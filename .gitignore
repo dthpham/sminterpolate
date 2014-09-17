@@ -1,0 +1,24 @@
+# compiled files
+*.pyc
+*.o
+*.so
+*.clb
+
+# misc
+*~
+
+#virtualenv
+bin
+lib
+include
+
+#links
+conversion.*
+
+#setuptools
+build
+dist
+*.egg-info
+
+#submodules
+butterflow/repos
