@@ -43,6 +43,12 @@ except ImportError:
   pass
 
 
+def have_command(name):
+  '''checks if a command is callable on the system'''
+  proc = subprocess.call(['which', name])
+  return (proc == 0)
+
+
 def git_init_submodules():
   if not os.path.exists(b_repos):
     os.makedirs(b_repos)
@@ -106,6 +112,13 @@ def build_lst(*lsts):
     else:
       lst.extend(l)
   return lst
+
+
+for x in ['git', 'pkg-config', 'ffmpeg']:
+  if not have_command(x):
+    raise RuntimeError(
+        '{} command is needed to complete the build process'.format(x))
+
 
 cflags = ['-g', '-Wall']
 linkflags = ['-shared', '-Wl,--export-dynamic']
