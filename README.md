@@ -1,8 +1,8 @@
 #Butterflow
 
-*Butterflow* is a stand alone, easy to use command line tool that lets you
-create fluid slow motion and smooth motion videos by increasing frame rates
-through a process known as motion interpolation.
+*Butterflow* is a easy to use command line tool that lets you create fluid slow
+motion and smooth motion videos by increasing frame rates through a process
+known as motion interpolation.
 
 ###How does it work?
 
@@ -36,8 +36,8 @@ These need to be installed before you can install *butterflow*:
 
 * `git`
 * `ffmpeg` with any codecs that you will need
-* `opencv-2.4.9` built with `BUILD_opencv_python=YES`, `WITH_OPENCL=YES`,
-and `WITH_FFMPEG=YES`
+* `opencv-2.4.9` built with `BUILD_opencv_python=ON`, `WITH_OPENCL=ON`,
+and `WITH_FFMPEG=ON`
 * `libcl` or equivalent library that provides access to the OpenCL API
 * A vendor-specific implementation of OpenCL sunch as `opencl-nvidia` or
 `intel-opencl-runtime`
@@ -105,11 +105,3 @@ The format of time is in `hh:mm:ss.msec`. Leading zeros are required so this
 will work `01:30:15.008` but this *will not* `1:30:15.009`. This will work
 `00:08:23.6` but this *will not* `8:23.6`. You can leave off trailing zeros in
 the millisecond portion so `00:00:26.5` and `00:00:26` would both work.
-
-##Notes
-
-Please take a look at the *slowmoVideo* program, which doesn't require OpenCL
-and  comes with a GUI interface and has some more advanced features such as
-variable slow down factors and motion blur. If you want to watch movies at a
-higher rate in real-time, check out the *SmoothVideo Project* for more
-information.
