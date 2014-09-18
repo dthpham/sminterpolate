@@ -4,6 +4,7 @@ import os
 from butterflow.__init__ import __version__ as version
 import pdb
 
+
 b_repos = 'butterflow/repos/'
 b_media = 'butterflow/media/'
 b_motion = 'butterflow/motion/'
@@ -47,6 +48,26 @@ def have_command(name):
   '''checks if a command is callable on the system'''
   proc = subprocess.call(['which', name])
   return (proc == 0)
+
+
+def have_library(name):
+  '''check if a library is installed on the system'''
+  proc = subprocess.call(['pkg-config', '--exists', name])
+  return (proc == 0)
+
+
+def have_library_object_file(libname, name):
+  '''check if library has specific object file'''
+  if have_library(libname):
+    c = ['pkg-config', '--libs', libname]
+    res = subprocess.Popen(c, stdout=subprocess.PIPE).stdout.read()
+    res = res.strip()
+    res = res.split(' ')
+    for x in res:
+      if not x.startswith('-l'):
+        if os.path.basename(x) == name:
+          return True
+    return False
 
 
 def git_init_submodules():
@@ -114,10 +135,32 @@ def build_lst(*lsts):
   return lst
 
 
-for x in ['git', 'pkg-config', 'ffmpeg']:
+for x in ['pkg-config',
+          'git',
+          'ffmpeg']:
   if not have_command(x):
     raise RuntimeError(
         '{} command is needed to complete the build process'.format(x))
+
+for x in ['opencv',
+          'libavformat',
+          'libavcodec',
+          'python2']:
+  if not have_library(x):
+    raise RuntimeError(
+        '{} library is needed to complete the build process'.format(x))
+
+for x, y in [('opencv', 'libopencv_ocl.so'),
+             ('opencv', 'libopencv_core.so'),
+             ('opencv', 'libopencv_imgproc.so')]:
+  if not have_library_object_file(x, y):
+    raise RuntimeError(
+        '{} library is missing object file'.format((x, y)))
+
+try:
+  import cv2
+except ImportError:
+  raise RuntimeError('opencv built with BUILD_opencv_python=ON required')
 
 
 cflags = ['-g', '-Wall']
@@ -172,6 +215,7 @@ py_motion = Extension(
 
 
 git_init_submodules()
+
 setup(
     name='butterflow',
     packages=find_packages(exclude=['repos']),
