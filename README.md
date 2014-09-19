@@ -67,13 +67,20 @@ $ butterflow <video> -r <playback-rate> -t full,fps=<fps>
 $ butterflow <video> -r <playback-rate> -t full,dur=<duration>
 ```
 
+#####Slow-mo an entire clip with speed factor:
+
+```
+$ butterflow <video> -r <playback-rate> -t full,factor=<factor>
+```
+
 #####Slow-mo with regions:
 
 ```
 $ butterflow <video> -r <rate> -t \
-      a=<time-start>,b=<time-end>,dur=<secs>;\
-      a=<time-start>,b=<time-end>,dur=<secs>;\
-      a=<time-start>,b=<time-end>,fps=<fps>
+      "a=<time-start>,b=<time-end>,dur=<secs>;\
+       a=<time-start>,b=<time-end>,dur=<secs>;\
+       a=<time-start>,b=<time-end>,fps=<fps>;\
+       a=<time-start>,b=<time-end>,factor=<factor>"
 ```
 
 
@@ -81,17 +88,20 @@ $ butterflow <video> -r <rate> -t \
 
 ```
 $ butterflow <video> -r 23.976 -t \
-      a=00:00:10,b=00:00:11,dur=10;\
-      a=00:01:22,b=00:01:25,dur=20;\
-      a=00:01:25,b=00:02:00,fps=400
+      "a=00:00:10,b=00:00:11,dur=10;\
+       a=00:01:22,b=00:01:25,dur=20;\
+       a=00:01:25,b=00:02:00,fps=400;\
+       a=00:02:00,b=00:02:05,factor=0.5"
 ```
 
 This will create a new video with three regions that will be slowed down.
 The first region is only 1s long, `a=00:00:10,b=00:00:11,dur=10` will be
 stretched out to 10s long. The next region `a=00:01:22,b=00:01:25,dur=20` which
-is originally only 3s long will turn into 20s long. The last region
+is originally only 3s long will turn into 20s long. The third region
 `a=00:01:25,b=00:02:00,fps=400` will have 400 frames per second and since it's
 5s long there will be 2,000 frames in that region being played back at 24fps.
+Finally, the last region `a=00:02:00,b=00:02:05,factor=0.5` will be rendered at
+half speed.
 
 
 ##Specifying rate and FPS

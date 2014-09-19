@@ -125,6 +125,7 @@ class RenderingSubRegion(VideoSubRegion):
     super(RenderingSubRegion, self).__init__(time_a, time_b)
     self.target_rate = None
     self.target_duration = None
+    self.target_factor = None
 
   @classmethod
   def from_rate(cls, time_a, time_b, rate):
@@ -140,6 +141,12 @@ class RenderingSubRegion(VideoSubRegion):
     return obj
 
   @classmethod
+  def from_factor(cls, time_a, time_b, factor):
+    obj = cls(time_a, time_b)
+    obj.target_factor = factor
+    return obj
+
+  @classmethod
   def from_string(cls, string):
     '''returns a sub region given a formatted string
     the two formats:
@@ -148,29 +155,33 @@ class RenderingSubRegion(VideoSubRegion):
     where time should be in the form hh:mm:ss.xxx
     '''
     v = string.split(',')
-    a_part = v[0].split('=')[1]
-    b_part = v[1].split('=')[1]
-    t_part_l = v[2].split('=')[0]
-    t_part_r = v[2].split('=')[1]
+    a = v[0].split('=')[1]
+    b = v[1].split('=')[1]
+    tgt = v[2].split('=')[0]
+    val = v[2].split('=')[1]
 
-    time_a = VideoRegionUtils.time_string_to_ms(a_part)
-    time_b = VideoRegionUtils.time_string_to_ms(b_part)
+    time_a = VideoRegionUtils.time_string_to_ms(a)
+    time_b = VideoRegionUtils.time_string_to_ms(b)
 
     fps = None
-    dur = None
+    duration = None
+    factor = None
 
-    if t_part_l == 'fps':
-      if '/' in t_part_r:
-        v = t_part_r.split('/')
-        fps = Fraction(int(v[0]), int(v[1]))
+    if tgt == 'fps':
+      if '/' in val:
+        frac = val.split('/')
+        fps = Fraction(int(frac[0]), int(frac[1]))
       else:
-        fps = float(t_part_r)
-    if t_part_l == 'dur':
-      dur = float(t_part_r) * 1000
+        fps = float(val)
+    elif tgt == 'dur':
+      duration = float(val) * 1000
+    elif tgt == 'factor':
+      factor = float(val)
 
     obj = cls(time_a, time_b)
     obj.target_rate = fps
-    obj.target_duration = dur
+    obj.target_duration = duration
+    obj.target_factor = factor
     return obj
 
   def sync_frame_points_with_fps(self, fps):

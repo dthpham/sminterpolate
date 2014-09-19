@@ -63,6 +63,8 @@ class Project(object):
             sr.target_rate = float(val)
         elif tgt == 'dur':
           sr.target_duration = float(val) * 1000
+        elif tgt == 'factor':
+          sr.target_factor = float(val)
         if len(sub_regions) > 1:
           raise ValueError(
               'more than 1 region specified after specifying a full region')

@@ -135,6 +135,13 @@ class RenderingSubRegionTestCase(unittest.TestCase):
     self.assertEqual(r.target_rate,None)
     self.assertEqual(r.target_duration,10)
 
+  def test_create_from_factor(self):
+    r = RenderingSubRegion.from_factor(1,2,0.5)
+    self.assertIsInstance(r, RenderingSubRegion)
+    self.assertEqual(r.target_rate,None)
+    self.assertEqual(r.target_duration,None)
+    self.assertEqual(r.target_factor,0.5)
+
   def test_create_from_string_fps(self):
     r = RenderingSubRegion.from_string(
         'a=00:05:00.0,b=00:05:30.0,fps=59.94')
@@ -158,6 +165,14 @@ class RenderingSubRegionTestCase(unittest.TestCase):
     self.assertEqual(r.time_a,(1*3600+20*60+31.59)*1000)
     self.assertEqual(r.time_b,(1*3600+21*60+34.0)*1000)
     self.assertEqual(r.target_duration,3*1000)
+
+  def test_create_from_string_factor(self):
+    r = RenderingSubRegion.from_string(
+        'a=00:00:01.0,b=00:00:02.0,factor=0.5')
+    self.assertIsInstance(r, RenderingSubRegion)
+    self.assertEqual(r.time_a,1*1000)
+    self.assertEqual(r.time_b,2*1000)
+    self.assertEqual(r.target_factor,0.5)
 
   def test_sync_frame_points_with_fps(self):
     r = RenderingSubRegion.from_string(

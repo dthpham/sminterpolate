@@ -86,14 +86,16 @@ class Renderer(object):
     if sub_region.target_duration:
       tgt_dur_secs = sub_region.target_duration / 1000
       tgt_frs = int(self.playback_rate * tgt_dur_secs)
-      fr_factor = tgt_frs * 1.0 / frs_in_region
-      time_step = 1 / fr_factor
-
     if sub_region.target_rate:
       reg_dur_secs = dur_in_region / 1000
       tgt_frs = int(sub_region.target_rate * reg_dur_secs)
-      fr_factor = tgt_frs * 1.0 / frs_in_region
-      time_step = 1 / fr_factor
+    if sub_region.target_factor:
+      reg_dur_secs = dur_in_region / 1000
+      tgt_factor = 1 / sub_region.target_factor
+      tgt_frs = int(self.playback_rate * reg_dur_secs * tgt_factor)
+
+    fr_factor = tgt_frs * 1.0 / frs_in_region
+    time_step = 1 / fr_factor
 
     time_step = min(time_step, 1.0)
 
@@ -134,8 +136,6 @@ class Renderer(object):
     print('drop_every', drop_every_n_frs)
     print('dupe_every', dupe_every_n_frs)
     print('potential_drift_secs', float(pot_drift_secs))
-
-    # pdb.set_trace()
 
     frs_made = 0
     frs_dropped = 0
@@ -234,6 +234,7 @@ class Renderer(object):
       r.frame_b = fb
       r.target_rate = self.playback_rate
       r.target_duration = tb - ta
+      r.target_factor = 1.0
 
       new_sub_regions.append(r)
 
@@ -281,6 +282,7 @@ class Renderer(object):
           r.frame_b = fb
           r.target_rate = self.playback_rate
           r.target_duration = tb - ta
+          r.target_factor = 1.0
           region_for_range = r
 
         new_sub_regions.append(r)
