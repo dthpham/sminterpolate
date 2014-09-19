@@ -181,32 +181,33 @@ def build_lst(*lsts):
   return lst
 
 
-for x in ['pkg-config',
-          'git',
-          'ffmpeg']:
-  if not have_command(x):
-    raise RuntimeError(
-        '{} command is needed to complete the build process'.format(x))
+def check_dependencies():
+  '''verifies if all dependencies have been met'''
+  for x in ['pkg-config',
+            'git',
+            'ffmpeg']:
+    if not have_command(x):
+      return False, '{} command is needed to complete the build process'.\
+          format(x)
+  for x in ['opencv',
+            'libavformat',
+            'libavcodec',
+            'python2']:
+    if not have_library(x):
+      return False, '{} library is needed to complete the build process'.\
+          format(x)
+  for x, y in [('opencv', 'libopencv_ocl.so'),
+               ('opencv', 'libopencv_core.so'),
+               ('opencv', 'libopencv_imgproc.so')]:
+    if not have_library_object_file(x, y):
+      return False, '{} library is missing object file {}'.format(x, y)
 
-for x in ['opencv',
-          'libavformat',
-          'libavcodec',
-          'python2']:
-  if not have_library(x):
-    raise RuntimeError(
-        '{} library is needed to complete the build process'.format(x))
+  try:
+    import cv2
+  except ImportError:
+    return False, 'opencv built with BUILD_opencv_python=ON required'
 
-for x, y in [('opencv', 'libopencv_ocl.so'),
-             ('opencv', 'libopencv_core.so'),
-             ('opencv', 'libopencv_imgproc.so')]:
-  if not have_library_object_file(x, y):
-    raise RuntimeError(
-        '{} library is missing object file'.format((x, y)))
-
-try:
-  import cv2
-except ImportError:
-  raise RuntimeError('opencv built with BUILD_opencv_python=ON required')
+  return True, None
 
 
 cflags = ['-g', '-Wall']
@@ -259,6 +260,11 @@ py_motion = Extension(
     language='c++'
 )
 
+
+ret, description = check_dependencies()
+if not ret:
+  print(description)
+  exit(1)
 
 git_init_submodules()
 
