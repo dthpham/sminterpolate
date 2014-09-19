@@ -1,4 +1,4 @@
-from setuptools import setup, find_packages, Extension
+from setuptools import setup, find_packages, Extension, Command
 import subprocess
 import os
 from butterflow.__init__ import __version__ as version
@@ -42,6 +42,49 @@ try:
   long_description = doc.rst
 except ImportError:
   pass
+
+
+class Clean(Command):
+  description = 'removes all uneeded files from the project'
+  user_options = []
+
+  def initialize_options(self):
+    self.cwd = None
+    self.root_path = None
+
+  def finalize_options(self):
+    self.cwd = os.getcwd()
+    self.root_path = os.path.dirname(os.path.realpath(__file__))
+
+  def run(self):
+    if self.cwd != self.root_path:
+      raise RuntimeWarning(
+          'Must be in pkg root ({}) to run clean'.format(self.root_path))
+    else:
+      os.system('rm -f out.mp4')
+      os.system('rm -rf *.clb')
+      os.system('rm -rf *.pyc')
+      os.system('rm -rf ~/.butterflow')
+      os.system('rm -rf /tmp/butterflow')
+      # os.system('rm -rf butterflow/repos')
+      will_rem = set()
+      will_walk = [
+          os.path.join(self.root_path, 'butterflow'),
+          os.path.join(self.root_path, 'tests')
+      ]
+      for w in will_walk:
+        for root, dirs, files in os.walk(w):
+          for f in files:
+            name, ext = os.path.splitext(f)
+            if ext in ['.so', '.pyc']:
+              will_rem.add(os.path.join(root, f))
+            elif name == 'conversion':
+              if root != os.path.join(self.root_path,
+                                      'butterflow', 'repos',
+                                      'opencv-ndarray-conversion'):
+                will_rem.add(os.path.join(root, f))
+      for x in will_rem:
+        os.remove(x)
 
 
 def have_command(name):
@@ -233,6 +276,9 @@ setup(
     keywords=['slowmo', 'slow motion', 'interpolation'],
     entry_points={
         'console_scripts': ['butterflow = butterflow.butterflow:main']
+    },
+    cmdclass={
+        'clean': Clean
     },
     test_suite='tests'
 )
