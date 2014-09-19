@@ -53,6 +53,16 @@ class Project(object):
       v = x.split(',')
       if v[0] == 'full':
         sr = RenderingSubRegion(0, vid_dur_ms)
+        tgt = v[1].split('=')[0]
+        val = v[1].split('=')[1]
+        if tgt == 'fps':
+          if '/' in val:
+            frac = val.split('/')
+            sr.target_rate = Fraction(int(frac[0]), int(frac[1]))
+          else:
+            sr.target_rate = float(val)
+        elif tgt == 'dur':
+          sr.target_duration = float(val) * 1000
         if len(sub_regions) > 1:
           raise ValueError(
               'more than 1 region specified after specifying a full region')

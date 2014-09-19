@@ -242,13 +242,13 @@ class Renderer(object):
     # and number of frames may have changed during normalization
     if self.timing_regions is not None:
       vid_dur_ms = src.duration
-      vid_frs = src.num_frames
+      vid_frs = src.num_frames - 1
 
       cut_points = set([])
       # add start and end of video cutting points:
       # (frame_idx, duration_ms)
       cut_points.add((0, 0))
-      cut_points.add((src.num_frames - 1, src.duration))
+      cut_points.add((vid_frs, src.duration))
 
       for sr in self.timing_regions:
         rel_a = sr.relative_pos_a
