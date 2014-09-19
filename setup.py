@@ -9,6 +9,8 @@ b_repos = 'butterflow/repos/'
 b_media = 'butterflow/media/'
 b_motion = 'butterflow/motion/'
 
+F_NULL = open(os.devnull, 'w')
+
 
 # Convert README.md to .rst for PyPi, requires pandoc
 # Because pandoc has a ridiculous amount of dependencies and it would
@@ -89,7 +91,8 @@ class Clean(Command):
 
 def have_command(name):
   '''checks if a command is callable on the system'''
-  proc = subprocess.call(['which', name])
+  proc = subprocess.call(['which', name], stdout=F_NULL,
+                         stderr=subprocess.STDOUT)
   return (proc == 0)
 
 
