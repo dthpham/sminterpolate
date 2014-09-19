@@ -96,7 +96,8 @@ class Project(object):
     unix_time = lambda(dt):\
         (dt - datetime.datetime.utcfromtimestamp(0)).total_seconds()
 
-    nrm_name = '{}_{}.mp4'.format(vid_name, str(unix_time(vid_mod_utc)))
+    nrm_name = '{}_{}_{}.mp4'.format(vid_name,
+        str(unix_time(vid_mod_utc)), v_scale)
     nrm_name = nrm_name.lower()
     nrm_path = os.path.join(tmp_path, nrm_name)
 
