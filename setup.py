@@ -12,38 +12,42 @@ b_motion = 'butterflow/motion/'
 F_NULL = open(os.devnull, 'w')
 
 
-# Convert README.md to .rst for PyPi, requires pandoc
-# Because pandoc has a ridiculous amount of dependencies and it would
-# probably be better re-write the README in RST format as Github can
-# render it
-#
-# To install pandoc on Arch Linux:
-# $ aur -S haskell-pandoc
-# Or
-# $ sudo pacman -S ghc alex happy cabal-install
-# $ sudo cabal update
-# $ sudo cabal install --global pandoc
-# For python bindings:
-# $ pip install pyandoc
-long_description = ''
-try:
-  import pandoc
-  proc = subprocess.Popen(
-      ['which pandoc'],
-      shell=True,
-      stdout=subprocess.PIPE,
-      universal_newlines=True
-  )
-  pandoc_path = proc.communicate()[0]
-  pandoc_path = pandoc_path.strip()
-  pandoc.core.PANDOC_PATH = pandoc_path
+def get_long_description():
+  '''
+  Convert README.md to .rst for PyPi, requires pandoc. Because pandoc
+  has a ridiculous amount of dependencies, it might be better to just
+  re-write the README in RST format as Github also supports it.
 
-  doc = pandoc.Document()
-  doc.markdown = open('README.md', 'r').read()
+  To install pandoc on Arch Linux:
+      $ aur -S haskell-pandoc
+  Or
+      $ sudo pacman -S ghc alex happy cabal-install
+      $ sudo cabal update
+      $ sudo cabal install --global pandoc
 
-  long_description = doc.rst
-except ImportError:
-  pass
+  For python bindings:
+      $ pip install pyandoc
+  '''
+  long_description = ''
+  try:
+    import pandoc
+    proc = subprocess.Popen(
+        ['which pandoc'],
+        shell=True,
+        stdout=subprocess.PIPE,
+        universal_newlines=True
+    )
+    pandoc_path = proc.communicate()[0]
+    pandoc_path = pandoc_path.strip()
+    pandoc.core.PANDOC_PATH = pandoc_path
+
+    doc = pandoc.Document()
+    doc.markdown = open('README.md', 'r').read()
+
+    long_description = doc.rst
+  except ImportError:
+    pass
+  return long_description
 
 
 class Clean(Command):
@@ -281,7 +285,7 @@ setup(
     url='https://github.com/dthpham/butterflow',
     download_url='https://github.com/dthpham/butterflow/tarball/{}'.format(version),
     description='Lets you create slow motion and smooth motion videos',
-    long_description=long_description,
+    long_description=get_long_description(),
     keywords=['slowmo', 'slow motion', 'interpolation'],
     entry_points={
         'console_scripts': ['butterflow = butterflow.butterflow:main']
