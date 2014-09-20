@@ -3,6 +3,13 @@
 #include <stdio.h>
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
+#include <libavutil/avutil.h>
+#include <libavutil/mathematics.h>
+
+#define MIN(a,b) (((a)<(b))?(a):(b))
+#define MAX(a,b) (((a)>(b))?(a):(b))
+#define MS_PER_SEC 1000
+
 
 static PyObject*
 py_get_video_info(PyObject *self, PyObject *arg) {
@@ -46,7 +53,9 @@ py_get_video_info(PyObject *self, PyObject *arg) {
 
   int w = 0;
   int h = 0;
-  double duration = 0.0;
+  int64_t duration = 0.0;
+  int64_t v_duration = 0.0;
+  int64_t c_duration = 0.0;
   int rate_num = -1;
   int rate_den = -1;
   double min_rate = 0.0;
@@ -54,9 +63,14 @@ py_get_video_info(PyObject *self, PyObject *arg) {
 
   if (v_stream_exists) {
     AVStream *v_stream = format_ctx->streams[v_stream_idx];
-    double tb_den = v_stream->time_base.den;
-    double tb_num = v_stream->time_base.num;
-    duration = v_stream->duration*(tb_num/tb_den);
+
+    AVRational ms_tb = {1, MS_PER_SEC};
+    AVRational av_tb = {1, AV_TIME_BASE};
+
+    v_duration = av_rescale_q(v_stream->duration, v_stream->time_base, ms_tb);
+    c_duration = av_rescale_q(format_ctx->duration, av_tb, ms_tb);
+
+    duration = MAX(v_duration, c_duration);
 
     AVCodecContext *v_codec_ctx = format_ctx->streams[v_stream_idx]->codec;
 
@@ -69,9 +83,8 @@ py_get_video_info(PyObject *self, PyObject *arg) {
     rate_den = rational_rate.den;
     double rate = rate_num*1.0/rate_den;
 
-    num_frames = rate * duration;
-    duration   = num_frames/rate;
-    min_rate   = num_frames/duration;
+    num_frames = rate * (duration / 1000.0);
+    min_rate   = num_frames/ (duration / 1000.0);
   }
 
   avformat_close_input(&format_ctx);

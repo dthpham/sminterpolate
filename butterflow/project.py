@@ -47,12 +47,11 @@ class Project(object):
     sub_regions = region_string.split(';')
     if len(sub_regions) > 0:
       self.timing_regions = []
-    vid_dur_ms = self.vid_info.duration * 1000.0
     for x in sub_regions:
       # set time_b to length of video if `full` option is specified
       v = x.split(',')
       if v[0] == 'full':
-        sr = RenderingSubRegion(0, vid_dur_ms)
+        sr = RenderingSubRegion(0, self.vid_info.duration)
         tgt = v[1].split('=')[0]
         val = v[1].split('=')[1]
         if tgt == 'fps':
@@ -71,7 +70,8 @@ class Project(object):
       else:
         sr = RenderingSubRegion.from_string(x)
       self.timing_regions.append(sr)
-    VideoRegionUtils.validate_region_set(vid_dur_ms, self.timing_regions)
+    VideoRegionUtils.validate_region_set(self.vid_info.duration,
+                                         self.timing_regions)
 
   def render_video(self, dst_path, v_scale=1.0):
     '''normalizes, renders, muxes an interpolated video, if necessary.
@@ -89,7 +89,7 @@ class Project(object):
     # and duration
     if self.timing_regions is not None:
       for r in self.timing_regions:
-        r.sync_relative_pos_to_duration(self.vid_info.duration * 1000)
+        r.sync_relative_pos_to_duration(self.vid_info.duration)
 
     vid_prep = VideoPrep(self.vid_info, loglevel='info')
 

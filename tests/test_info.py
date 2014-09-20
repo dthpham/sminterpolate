@@ -78,7 +78,7 @@ class LibAvVideoInfoTestCase(BaseVideoInfoTestCase):
 
   def test_duration(self):
     i = LibAvVideoInfo(self.test_vid)
-    d = 3.003
+    d = 3.003*1000
     self.do_test_duration(i, d)
 
   def test_min_rate(self):

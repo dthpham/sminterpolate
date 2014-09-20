@@ -221,6 +221,7 @@ def check_dependencies():
   for x in ['opencv',
             'libavformat',
             'libavcodec',
+            'libavutil',
             'python2']:
     if not have_library(x):
       return False, '{} library is needed to complete the build process'.\
