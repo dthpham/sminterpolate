@@ -259,7 +259,9 @@ class Renderer(object):
         cut_points.add((sr.frame_b, sr.time_b))
 
       cut_points = list(cut_points)
-      cut_points = sorted(cut_points, key=lambda(x, y): x, reverse=False)
+      cut_points = sorted(cut_points,
+                          key=lambda(x): (x[0], x[1]),
+                          reverse=False)
       regions_to_make = len(cut_points) - 1
       in_bounds = lambda(x): x.time_a >= 0 and x.time_b <= src.duration
 
