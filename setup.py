@@ -1,7 +1,10 @@
+#!/usr/bin/env python2
+
 from setuptools import setup, find_packages, Extension, Command
 import subprocess
 import os
 from butterflow.__init__ import __version__ as version
+import getpass
 import pdb
 
 
@@ -93,6 +96,25 @@ class Clean(Command):
         os.remove(x)
 
 
+def get_extra_envs():
+  '''returns a modified environment. needed when running as root
+  as it automatically clears some for safety which may cause certain
+  calls, to pkg-config for example, to fail. installs may fail
+  without passing this env to a subprocess'''
+  env = os.environ.copy()
+  local_pkg_config_paths = \
+      '/usr/local/lib/pkgconfig:'\
+      '/usr/local/pkgconfig:'\
+      '/usr/share/pkgconfig'
+  if 'PKG_CONFIG_PATH' in env:
+    pkg_config_path = env['PKG_CONFIG_PATH']
+    pkg_config_path = pkg_config_path + ':' + local_pkg_config_paths
+    env['PKG_CONFIG_PATH'] = pkg_config_path
+  else:
+    env['PKG_CONFIG_PATH'] = local_pkg_config_paths
+  return env
+
+
 def have_command(name):
   '''checks if a command is callable on the system'''
   proc = subprocess.call(['which', name], stdout=F_NULL,
@@ -102,15 +124,18 @@ def have_command(name):
 
 def have_library(name):
   '''check if a library is installed on the system'''
-  proc = subprocess.call(['pkg-config', '--exists', name])
+  proc = subprocess.call(['pkg-config', '--exists', name], env=get_extra_envs())
   return (proc == 0)
 
 
 def have_library_object_file(libname, name):
   '''check if library has specific object file'''
   if have_library(libname):
-    c = ['pkg-config', '--libs', libname]
-    res = subprocess.Popen(c, stdout=subprocess.PIPE).stdout.read()
+    call = ['pkg-config', '--libs', libname]
+    res = subprocess.Popen(
+        call,
+        stdout=subprocess.PIPE,
+        env=get_extra_envs()).stdout.read()
     res = res.strip()
     res = res.split(' ')
     for x in res:
@@ -151,12 +176,12 @@ def pkg_config_res(*opts):
   '''
   c = ['pkg-config']
   c.extend(opts)
-  res = subprocess.Popen(c, stdout=subprocess.PIPE).stdout.read()
+  res = subprocess.Popen(c, stdout=subprocess.PIPE, env=get_extra_envs()).stdout.read()
   res = res.strip()
   res = res.split('-')
   lst = []
   for x in res:
-    if x is not '':
+    if x != '':
       x = x.strip()
       if len(x.split(' ')) > 1:
         sep = x.split(' ')
@@ -207,6 +232,11 @@ def check_dependencies():
       return False, '{} library is missing object file {}'.format(x, y)
 
   try:
+    if getpass.getuser() == 'root':
+      import sys
+      local_site_pkgs = \
+          '/usr/local/lib/python2.7/site-packages'
+      sys.path.insert(1, local_site_pkgs)
     import cv2
   except ImportError:
     return False, 'opencv built with BUILD_opencv_python=ON required'
