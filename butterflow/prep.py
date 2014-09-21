@@ -3,6 +3,7 @@ import fractions
 import math
 import subprocess
 import shutil
+import pdb
 
 
 class VideoPrep(object):
@@ -102,8 +103,8 @@ class VideoPrep(object):
         '-fflags', '+discardcorrupt+genpts+igndts',
         '-i', self.video_info.video_path,
         '-pix_fmt', 'yuv420p',
-        '-filter:v', 'pullup, scale=-2:{}'.format(h),
-        '-r', str(new_rate)
+        '-filter:v', 'fieldmatch,decimate,scale=-2:{}'.format(h),
+        # '-r', str(new_rate)
     ]
     if has_aud:
       call.extend([
