@@ -7,6 +7,7 @@ from media.info import LibAvVideoInfo
 from region import VideoRegionUtils, RenderingSubRegion
 import datetime
 import tempfile
+import shutil
 from motion.flow import Flow
 from motion.interpolate import Interpolate
 
@@ -127,8 +128,14 @@ class Project(object):
         sub_path = os.path.join(
             tmp_path, '{}_subs.srt'.format(nrm_name_no_ext))
         vid_prep.extract_subtitles(sub_path)
+        with open(sub_path, 'r') as f:
+          if f.read() == '':
+            sub_path = None
 
-    VideoPrep.mux_video(rnd_path, aud_path, sub_path, dst_path, 'info')
+    try:
+      VideoPrep.mux_video(rnd_path, aud_path, sub_path, dst_path, 'info')
+    except RuntimeError:
+      shutil.copy(rnd_path, dst_path)
 
     if os.path.exists(rnd_path):
       os.remove(rnd_path)
