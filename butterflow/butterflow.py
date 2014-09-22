@@ -25,12 +25,16 @@ def main():
                    default='24000/1001', help='Specify the playback rate')
   par.add_argument('-t', '--timing-regions', type=str, nargs='?',
                    help='Specify rendering sub regions')
+
   par.add_argument('-o', '--out-path', type=str, nargs='?',
                    default=os.path.join(os.getcwd(), 'out.mp4'),
                    help='Set path to the output video')
 
   par.add_argument('--video-scale', type=float, default=1.0,
                    help='Set the video scale')
+  par.add_argument('--decimate', action='store_true',
+                   help='Specify if should decimate duplicate frames')
+
   par.add_argument('--pyr-scale', type=float, default=0.5,
                    help='Set pyramid scale factor')
   par.add_argument('--levels', type=int, default=3,
@@ -75,4 +79,4 @@ def main():
   if timing_regions is not None:
     project.set_timing_regions_with_string(timing_regions)
 
-  project.render_video(dst_path, args.video_scale)
+  project.render_video(dst_path, args.video_scale, args.decimate)

@@ -1,6 +1,4 @@
 import os
-import fractions
-import math
 import subprocess
 import shutil
 import pdb
@@ -14,64 +12,8 @@ class VideoPrep(object):
     self.video_info = video_info
     self.loglevel = loglevel
 
-  def get_nearest_common_frame_rate(self, rate, tol=25.0):
-    '''returns the nearest lowest common frame rate for a given rate.
-    `tol` is the largest difference between the closest common rate and
-    the given rate that is needed before accepting any newly proposed
-    rate. note that it is more desirable to drop frames (going from
-    higher to lower). a higher rate means frames will have to be
-    duplicated.
-    '''
-    new_rate = rate
-    common = {
-        '24': fractions.Fraction(24),
-        '23.976': fractions.Fraction(24*1000,1001),
-        '23.98': fractions.Fraction(24*1000,1001),
-        '25': fractions.Fraction(25),
-        '29.97': fractions.Fraction(30*1000,1001),
-        '48': fractions.Fraction(48),
-        '50': fractions.Fraction(50),
-        '59.94': fractions.Fraction(60*1000,1001),
-        '60': fractions.Fraction(60),
-    }
-
-    key = None
-    low_diff = float('inf')
-    for r in common.keys():
-      diff = math.fabs(float(r) - float(rate))
-      if diff < low_diff:
-        key = r
-        low_diff = diff
-    near_rate = common[key]
-
-    if low_diff <= tol:
-      new_rate = near_rate
-    return new_rate
-
-  def get_telecine_compensated_rate(self, rate):
-    '''returns a rate that compensates for videos that may have been
-    telecined / pulled down. rate should be in fractional form. this
-    doesnt cover the entire range of pulldown patterns we're not trying
-    to detect telecined videos here, just indiscriminately going to use
-    a pullup filter on all videos later, however this can have a
-    negative effect because the videos may not even be pulled down and
-    therefore lowering the fps may cause unique frames to be dropped.
-    this can be improved by first detecting if a video is telecined
-    using a quick and dirty heuritic and only pulling up when necessary
-    '''
-    if not isinstance(rate, fractions.Fraction):
-      raise RuntimeWarning(
-          'rate should be in fractional form for best results')
-    patterns = {
-        fractions.Fraction(25): fractions.Fraction(24*1000, 1001),
-        fractions.Fraction(30*1000, 1001): fractions.Fraction(24*1000, 1001)
-    }
-    new_rate = rate
-    if rate in patterns.keys():
-      new_rate = patterns[rate]
-    return new_rate
-
-  def normalize_for_interpolation(self, dst_path, scale=1.0):
+  def normalize_for_interpolation(self, dst_path, vf_scale=1.0,
+                                  vf_decimate=False):
     '''transcode the video to a standard format so that interpolation
     yields the the best results. the main goal is to retranscode to the
     lowest possible constant rate in which all unique frames in the vid
@@ -85,26 +27,24 @@ class VideoPrep(object):
     has_sub = self.video_info.has_subtitle_stream
     has_aud = self.video_info.has_audio_stream
 
-    h = int(self.video_info.height * scale * 0.5) * 2
-    scaler = 'bilinear' if scale >= 1.0 else 'lanczos'
-
-    new_rate = self.video_info.min_rate
-    new_rate = self.get_nearest_common_frame_rate(new_rate)
-    new_rate = self.get_telecine_compensated_rate(new_rate)
+    h = int(self.video_info.height * vf_scale * 0.5) * 2
+    scaler = 'bilinear' if vf_scale >= 1.0 else 'lanczos'
 
     tmp_path = os.path.join(
         os.path.dirname(dst_path), '~' + os.path.basename(dst_path))
+
+    vf = 'scale=-2:{}'.format(h)
+    if vf_decimate:
+      vf = 'fieldmatch,decimate,' + vf
 
     call = [
         'ffmpeg',
         '-loglevel', self.loglevel,
         '-y',
         '-threads', '0',
-        '-fflags', '+discardcorrupt+genpts+igndts',
         '-i', self.video_info.video_path,
         '-pix_fmt', 'yuv420p',
-        '-filter:v', 'fieldmatch,decimate,scale=-2:{}'.format(h),
-        # '-r', str(new_rate)
+        '-filter:v', vf,
     ]
     if has_aud:
       call.extend([
