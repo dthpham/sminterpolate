@@ -7,7 +7,7 @@ known as motion interpolation.
 ###How does it work?
 
 It works by generating intermediate frames between existing frames. For example,
-given two existing frames `A` and `B`, this program can generate a frames `C.1`,
+given two existing frames `A` and `B`, this program can generate frames `C.1`,
 `C.2`...`C.n` that are positioned between the two. This process, called
 [motion interpolation](http://en.wikipedia.org/wiki/Motion_interpolation),
 increases frame rates and can give the perception of smoother motion and more
@@ -16,10 +16,11 @@ through this process that allows *butterflow* takes advantage of the increase
 in frame rates to generate high fps videos that are needed to make slow motion
 videos with minimal judder.
 
-###Can you tell the difference?
+###See for yourself:
 
-* [Video @12fps](https://dl.dropboxusercontent.com/u/103239050/gel12-scaled.mp4)
-* [Video rendered with butterflow to 96fps](https://dl.dropboxusercontent.com/u/103239050/gel96-scaled.mp4)
+* [Video (12fps)](https://dl.dropboxusercontent.com/u/103239050/gel12-scaled.mp4)
+* [Video frame rate increased with butterflow (96fps)](https://dl.dropboxusercontent.com/u/103239050/gel96-scaled.mp4)
+* [Video at 30fps slowed down with butterflow (210fps)](https://www.dropbox.com/s/6gs3h030l07b5l2/side.mp4?dl=0)
 
 ##Installation
 
@@ -30,22 +31,22 @@ videos with minimal judder.
 ###From source:
 
 Clone this repository or download a source package
-[here](https://github.com/dthpham/butterflow/tarball/0.1.1).
+[here](https://github.com/dthpham/butterflow/tarball/0.1.2).
 
-Run `$ python setup.py install` to install.
+`$ python setup.py install` to install.
 
-Do `$ python setup.py test` to run tests.
+`$ python setup.py test` to run tests.
 
 ##Dependencies and Requirements
 
 These need to be installed before you can install *butterflow*:
 
 * `git`
-* `ffmpeg` with any codecs that you will need
+* `ffmpeg` with any codecs that you may need
 * `opencv-2.4.9` built with `BUILD_opencv_python=ON`, `WITH_OPENCL=ON`,
 and `WITH_FFMPEG=ON`
 * `libcl` or an equivalent library that provides access to the OpenCL API
-* A vendor-specific implementation of OpenCL sunch as `opencl-nvidia` or
+* A vendor-specific implementation of OpenCL such as `opencl-nvidia` or
 `intel-opencl-runtime`
 
 For more information on how to satisfy the OpenCL requirements, please read this
