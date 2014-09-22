@@ -20,13 +20,8 @@ static int ocl_device_available(int type) {
   int num_dev = getOpenCLDevices(devices, type, NULL);
 
   if (platforms.size() < 1 || num_dev == 0) {
-    // printf("ocl type (%d) is not available!\n", type);
     return 0;
   }
-
-  // printf("ocl_platforms: %d\n", platforms.size());
-  // printf("ocl_devices_available: %d\n", num_dev);
-
   return 1;
 }
 
@@ -40,10 +35,7 @@ static int use_ocl_device(int type) {
 
   for (int i = 0; i < num_dev; i++) {
     DeviceInfo *dev = (DeviceInfo *)devices[i];
-    // printf("ocl_platform_name: %s\n", dev->platform->platformName.c_str());
-    // printf("ocl_device_name: %s\n",   dev->deviceName.c_str());
     if (dev->deviceType == type) {
-      // printf("using device with type: %d\n", type);
       setDevice(dev);
       return 1;
     }
@@ -55,7 +47,6 @@ static PyObject*
 py_ocl_set_cache_path(PyObject *self, PyObject *arg) {
   char *cache_path = PyString_AsString(arg);
   setBinaryPath(cache_path);
-  // printf("ocl_cache_path: %s\n", cache_path);
   return PyBool_FromLong(1);
 }
 

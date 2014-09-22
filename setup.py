@@ -5,7 +5,6 @@ import subprocess
 import os
 from butterflow.__init__ import __version__ as version
 import getpass
-import pdb
 
 
 b_repos = 'butterflow/repos/'

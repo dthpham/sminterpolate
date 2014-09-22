@@ -9,7 +9,6 @@ import datetime
 import tempfile
 from motion.flow import Flow
 from motion.interpolate import Interpolate
-import pdb
 
 
 class Project(object):

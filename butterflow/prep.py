@@ -1,7 +1,6 @@
 import os
 import subprocess
 import shutil
-import pdb
 
 
 class VideoPrep(object):

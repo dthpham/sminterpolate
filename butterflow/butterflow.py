@@ -5,7 +5,6 @@ import motion.py_motion as py_motion
 from project import Project
 from fractions import Fraction
 import os
-import pdb
 from os.path import expanduser
 
 

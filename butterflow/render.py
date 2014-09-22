@@ -5,7 +5,6 @@ from motion.interpolate import Interpolate
 import numpy as np
 import os
 import math
-import pdb
 from region import VideoRegionUtils, RenderingSubRegion
 
 
@@ -103,7 +102,6 @@ class Renderer(object):
     dupe_every_n_frs = 0.0
 
     # if 1.0 % time_step is zero, one less frame will be interpolated
-    # See: loop in the interpolate frames method
     frs_inter_each_go = int(1 / time_step)
     if abs(0 - math.fmod(1, time_step)) <= 1e-16:
       frs_inter_each_go -= 1
@@ -145,8 +143,8 @@ class Renderer(object):
     wrk_idx = 0
 
     fr_1 = None
-    fr_2 = src.frame_at_idx(fr_a) # TODO: missing that first frame?
-    src.seek_to_frame(fr_a+1)
+    fr_2 = src.frame_at_idx(fr_a)
+    src.seek_to_frame(fr_a + 1)
 
     for x in xrange(0, frs_in_region - 1):
       ch = 0xff & cv2.waitKey(30)
@@ -186,14 +184,12 @@ class Renderer(object):
           drop_rem = math.fmod(wrk_idx, drop_every_n_frs)
           should_drop = drop_rem < 1.0
           if should_drop:
-            # print('DRP <idx={0:0>6d}, rem={1:.2f}>'.format(wrk_idx, drop_rem))
             frs_dropped += 1
             continue
         if dupe_every_n_frs > 0:
           dupe_rem = math.fmod(wrk_idx, dupe_every_n_frs)
           should_dupe = dupe_rem < 1.0
           if should_dupe:
-            # print('DUP <idx={0:0>6d}, rem={1:.2f}>'.format(wrk_idx, dupe_rem))
             self.write_frame_to_pipe(fr)
             frs_duped += 1
 
@@ -211,8 +207,6 @@ class Renderer(object):
     print('frs_written: {}/{} ({:.2f}%)'.format(
         frs_written, tgt_frs, fr_write_ratio * 100))
     print('est_drift:', est_drift_secs)
-
-    # pdb.set_trace()
 
   def render(self, dst_path):
     '''separates video regions to render them individually'''
