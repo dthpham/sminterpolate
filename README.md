@@ -4,7 +4,7 @@
 motion and smooth motion videos by increasing frame rates through a process
 known as motion interpolation.
 
-###How does it work?
+####How does it work?
 
 It works by generating intermediate frames between existing frames. For example,
 given two existing frames `A` and `B`, this program can generate frames `C.1`,
@@ -12,23 +12,24 @@ given two existing frames `A` and `B`, this program can generate frames `C.1`,
 [motion interpolation](http://en.wikipedia.org/wiki/Motion_interpolation),
 increases frame rates and can give the perception of smoother motion and more
 fluid animation, an effect most people know as the "soap opera effect". It is
-through this process that allows *butterflow* takes advantage of the increase
+through this process that allows *butterflow* to take advantage of the increase
 in frame rates to generate high fps videos that are needed to make slow motion
 videos with minimal judder.
 
-###See for yourself:
+####See it for yourself
 
 * [Video (12fps)](https://dl.dropboxusercontent.com/u/103239050/gel12-scaled.mp4)
 * [Video frame rate increased with butterflow (96fps)](https://dl.dropboxusercontent.com/u/103239050/gel96-scaled.mp4)
 * [Video at 30fps slowed down with butterflow (210fps)](https://www.dropbox.com/s/6gs3h030l07b5l2/side.mp4?dl=0)
 
+
 ##Installation
 
-###With pip:
+#####With pip:
 
 ```$ pip install butterflow```
 
-###From source:
+#####From source:
 
 Clone this repository or download a source package
 [here](https://github.com/dthpham/butterflow/tarball/0.1.2).
@@ -37,92 +38,67 @@ Clone this repository or download a source package
 
 `$ python setup.py test` to run tests.
 
-##Dependencies and Requirements
+##Dependencies:
 
-These need to be installed before you can install *butterflow*:
+These need to be installed before before anything else.
 
-* `git`
-* `ffmpeg` with any codecs that you may need
-* `opencv-2.4.9` built with `BUILD_opencv_python=ON`, `WITH_OPENCL=ON`,
-and `WITH_FFMPEG=ON`
-* `libcl` or an equivalent library that provides access to the OpenCL API
-* A vendor-specific implementation of OpenCL such as `opencl-nvidia` or
-`intel-opencl-runtime`
+* [`numpy`](http://www.numpy.org/)
+* [`ffmpeg`](https://github.com/FFmpeg/FFmpeg), with any codecs you may need
+* [`opencv-2.4.9`](http://opencv.org/), built with `BUILD_opencv_python=ON`,
+`WITH_OPENCL=ON`, and `WITH_FFMPEG=ON`
+* [`libcl`](http://www.libcl.org/), or an equivalent library that provides
+access to the OpenCL API
 
-For more information on how to satisfy the OpenCL requirements, please read this
-Wiki page [here](https://wiki.archlinux.org/index.php/Opencl).
+Plus at least one vendor-specific implementation of OpenCL that matches your hardware:
 
-##Quickstart
+* [`opencl-nvidia`](https://developer.nvidia.com/opencl)
+* [`intel-opencl-runtime`](https://software.intel.com/en-us/intel-opencl)
+* [`amdapp-sdk`](http://developer.amd.com/tools-and-sdks/opencl-zone/)
+* [`opencl-mesa`](http://www.x.org/wiki/GalliumStatus/)
 
-For more help and full list of options run ```$ butterflow -h```.
+For more information on how to satisfy the OpenCL requirements, please read
+[this page](https://wiki.archlinux.org/index.php/Opencl).
 
-#####Smoothing out the motion of a video by increasing its frame rate:
+##Usage
 
-```
-$ butterflow <video> --r <playback-rate>
-```
+For a full list of options run ```$ butterflow -h```.
 
-#####Slow-mo an entire clip to fps:
+Now suppose you had a `24fps` video on your hands that was `10s` long...
 
-```
-$ butterflow <video> -r <playback-rate> -t full,fps=<fps>
-```
-
-#####Slow-mo an entire clip to a new duration:
+To smooth out the motion of the video you can increase its frame rate to `96fps`:
 
 ```
-$ butterflow <video> -r <playback-rate> -t full,dur=<duration>
+$ butterflow <video> --playback-rate 96
 ```
 
-#####Slow-mo an entire clip with speed factor:
+To slow-mo the entire clip with a target frame rate of `400fps`:
 
 ```
-$ butterflow <video> -r <playback-rate> -t full,factor=<factor>
+$ butterflow <video> --playback-rate 59.97 -t full,fps=400
 ```
 
-#####Slow-mo regions:
+To slow-mo the clip to be `15s` long:
 
 ```
-$ butterflow <video> -r <rate> -t \
-      "a=<time-start>,b=<time-end>,dur=<secs>;\
-       a=<time-start>,b=<time-end>,dur=<secs>;\
-       a=<time-start>,b=<time-end>,fps=<fps>;\
-       a=<time-start>,b=<time-end>,factor=<factor>"
+$ butterflow <video> --playback-rate 59.97 -t full,dur=15
 ```
 
-
-##Example Walkthrough
+To slow-mo to `0.25x` quarter speed:
 
 ```
-$ butterflow <video> -r 23.976 -t \
-      "a=00:00:10,b=00:00:11,dur=10;\
-       a=00:01:22,b=00:01:25,dur=20;\
-       a=00:01:25,b=00:02:00,fps=400;\
-       a=00:02:00,b=00:02:05,factor=0.5"
+$ butterflow <video> --playback-rate 59.97 -t full,factor=0.25
 ```
 
-This will create a new video with four regions that will be slowed down. The
-first region `a=00:00:10,b=00:00:11,dur=10` is 1s long and will be stretched out
-to 10s long. The next region `a=00:01:22,b=00:01:25,dur=20` will turn into 20s
-long. The third region `a=00:01:25,b=00:02:00,fps=400` will have 400fps and
-since it's 5s long there will be 2,000 frames in that region being played back
-at 24fps. Finally, the last region `a=00:02:00,b=00:02:05,factor=0.5` will be
-rendered at half speed.
+Now suppose you want to slow-mo particular parts, you can do this:
 
+```
+$ butterflow <video> --playback-rate 24000/1001 --timing-regions \
+a=00:00:10,b=00:00:11,factor=0.5
+```
 
-##Specifying rate and FPS
+You can also chain together multiple regions with a `,` like so:
 
-You can specify rates with fractions so `-r 23.976`, `-r 24000/1001`, and
-`-r 24/1.001` are equivalent.
-
-##Specifying time
-
-The format of time is in `hh:mm:ss.msec`. Leading zeros are required so this
-will work `01:30:15.008` but this *will not* `1:30:15.009`. This will work
-`00:08:23.6` but this *will not* `8:23.6`. You can leave off trailing zeros in
-the millisecond portion so `00:00:26.5` and `00:00:26` would both work.
-
-##Notes
-
-Please contact me by [email](mailto:dthpham@gmail.com) if you need help
-installing or have any other questions.
+```
+a=00:00:10.0,b=00:00:11.0,factor=0.5,\
+a=00:00:15.0,b=00:00:28.0,fps=400
+```
