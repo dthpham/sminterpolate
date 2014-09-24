@@ -60,42 +60,61 @@ For more information on how to satisfy the OpenCL requirements, please read
 
 For a full list of options run ```$ butterflow -h```.
 
-#####Increase a video's frame rate to `120fps`:
+####Increase a video's frame rate to `120fps`:
 
 ```
 $ butterflow <video> --playback-rate 120
 ```
 
-#####Slow-mo a clip with a target frame rate of `400fps`:
+####Slow-mo a clip with a target frame rate of `400fps`:
 
 ```
 $ butterflow <video> --playback-rate 59.94 -t full,fps=400
 ```
 
-#####Slow-mo a clip to `0.25x` quarter speed:
+####Slow-mo a clip to `0.25x` quarter speed:
 
 ```
 $ butterflow <video> --playback-rate 59.94 -t full,factor=0.25
 ```
 
-#####Slow-mo a clip to be `30s` long:
+####Slow-mo a clip to be `30s` long:
 
 ```
 $ butterflow <video> --playback-rate 59.94 -t full,duration=30
 ```
 
-#####Slow-mo a region:
+####Slow-mo a region:
 
 ```
 $ butterflow <video> --playback-rate 24 -t \
 a=00:00:05.0,b=00:00:06.0,factor=0.5
 ```
 
-#####Slow-mo multiple regions:
+####Slow-mo multiple regions:
 
 ```
 $ butterflow <video> --playback-rate 24 -t \
-"a=00:00:05.0,b=00:00:06.0,fps=200,\
-a=00:00:16.0,b=00:00:18.0,fps=400,\
+"a=00:00:05.0,b=00:00:06.0,fps=200;\
+a=00:00:16.0,b=00:00:18.0,fps=400;\
 a=00:00:18.0,b=00:00:20.0,factor=0.5"
+```
+
+##Advanced Options
+
+####Decimate:
+
+If your results have judder you may be working with a video that has duplicate
+frames. To compensate for this use the `--decimate` option:
+
+```
+$ butterflow <video> --playback-rate 60 --decimate
+```
+
+####Video Scale:
+
+To scale the output video to `75%` of its original size:
+
+```
+$ butterflow <video> --playback-rate 24 --video-scale 0.75
 ```
