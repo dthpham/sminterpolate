@@ -7,41 +7,14 @@
 #include "ocl_optical_flow.h"
 #include "conversion.h"
 #include <opencv2/ocl/ocl.hpp>
+#define CL_USE_DEPRECATED_OPENCL_1_1_APIS
+#include <CL/cl.hpp>
+#undef CL_VERSION_1_2
 
 using namespace std;
 using namespace cv;
 using namespace cv::ocl;
 
-
-static int ocl_device_available(int type) {
-  PlatformsInfo platforms;
-  getOpenCLPlatforms(platforms);
-  DevicesInfo devices;
-  int num_dev = getOpenCLDevices(devices, type, NULL);
-
-  if (platforms.size() < 1 || num_dev == 0) {
-    return 0;
-  }
-  return 1;
-}
-
-static int use_ocl_device(int type) {
-  if (!ocl_device_available(type)) {
-    return 0;
-  }
-
-  DevicesInfo devices;
-  int num_dev = getOpenCLDevices(devices, type, NULL);
-
-  for (int i = 0; i < num_dev; i++) {
-    DeviceInfo *dev = (DeviceInfo *)devices[i];
-    if (dev->deviceType == type) {
-      setDevice(dev);
-      return 1;
-    }
-  }
-  return 0;
-}
 
 static PyObject*
 py_ocl_set_cache_path(PyObject *self, PyObject *arg) {
@@ -50,18 +23,24 @@ py_ocl_set_cache_path(PyObject *self, PyObject *arg) {
   return PyBool_FromLong(1);
 }
 
+static int ocl_device_available() {
+  std::vector<cl::Platform> all_platforms;
+  cl::Platform::get(&all_platforms);
+  if(all_platforms.size() == 0){
+    return 0;
+  }
+  cl::Platform default_platform=all_platforms[0];
+  std::vector<cl::Device> all_devices;
+  default_platform.getDevices(CL_DEVICE_TYPE_ALL, &all_devices);
+  if(all_devices.size() == 0){
+    return 0;
+  }
+  return 1;
+}
+
 static PyObject*
 py_ocl_device_available(PyObject *self, PyObject *noargs) {
-  if (ocl_device_available(CVCL_DEVICE_TYPE_GPU)) {
-    return PyBool_FromLong(1);
-  }
-  if (ocl_device_available(CVCL_DEVICE_TYPE_CPU)) {
-    return PyBool_FromLong(1);
-  }
-  if (ocl_device_available(CVCL_DEVICE_TYPE_DEFAULT)) {
-    return PyBool_FromLong(1);
-  }
-  return PyBool_FromLong(0);
+  return PyBool_FromLong(ocl_device_available());
 }
 
 static void mat_vector_fill_pylist(vector<Mat>& mats, PyObject* py_list) {
@@ -171,11 +150,4 @@ static PyMethodDef module_methods[] = {
 PyMODINIT_FUNC
 initpy_motion(void) {
   (void) Py_InitModule("py_motion", module_methods);
-  if (use_ocl_device(CVCL_DEVICE_TYPE_GPU))
-    return;
-  if (use_ocl_device(CVCL_DEVICE_TYPE_CPU))
-    return;
-  if (use_ocl_device(CVCL_DEVICE_TYPE_DEFAULT))
-    return;
-  printf("No ocl device available!\n");
 }

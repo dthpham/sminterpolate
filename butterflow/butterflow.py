@@ -48,26 +48,25 @@ def main():
                    help='Set standard deviation to smooth derivatives')
 
   args = par.parse_args()
-  print(args)
 
   src_path = args.video
   dst_path = args.out_path
   playback_rate = args.playback_rate
   timing_regions = args.timing_regions
 
-  use_ocl = py_motion.py_ocl_device_available()
-  if use_ocl:
+  have_ocl = py_motion.py_ocl_device_available()
+  if have_ocl:
     py_motion.py_ocl_set_cache_path(cache_path+'/')
   else:
-    print('No ocl device is available')
+    print('No OCL device available. Check your OpenCL installation.')
     exit(1)
 
-  farneback_method = Flow.farneback_optical_flow_ocl if use_ocl \
+  farneback_method = Flow.farneback_optical_flow_ocl if have_ocl \
       else Flow.farneback_optical_flow
   flow_method = lambda(x, y): \
       farneback_method(x, y, args.pyr_scale, args.levels, args.winsize,
                        args.iters, args.poly_n, args.poly_s, 0)
-  interpolate_method = Interpolate.interpolate_frames_ocl if use_ocl \
+  interpolate_method = Interpolate.interpolate_frames_ocl if have_ocl \
       else Interpolate.interpolate_frames
 
   project = Project.new(src_path)

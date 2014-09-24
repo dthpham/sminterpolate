@@ -4,7 +4,6 @@ from setuptools import setup, find_packages, Extension, Command
 import subprocess
 import os
 from butterflow.__init__ import __version__ as version
-import getpass
 
 
 b_repos = 'butterflow/repos/'
@@ -73,7 +72,9 @@ class Clean(Command):
       os.system('rm -rf *.clb')
       os.system('rm -rf *.pyc')
       os.system('rm -rf ~/.butterflow')
-      os.system('rm -rf /tmp/butterflow')
+      os.system('rm -rf build')
+      os.system('rm -rf dist')
+      os.system('rm -rf butterflow.egg-info')
       # os.system('rm -rf butterflow/repos')
       will_rem = set()
       will_walk = [
@@ -123,7 +124,8 @@ def have_command(name):
 
 def have_library(name):
   '''check if a library is installed on the system'''
-  proc = subprocess.call(['pkg-config', '--exists', name], env=get_extra_envs())
+  proc = subprocess.call(['pkg-config', '--exists', name],
+                         env=get_extra_envs())
   return (proc == 0)
 
 
@@ -137,11 +139,25 @@ def have_library_object_file(libname, name):
         env=get_extra_envs()).stdout.read()
     res = res.strip()
     res = res.split(' ')
+    lib_short_name = name.replace('lib', '-l')
+    lib_short_name = lib_short_name.replace('.so', '')
     for x in res:
       if not x.startswith('-l'):
         if os.path.basename(x) == name:
           return True
+      else:
+        if x == lib_short_name:
+          return True
     return False
+
+
+def ld_library_exists(name):
+  '''uses ldconfig to see if a library exists'''
+  call = ['ldconfig', '-p']
+  res = subprocess.Popen(call,
+                         stdout=subprocess.PIPE,
+                         universal_newlines=True).stdout.read()
+  return (name in res)
 
 
 def git_init_submodules():
@@ -173,27 +189,27 @@ def pkg_config_res(*opts):
   '''takes opts for a pkg-config command and returns a list of strings
   without lib prefixes and .so suffixes
   '''
-  c = ['pkg-config']
-  c.extend(opts)
-  res = subprocess.Popen(c, stdout=subprocess.PIPE, env=get_extra_envs()).stdout.read()
+  call = ['pkg-config']
+  call.extend(opts)
+  res = subprocess.Popen(call,
+                         stdout=subprocess.PIPE,
+                         env=get_extra_envs()).stdout.read()
   res = res.strip()
-  res = res.split('-')
+  res = res.split(' ')
   lst = []
   for x in res:
-    if x != '':
-      x = x.strip()
-      if len(x.split(' ')) > 1:
-        sep = x.split(' ')
-        for y in sep:
-          lib_name_ext = os.path.basename(y)
-          lib_name, _ = os.path.splitext(lib_name_ext)
-          lib_name = lib_name[3:] if lib_name.startswith('lib') else lib_name
-          lst.append(lib_name)
-        continue
-      elif x[0] in 'lLI':
-        lst.append(x[1:])
-      else:
-        lst.append(x)
+    if x == '':
+      continue
+    x = x.strip()
+    if x[0] == '-':
+      x = x[1:]
+    if x[0] in 'lLI':
+      lst.append(x[1:])
+    else:
+      x = os.path.basename(x)
+      x = x.replace('lib', '')
+      x = x.replace('.so', '')
+      lst.append(x)
   return lst
 
 
@@ -212,6 +228,7 @@ def build_lst(*lsts):
 def check_dependencies():
   '''verifies if all dependencies have been met'''
   for x in ['pkg-config',
+            'ldconfig',
             'git',
             'ffmpeg']:
     if not have_command(x):
@@ -230,17 +247,21 @@ def check_dependencies():
                ('opencv', 'libopencv_imgproc.so')]:
     if not have_library_object_file(x, y):
       return False, '{} library is missing object file {}'.format(x, y)
-
+  for x in ['libOpenCL.so']:
+    if not ld_library_exists(x):
+      return False, 'x is needed to complete the build process'.\
+          format(x)
   try:
-    if getpass.getuser() == 'root':
-      import sys
-      local_site_pkgs = \
-          '/usr/local/lib/python2.7/site-packages'
-      sys.path.insert(1, local_site_pkgs)
+    import sys
+    local_site_pkgs = \
+        '/usr/local/lib/python2.7/site-packages'
+    systm_site_pkgs = \
+        '/usr/lib/python2.7/site-packages'
+    sys.path.insert(1, local_site_pkgs)
+    sys.path.insert(2, systm_site_pkgs)
     import cv2
   except ImportError:
     return False, 'opencv built with BUILD_opencv_python=ON required'
-
   return True, None
 
 
@@ -271,13 +292,14 @@ py_libav_info = Extension(
 cflags = ['-g', '-Wall', '-std=c++11']
 cv_includes = pkg_config_res('--cflags', 'opencv')
 cv_libs = pkg_config_res('--libs', 'opencv')
+cl_libs = ['OpenCL']
 
 py_motion = Extension(
     'butterflow.motion.py_motion',
     extra_compile_args=cflags,
     extra_link_args=linkflags,
     include_dirs=build_lst(b_motion, includes, cv_includes, py_includes),
-    libraries=build_lst(cv_libs, py_libs),
+    libraries=build_lst(cv_libs, py_libs, cl_libs),
     library_dirs=ldflags,
     sources=[
         b_motion+'conversion.cpp',
@@ -305,9 +327,6 @@ git_init_submodules()
 setup(
     name='butterflow',
     packages=find_packages(exclude=['repos']),
-    install_requires=[
-        'numpy'
-    ],
     ext_modules=[py_libav_info, py_motion],
     version=version,
     author='Duong Pham',
