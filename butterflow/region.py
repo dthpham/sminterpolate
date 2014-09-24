@@ -93,33 +93,25 @@ class VideoSubRegion(object):
     '''returns if regions intersect each other, that is if either ends
     fall within each others ranges.
     '''
-    if self == other:
-      return True
-    if self.time_a > other.time_a and self.time_a < other.time_b:
-      return True
-    if self.time_b > other.time_a and self.time_b < other.time_b:
-      return True
-    if self.frame_a > other.frame_a and self.frame_a < other.frame_a:
-      return True
-    if self.frame_b > other.frame_a and self.frame_b < other.frame_b:
+    if (self is other or
+       (self.time_a == other.time_a and self.time_b == other.time_b) or
+       (self.time_a > other.time_a and self.time_a < other.time_b) or
+       (self.time_b > other.time_a and self.time_b < other.time_b) or
+       (self.frame_a > other.frame_a and self.frame_a < other.frame_a) or
+       (self.frame_b > other.frame_a and self.frame_b < other.frame_b)):
       return True
     return False
 
   def __lt__(self, other):
     return self.time_a < other.time_a and self.time_b <= other.time_a
-
   def __gt__(self, other):
     return self.time_a >= other.time_b and self.time_b > other.time_b
-
   def __eq__(self, other):
     return self.time_a == other.time_a and self.time_b == other.time_b
-
   def __le__(self, other):
     return NotImplemented
-
   def __ge__(self, other):
     return NotImplemented
-
   def __ne__(self, other):
       return self.time_a != other.time_a and self.time_b != other.time_b
 
