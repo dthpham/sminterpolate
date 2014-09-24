@@ -9,6 +9,24 @@ class VideoRegionUtilsTestCase(unittest.TestCase):
 
   def test_time_string_to_ms(self):
     f = VideoRegionUtils.time_string_to_ms
+    self.assertEqual(f('.001'),1)
+    self.assertEqual(f('.010'),10)
+    self.assertEqual(f('.100'),100)
+    self.assertEqual(f('1.1'),1.1*1000)
+    self.assertEqual(f('1.01'),1.01*1000)
+    self.assertEqual(f('1.001'),1.001*1000)
+    self.assertEqual(f('1'),1*1000)
+    self.assertEqual(f('01'),1*1000)
+    self.assertEqual(f('30'),30*1000)
+    self.assertEqual(f('90'),90*1000)
+    self.assertEqual(f('100'),100*1000)
+    self.assertEqual(f('1:00'),1*60*1000)
+    self.assertEqual(f('01:00'),1*60*1000)
+    self.assertEqual(f('00:34'),34*1000)
+    self.assertEqual(f('12:34'),(12*60+34)*1000)
+    self.assertEqual(f('123:45'),(123*60+45)*1000)
+    self.assertEqual(f('1:23:45'),(1*3600+23*60+45)*1000)
+    self.assertEqual(f('0:23:45'),(0*3600+23*60+45)*1000)
     self.assertEqual(f('00:00:00.001'),1)
     self.assertEqual(f('00:00:00.100'),100)
     self.assertEqual(f('00:17:33.090'),(0*3600+17*60+33.09)*1000)
@@ -18,13 +36,11 @@ class VideoRegionUtilsTestCase(unittest.TestCase):
   def test_time_string_to_ms_fails(self):
     f = VideoRegionUtils.time_string_to_ms
     with self.assertRaises(ValueError):
-      f('333:22:22.333')
+      f('')
     with self.assertRaises(ValueError):
-      f('22:333:22.333')
+      f('00:00:0:00.00a')
     with self.assertRaises(ValueError):
-      f('22:22:333.333')
-    with self.assertRaises(ValueError):
-      f('22:22:22.4444')
+      f('00:00:00:00.000')
 
 class SubRegionTestCase(unittest.TestCase):
   def test_creation(self):

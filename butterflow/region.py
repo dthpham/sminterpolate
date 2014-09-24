@@ -28,25 +28,30 @@ class VideoRegionUtils(object):
 
   @staticmethod
   def time_string_to_ms(time):
-    value_error = ValueError('invalid region string: {}'.format(time))
-
-    time_match = re.match(
-        r'^([\d]{2}):([\d]{2}):([\d]{2})(\.[\d]{0,3})$', time)
-    if time_match is None:
+    '''valid time syntax:
+    [hrs:mins:secs.xxx] OR [mins:secs.xxx] OR [secs.xxx]
+    '''
+    value_error = ValueError('invalid time syntax: {}'.format(time))
+    h, m, s = 0, 0, 0
+    valid_char_set = '0123456789:.'
+    if time == '':
       raise value_error
-
-    matches = time_match.groups()
-    if len(matches) is not 4:
+    if time.count(':') > 2:
       raise value_error
-    for m in matches:
-      if m is None:
+    for c in time:
+      if c not in valid_char_set:
         raise value_error
-
-    h = float(matches[0])
-    m = float(matches[1])
-    s = float(matches[2])
-    ms = float(matches[3])
-    return ((h * 60 * 60) + (m * 60) + s + ms) * 1000
+    v = time.split(':')
+    if len(v) >= 1:
+      if v[-1] != '':
+        s = v[-1]
+    if len(v) >= 2:
+      if v[-2] != '':
+        m = v[-2]
+    if len(v) == 3:
+      if v[-3] != '':
+        h = v[-3]
+    return (float(h) * 3600 + float(m) * 60 + float(s)) * 1000.0
 
 
 class VideoSubRegion(object):
