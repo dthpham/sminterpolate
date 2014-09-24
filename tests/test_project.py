@@ -29,7 +29,7 @@ class ProjectTestCase(unittest.TestCase):
     p.set_timing_regions_with_string(
         'a=00:00:00.5,b=00:00:01.2,fps=48;'
         'a=00:00:02.3,b=00:00:03.3,fps=24000/1001;'
-        'a=00:00:03.3,b=00:00:04.999,dur=5')
+        'a=00:00:03.3,b=00:00:04.999,duration=5')
     self.assertEquals(len(p.timing_regions),3)
     p = Project(self.test_vid)
     p.set_timing_regions_with_string('a=00:00:01.5,b=00:00:04.9,fps=48')
@@ -39,7 +39,7 @@ class ProjectTestCase(unittest.TestCase):
     p = Project(self.test_vid)
     p.set_timing_regions_with_string('full,fps=48')
     self.assertEquals(len(p.timing_regions),1)
-    p.set_timing_regions_with_string('full,dur=5')
+    p.set_timing_regions_with_string('full,duration=5')
     self.assertEquals(len(p.timing_regions),1)
     with self.assertRaises(ValueError):
       p.set_timing_regions_with_string(

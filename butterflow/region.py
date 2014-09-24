@@ -151,7 +151,7 @@ class RenderingSubRegion(VideoSubRegion):
     '''returns a sub region given a formatted string
     the two formats:
     a=[time],b=[time],fps=[num/den]
-    a=[time],b=[time],dur=[duration in seconds]
+    a=[time],b=[time],duration=[duration in seconds]
     where time should be in the form hh:mm:ss.xxx
     '''
     v = string.split(',')
@@ -173,7 +173,7 @@ class RenderingSubRegion(VideoSubRegion):
         fps = Fraction(int(frac[0]), int(frac[1]))
       else:
         fps = float(val)
-    elif tgt == 'dur':
+    elif tgt == 'duration':
       duration = float(val) * 1000
     elif tgt == 'factor':
       factor = float(val)

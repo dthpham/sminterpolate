@@ -160,7 +160,7 @@ class RenderingSubRegionTestCase(unittest.TestCase):
 
   def test_create_from_string_duration(self):
     r = RenderingSubRegion.from_string(
-        'a=01:20:31.59,b=01:21:34.0,dur=3')
+        'a=01:20:31.59,b=01:21:34.0,duration=3')
     self.assertIsInstance(r, RenderingSubRegion)
     self.assertEqual(r.time_a,(1*3600+20*60+31.59)*1000)
     self.assertEqual(r.time_b,(1*3600+21*60+34.0)*1000)
@@ -176,7 +176,7 @@ class RenderingSubRegionTestCase(unittest.TestCase):
 
   def test_sync_frame_points_with_fps(self):
     r = RenderingSubRegion.from_string(
-        'a=00:00:01.0,b=00:00:02.0,dur=3')
+        'a=00:00:01.0,b=00:00:02.0,duration=3')
     r.sync_frame_points_with_fps(0)
     self.assertEqual(r.frame_a, 0)
     self.assertEqual(r.frame_b, 0)
@@ -198,7 +198,7 @@ class RenderingSubRegionTestCase(unittest.TestCase):
 
   def test_sync_relative_pos_to_frames(self):
     r = RenderingSubRegion.from_string(
-        'a=00:00:01.0,b=00:00:02.0,dur=3')
+        'a=00:00:01.0,b=00:00:02.0,duration=3')
     r.sync_frame_points_with_fps(1.5)
     with self.assertRaises(ValueError):
       r.sync_relative_pos_to_frames(0)
@@ -213,7 +213,7 @@ class RenderingSubRegionTestCase(unittest.TestCase):
 
   def test_sync_relative_pos_to_duration(self):
     r = RenderingSubRegion.from_string(
-        'a=00:00:01.0,b=00:00:02.0,dur=3')
+        'a=00:00:01.0,b=00:00:02.0,duration=3')
     r.sync_frame_points_with_fps(29.976)
     with self.assertRaises(ValueError):
       r.sync_relative_pos_to_duration(0)

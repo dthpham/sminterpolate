@@ -41,7 +41,7 @@ class Project(object):
     '''a convienance function that sets the timing regions given a
     string with multiple subregions separated by a semicolon `;` char.
     example with two sub regions:
-    a=[time],b=[time],fps=[rate];a=[time],b=[time],dur=[rate]
+    a=[time],b=[time],fps=[rate];a=[time],b=[time],duration=[rate]
     '''
     self.timing_regions = None
     sub_regions = region_string.split(';')
@@ -60,7 +60,7 @@ class Project(object):
             sr.target_rate = Fraction(int(frac[0]), int(frac[1]))
           else:
             sr.target_rate = float(val)
-        elif tgt == 'dur':
+        elif tgt == 'duration':
           sr.target_duration = float(val) * 1000
         elif tgt == 'factor':
           sr.target_factor = float(val)

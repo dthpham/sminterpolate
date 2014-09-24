@@ -11,7 +11,7 @@ given two existing frames `A` and `B`, this program can generate frames `C.1`,
 [motion interpolation](http://en.wikipedia.org/wiki/Motion_interpolation),
 increases frame rates and can give the perception of smoother motion and more
 fluid animation, an effect most people know as the "soap opera effect". This
-process allows *Butterflow* to take advantage of the increase in frame rates to
+process allows *Butterflow* to take advantage of the increase in frame rate to
 generate high fps videos that are needed to make slow motion videos with minimal
 judder.
 
@@ -81,7 +81,7 @@ $ butterflow <video> --playback-rate 59.94 -t full,factor=0.25
 #####Slow-mo a clip to be `30s` long:
 
 ```
-$ butterflow <video> --playback-rate 59.94 -t full,dur=30
+$ butterflow <video> --playback-rate 59.94 -t full,duration=30
 ```
 
 #####Slow-mo a region:
