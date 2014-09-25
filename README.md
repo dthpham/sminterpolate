@@ -17,20 +17,17 @@ judder.
 
 #####See it for yourself:
 
-* [Video (12fps)](https://dl.dropboxusercontent.com/u/103239050/gel12-scaled.mp4)
-* [Video frame rate increased with butterflow (96fps)](https://dl.dropboxusercontent.com/u/103239050/gel96-scaled.mp4)
 * [Video at 30fps slowed down with butterflow (210fps)](https://dl.dropboxusercontent.com/u/103239050/side.mp4)
 
 ##Installation
 
-#####With pip:
+####With pip:
 
 ```$ pip install butterflow```
 
-#####From source:
+####From source:
 
-Clone this repository or download a source package
-[here](https://github.com/dthpham/butterflow/tarball/0.1.2).
+Clone this repository or download a [source package](https://github.com/dthpham/butterflow/releases).
 
 `$ python setup.py install` to install.
 
@@ -38,20 +35,29 @@ Clone this repository or download a source package
 
 ##Dependencies
 
-* [`git`](http://git-scm.com)
-* [`numpy`](http://www.numpy.org/)
+####You need these to build:
+
+* [`python2`]()
+* [`python2-numpy`](http://www.numpy.org/)
+* [`gcc`]()
+* [`git`]()
+* [`pkg-config`]()
 * [`ffmpeg`](https://github.com/FFmpeg/FFmpeg), with any codecs you may need
 * [`opencv-2.4.9`](http://opencv.org/), built with `BUILD_opencv_python=ON`,
 `WITH_OPENCL=ON`, and `WITH_FFMPEG=ON`
+* [`libcl`](https://www.archlinux.org/packages/extra/x86_64/libcl/), or
+an equivalent library that provides `libopencl.so`
 
-Plus at least one vendor-specific implementation of OpenCL that matches your
+####You need one to run:
+
+At least one vendor-specific implementation of OpenCL that matches your
 hardware:
 
 * [`opencl-nvidia`](https://developer.nvidia.com/opencl)
 * [`intel-opencl-runtime`](https://software.intel.com/en-us/intel-opencl)
 * [`amdapp-sdk`](http://developer.amd.com/tools-and-sdks/opencl-zone/)
-* [`opencl-catalyst`]()
 * [`opencl-mesa`](http://www.x.org/wiki/GalliumStatus/)
+* [`beignet`](http://cgit.freedesktop.org/beignet/)
 
 For more information on how to satisfy the OpenCL requirements, please read
 [this page](https://wiki.archlinux.org/index.php/Opencl).
@@ -100,12 +106,12 @@ a=00:00:16.0,b=00:00:18.0,fps=400;\
 a=00:00:18.0,b=00:00:20.0,factor=0.5"
 ```
 
-##Advanced Options
+##Filters
 
 ####Decimate:
 
-If your results have judder you may be working with a video that has duplicate
-frames. To compensate for this use the `--decimate` option:
+Videos may have some judder if your source has duplicate frames. To compensate
+for this, use the `--decimate` option:
 
 ```
 $ butterflow <video> --playback-rate 60 --decimate
