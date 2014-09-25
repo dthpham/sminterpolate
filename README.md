@@ -21,40 +21,39 @@ judder.
 
 ##Installation
 
-####With pip:
+####On Arch Linux:
 
-```$ pip install butterflow```
+A package is available in the AUR under [butterflow](https://aur.archlinux.org/packages/butterflow/).
 
 ####From source:
 
-Clone this repository or download a [source package](https://github.com/dthpham/butterflow/releases).
+1. Clone this repository or download a [source package](https://github.com/dthpham/butterflow/releases).
+2. Satisfy all the dependencies.
+3. `$ python2 setup.py install` to install.
+4. `$ python2 setup.py test` to run tests.
 
-`$ python setup.py install` to install.
+####With pip:
 
-`$ python setup.py test` to run tests.
+1. Satisfy all the dependencies.
+2. `$ pip2 install butterflow` to install.
 
 ##Dependencies
 
-####You need these to build:
-
-* [`python2`]()
-* [`python2-numpy`](http://www.numpy.org/)
-* [`gcc`]()
 * [`git`]()
+* [`gcc`]()
 * [`pkg-config`]()
+* [`python2-numpy`](http://www.numpy.org/)
 * [`ffmpeg`](https://github.com/FFmpeg/FFmpeg), with any codecs you may need
 * [`opencv-2.4.9`](http://opencv.org/), built with `BUILD_opencv_python=ON`,
 `WITH_OPENCL=ON`, and `WITH_FFMPEG=ON`
 * [`libcl`](https://www.archlinux.org/packages/extra/x86_64/libcl/), or
 an equivalent library that provides `libopencl.so`
 
-####You need one to run:
-
-At least one vendor-specific implementation of OpenCL that matches your
+Plus **at least one** vendor-specific implementation of OpenCL that matches your
 hardware:
 
 * [`opencl-nvidia`](https://developer.nvidia.com/opencl)
-* [`intel-opencl-runtime`](https://software.intel.com/en-us/intel-opencl)
+* [`intel-opencl-sdk`](https://software.intel.com/en-us/intel-opencl)
 * [`amdapp-sdk`](http://developer.amd.com/tools-and-sdks/opencl-zone/)
 * [`opencl-mesa`](http://www.x.org/wiki/GalliumStatus/)
 * [`beignet`](http://cgit.freedesktop.org/beignet/)
