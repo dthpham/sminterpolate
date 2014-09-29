@@ -17,46 +17,68 @@ judder.
 
 #####See it for yourself:
 
-* [Video at 30fps slowed down with butterflow (210fps)](https://dl.dropboxusercontent.com/u/103239050/side.mp4)
+* [Video @30fps slowed down with butterflow (210fps)](https://dl.dropboxusercontent.com/u/103239050/side.mp4)
+* [Video @12fps frame rate increased with butterflow (96fps)](https://dl.dropboxusercontent.com/u/103239050/gel.mp4)
 
 ##Installation
 
-####On Arch Linux:
+###On Arch Linux:
 
 A package is available in the AUR under [butterflow](https://aur.archlinux.org/packages/butterflow/).
 
-####From source:
 
-1. Clone this repository or download a [source package](https://github.com/dthpham/butterflow/releases).
-2. Satisfy all the dependencies.
-3. `$ python2 setup.py install` to install.
-4. `$ python2 setup.py test` to run tests.
+###With pip:
 
-####With pip:
+1. Satisfy all the dependencies
+2. `$ pip2 install butterflow`
 
-1. Satisfy all the dependencies.
-2. `$ pip2 install butterflow` to install.
+
+###From Source:
+
+1. Satisfy all the dependencies
+2. Clone this repository or download a [source package](https://github.com/dthpham/butterflow/releases).
+3. `$ python2 setup.py init`
+4. `$ python2 setup.py install`
+5. `$ python2 setup.py test`, to test
+
 
 ##Dependencies
 
 * [`git`]()
-* [`gcc`]()
+* [`build-essential`]()
 * [`pkg-config`]()
-* [`python2-numpy`](http://www.numpy.org/)
-* [`ffmpeg`](https://github.com/FFmpeg/FFmpeg), with any codecs you may need
-* [`opencv-2.4.9`](http://opencv.org/), built with `BUILD_opencv_python=ON`,
-`WITH_OPENCL=ON`, and `WITH_FFMPEG=ON`
-* [`libcl`](https://www.archlinux.org/packages/extra/x86_64/libcl/), or
-an equivalent library that provides `libopencl.so`
+* [`ffmpeg`](https://github.com/FFmpeg/FFmpeg)
+* [`python-dev`]()
+* [`python-setuptools`]()
+* [`python-numpy`](http://www.numpy.org/)
+* [`python-opencv`]()
+* [`opencl-headers`]()
+* [`libopencv-dev (>=2.4.8)`]()
+* [`libopencv-ocl-dev`]()
+* [`ocl-icd-opencl-dev`]()
 
-Plus **at least one** vendor-specific implementation of OpenCL that matches your
-hardware:
+##Setup
+
+After installing the package, you still need to install ***at least one***
+vendor-specific implementation of OpenCL that matches your hardware:
+
+#####On Ubuntu, Debian
+
+* [`nvidia-libopencl1-304-updates`]()
+* [`nvidia-libopencl1-331-updates`]()
+* [`beignet`]()
+* [`ocl-icd-libopencl1`]()
+
+#####On Arch Linux:
 
 * [`opencl-nvidia`](https://developer.nvidia.com/opencl)
+* [`opencl-nvidia-304xx`]()
 * [`intel-opencl-sdk`](https://software.intel.com/en-us/intel-opencl)
+* [`intel-opencl-runtime`]()
 * [`amdapp-sdk`](http://developer.amd.com/tools-and-sdks/opencl-zone/)
 * [`opencl-mesa`](http://www.x.org/wiki/GalliumStatus/)
 * [`beignet`](http://cgit.freedesktop.org/beignet/)
+
 
 For more information on how to satisfy the OpenCL requirements, please read
 [this page](https://wiki.archlinux.org/index.php/Opencl).

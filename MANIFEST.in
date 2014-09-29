@@ -1,9 +1,7 @@
 recursive-include butterflow *.h
-prune butterflow/repos
+recursive-exclude tests *
 include README.md
 include LICENSE
-include tests
-include tests/samples/*
 exclude *.clb
 exclude .gitignore
 exclude .gitmodules

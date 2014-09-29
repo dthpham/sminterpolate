@@ -13,7 +13,7 @@ lib
 include
 
 #links
-conversion.*
+butterflow/motion/conversion.*
 
 #setuptools
 build
@@ -21,4 +21,4 @@ dist
 *.egg-info
 
 #submodules
-butterflow/repos
+repos/opencv-ndarray-conversion
