@@ -1,4 +1,3 @@
 [submodule "repos/opencv-ndarray-conversion"]
 	path = repos/opencv-ndarray-conversion
 	url = https://github.com/dthpham/opencv-ndarray-conversion.git
-	branch = 2.4-latest

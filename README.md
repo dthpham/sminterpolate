@@ -12,37 +12,46 @@ given two existing frames `A` and `B`, this program can generate frames `C.1`,
 increases frame rates and can give the perception of smoother motion and more
 fluid animation, an effect most people know as the "soap opera effect". This
 process allows *Butterflow* to take advantage of the increase in frame rate to
-generate high fps videos that are needed to make slow motion videos with minimal
-judder.
+generate high fps videos that are needed to make smooth and slow motion videos
+with minimal judder.
 
 #####See it for yourself:
 
-* [Video @30fps slowed down with butterflow (210fps)](https://dl.dropboxusercontent.com/u/103239050/side.mp4)
-* [Video @12fps frame rate increased with butterflow (96fps)](https://dl.dropboxusercontent.com/u/103239050/gel.mp4)
+* [Video @30fps slowed down with butterflow (210fps)](https://dl.dropboxusercontent.com/u/103239050/INK-SIDE.mp4)
+* [Video @12fps frame rate increased with butterflow (96fps)](https://dl.dropboxusercontent.com/u/103239050/GEL-SIDE.mp4)
 
 ##Installation
 
-###On Arch Linux:
+####On Ubuntu, Debian:
+
+1. `$ apt-add-repository ppa:dthpham/butterflow`
+2. `$ apt-add-repository ppa:jon-severinsson/ffmpeg`
+3. `$ apt-get update`
+4. `$ apt-get install butterflow ffmpeg`
+
+####On Arch Linux:
 
 A package is available in the AUR under [butterflow](https://aur.archlinux.org/packages/butterflow/).
 
-
-###With pip:
+####With pip:
 
 1. Satisfy all the dependencies
 2. `$ pip2 install butterflow`
 
-
-###From Source:
+####From Source:
 
 1. Satisfy all the dependencies
 2. Clone this repository or download a [source package](https://github.com/dthpham/butterflow/releases).
 3. `$ python2 setup.py init`
 4. `$ python2 setup.py install`
-5. `$ python2 setup.py test`, to test
+5. `$ python2 setup.py test`
 
 
 ##Dependencies
+
+Installing these aren't necessary if you installed using a package.
+
+####On Ubuntu, Debian:
 
 * [`git`]()
 * [`build-essential`]()
@@ -56,20 +65,28 @@ A package is available in the AUR under [butterflow](https://aur.archlinux.org/p
 * [`libopencv-dev (>=2.4.8)`]()
 * [`libopencv-ocl-dev`]()
 * [`ocl-icd-opencl-dev`]()
+* [`mesa-common-dev`]()
+
+####On Arch Linux:
+
+* [`python2-numpy`]()
+* [`ffmpeg (>=2.4.1)`]()
+* [`opencv (>=2.4.9)`]()
+* [`libcl`]()
 
 ##Setup
 
 After installing the package, you still need to install ***at least one***
 vendor-specific implementation of OpenCL that matches your hardware:
 
-#####On Ubuntu, Debian
+####On Ubuntu, Debian:
 
 * [`nvidia-libopencl1-304-updates`]()
 * [`nvidia-libopencl1-331-updates`]()
 * [`beignet`]()
 * [`ocl-icd-libopencl1`]()
 
-#####On Arch Linux:
+####On Arch Linux:
 
 * [`opencl-nvidia`](https://developer.nvidia.com/opencl)
 * [`opencl-nvidia-304xx`]()

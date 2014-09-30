@@ -19,6 +19,3 @@ butterflow/motion/conversion.*
 build
 dist
 *.egg-info
-
-#submodules
-repos/opencv-ndarray-conversion

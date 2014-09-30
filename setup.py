@@ -117,9 +117,7 @@ def get_long_description():
       matches = matcher.match(x)
       if matches:
         txt, link = matches.groups()
-        new_txt = txt
-        if link:
-          new_txt = '`{} <{}>`__'.format(txt, link)
+        new_txt = '``{}``'.format(txt)
         x = new_txt
       new_description.append(x)
 

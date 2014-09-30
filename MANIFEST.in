@@ -1,5 +1,6 @@
 recursive-include butterflow *.h
 recursive-exclude tests *
+recursive-exclude repos *
 include README.md
 include LICENSE
 exclude *.clb
