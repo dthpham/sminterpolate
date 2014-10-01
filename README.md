@@ -10,10 +10,10 @@ given two existing frames `A` and `B`, this program can generate frames `C.1`,
 `C.2`...`C.n` that are positioned between the two. This process, called
 [motion interpolation](http://en.wikipedia.org/wiki/Motion_interpolation),
 increases frame rates and can give the perception of smoother motion and more
-fluid animation, an effect most people know as the "soap opera effect". This
-process allows *Butterflow* to take advantage of the increase in frame rate to
-generate high fps videos that are needed to make smooth and slow motion videos
-with minimal judder.
+fluid animation, an effect most people know as the "soap opera effect".
+Butterflow takes advantage of this increase in frame rates to generate high fps
+videos that are needed to make smooth and slow motion videos with minimal
+judder.
 
 #####See it for yourself:
 
@@ -22,12 +22,17 @@ with minimal judder.
 
 ##Installation
 
-####On Ubuntu, Debian:
+####On Ubuntu:
 
 1. `$ apt-add-repository ppa:dthpham/butterflow`
-2. `$ apt-add-repository ppa:jon-severinsson/ffmpeg`
-3. `$ apt-get update`
-4. `$ apt-get install butterflow ffmpeg`
+2. `$ apt-get update`
+3. `$ apt-get install butterflow`
+
+If you need [`ffmpeg`]():
+
+1. `$ apt-add-repository ppa:jon-severinsson/ffmpeg`
+2. `$ apt-get update`
+3. `$ apt-get install ffmpeg`
 
 ####On Arch Linux:
 
@@ -43,9 +48,9 @@ A package is available in the AUR under [butterflow](https://aur.archlinux.org/p
 1. Satisfy all the dependencies
 2. Clone this repository or download a [source package](https://github.com/dthpham/butterflow/releases).
 3. `$ python2 setup.py init`
-4. `$ python2 setup.py install`
+4. `$ python2 setup.py develop`
 5. `$ python2 setup.py test`
-
+6. `$ python2 setup.py install`
 
 ##Dependencies
 
@@ -56,35 +61,43 @@ Installing these aren't necessary if you installed using a package.
 * [`git`]()
 * [`build-essential`]()
 * [`pkg-config`]()
-* [`ffmpeg`](https://github.com/FFmpeg/FFmpeg)
+* [`ffmpeg`]()
 * [`python-dev`]()
 * [`python-setuptools`]()
-* [`python-numpy`](http://www.numpy.org/)
+* [`python-numpy`]()
 * [`python-opencv`]()
 * [`opencl-headers`]()
 * [`libopencv-dev (>=2.4.8)`]()
 * [`libopencv-ocl-dev`]()
-* [`ocl-icd-opencl-dev`]()
 * [`mesa-common-dev`]()
+* [`ocl-icd-libopencl1`]()
 
 ####On Arch Linux:
 
-* [`python2-numpy`]()
+* [`git`]()
+* [`libcl`]()
 * [`ffmpeg (>=2.4.1)`]()
 * [`opencv (>=2.4.9)`]()
-* [`libcl`]()
+* [`python2-numpy`]()
 
 ##Setup
 
 After installing the package, you still need to install ***at least one***
 vendor-specific implementation of OpenCL that matches your hardware:
 
-####On Ubuntu, Debian:
+####On Ubuntu:
 
-* [`nvidia-libopencl1-304-updates`]()
-* [`nvidia-libopencl1-331-updates`]()
+* [`nvidia-opencl-icd-304-updates`]()
+* [`nvidia-opencl-icd-331-updates`]()
 * [`beignet`]()
-* [`ocl-icd-libopencl1`]()
+
+####On Debian:
+
+* [`nvidia-opencl-icd`]()
+* [`amd-opencl-icd`]()
+* [`amd-opencl-icd-legacy`]()
+* [`mesa-opencl-icd`]()
+* [`beignet`]()
 
 ####On Arch Linux:
 
@@ -96,8 +109,8 @@ vendor-specific implementation of OpenCL that matches your hardware:
 * [`opencl-mesa`](http://www.x.org/wiki/GalliumStatus/)
 * [`beignet`](http://cgit.freedesktop.org/beignet/)
 
-
 For more information on how to satisfy the OpenCL requirements, please read
+[this page](http://wiki.tiker.net/OpenCLHowTo). If you're on Arch Linux, see
 [this page](https://wiki.archlinux.org/index.php/Opencl).
 
 ##Usage

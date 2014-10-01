@@ -245,8 +245,7 @@ def check_dependencies():
   for x in ['opencv',
             'libavformat',
             'libavcodec',
-            'libavutil',
-            'python2']:
+            'libavutil']:
     if not have_library(x):
       return False, '{} library is needed to complete the build process'.\
           format(x)
@@ -283,8 +282,8 @@ cflags = ['-g', '-Wall']
 linkflags = ['-shared', '-Wl,--export-dynamic']
 includes = ['/usr/include', '/usr/local/include']
 ldflags = ['/usr/lib', '/usr/local/lib']
-py_includes = pkg_config_res('--cflags', 'python2')
-py_libs = pkg_config_res('--libs', 'python2')
+py_includes = pkg_config_res('--cflags', 'python-2.7')
+py_libs = pkg_config_res('--libs', 'python-2.7')
 libav_libs = ['avcodec', 'avformat']
 
 py_libav_info = Extension(
