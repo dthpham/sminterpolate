@@ -224,15 +224,14 @@ def pkg_config_res(*opts):
   return lst
 
 
-def build_lst(*lsts):
-  '''collects multiple irems and lists into a single list'''
+def build_lst(*items):
+  '''collects multiple string and lists items into a single list'''
   lst = []
-  for l in lsts:
-    if not isinstance(l, list):
-      for x in l:
-        lst.append(x)
-    else:
-      lst.extend(l)
+  for i in items:
+    if isinstance(i, str):
+      lst.append(i)
+    if isinstance(i, list):
+      lst.extend(i)
   return lst
 
 
