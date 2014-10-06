@@ -7,6 +7,7 @@ import os
 import re
 import shutil
 from butterflow.__init__ import __version__ as version
+from ctypes.util import find_library
 
 F_NULL = open(os.devnull, 'w')
 
@@ -27,6 +28,10 @@ class ProjectInit(Command):
     self.repo_path = os.path.join(self.root_path, 'repos')
 
   def run(self):
+    if not have_command('git'):
+      print('Must have git installed to run init')
+      return
+
     os.chdir(self.root_path)
     if not os.path.exists(self.repo_path):
       os.makedirs(self.repo_path)
@@ -154,10 +159,17 @@ def have_command(name):
 
 
 def have_library(name):
-  '''check if a library is installed on the system'''
-  proc = subprocess.call(['pkg-config', '--exists', name],
-                         env=get_extra_envs())
-  return (proc == 0)
+  '''check if a library is installed on the system using
+  ctypes.util.find_library, fallback to pkg-config if not found.
+  find_library will run external programs (ldconfig, gcc, and objdump)
+  to find library files'''
+  short_name = get_lib_short_name(name)
+  res = find_library(short_name)
+  if not res:
+    proc = subprocess.call(['pkg-config', '--exists', name],
+                           env=get_extra_envs())
+    return (proc == 0)
+  return True
 
 
 def have_library_object_file(libname, name):
@@ -170,33 +182,13 @@ def have_library_object_file(libname, name):
         env=get_extra_envs()).stdout.read()
     res = res.strip()
     res = res.split(' ')
-    short_name = name
-    if short_name.startswith('lib'):
-      short_name = '-l{}'.format(name[3:])
-    if short_name.endswith('.so'):
-      short_name = short_name[:-3]
-    for x in res:
-      if not x.startswith('-l'):
-        if os.path.basename(x) == name:
-          return True
-      else:
-        if x == short_name:
-          return True
-    return False
-
-
-def ld_library_exists(name):
-  '''uses ldconfig to see if a library exists'''
-  call = ['ldconfig', '-p']
-  res = subprocess.Popen(call,
-                         stdout=subprocess.PIPE,
-                         universal_newlines=True).stdout.read()
-  return (name in res)
+    res = map(get_lib_short_name, res)
+    return get_lib_short_name(name) in res
 
 
 def pkg_config_res(*opts):
   '''takes opts for a pkg-config command and returns a list of strings
-  without lib prefixes and .so suffixes
+  that are compatible with setuptools
   '''
   call = ['pkg-config']
   call.extend(opts)
@@ -215,24 +207,65 @@ def pkg_config_res(*opts):
     if x[0] in 'lLI':
       lst.append(x[1:])
     else:
-      x = os.path.basename(x)
-      if x.startswith('lib'):
-        x = x[3:]
-      if x.endswith('.so'):
-        x = x[:-3]
-      lst.append(x)
+      lst.append(get_lib_short_name(x))
   return lst
+
+
+def get_lib_installed_path(libname):
+  '''use ldconfig to find the full installation path of a library'''
+  call = ['ldconfig', '-p']
+  res = subprocess.Popen(call,
+                         stdout=subprocess.PIPE,
+                         universal_newlines=True).stdout.read()
+  if libname not in res:
+    return None
+  res = res.split('\n\t')
+  for x in res:
+    if x.startswith(libname):
+      y = x.split('=>')
+      return y[1].strip()
+  return None
+
+
+def get_lib_filename_namespec(libname):
+  '''returns library's namespec in the form :filename. ld will search
+  the library path for a file called filename, otherwise it will
+  search the library path for a file called libnamespec.a.'''
+  return ':' + os.path.basename(get_lib_installed_path(libname))
+
+
+def get_lib_short_name(name):
+  '''returns a setuptools compatible lib name, without lib prefixes
+  and suffixes such as .so, .dylib or version number'''
+  name = name.strip()
+  name = os.path.basename(name)
+  if name.startswith('-l'):
+    name = name[2:]
+  if name.startswith('lib'):
+    name = name[3:]
+
+  def chop_at(x, y):
+    idx = x.find(y)
+    if idx != -1:
+      x = x[:idx]
+    return x
+  name = chop_at(name, '.so')
+  name = chop_at(name, '.dylib')
+  name = chop_at(name, '.a')
+  return name
 
 
 def build_lst(*items):
-  '''collects multiple string and lists items into a single list'''
-  lst = []
-  for i in items:
-    if isinstance(i, str):
-      lst.append(i)
-    if isinstance(i, list):
-      lst.extend(i)
-  return lst
+  '''collects multiple string and lists items into a single list with
+  all duplicates removed'''
+  item_set = set([])
+  for x in items:
+    if isinstance(x, str):
+      item_set.add(x)
+    if isinstance(x, list):
+      for y in x:
+        item_set.add(y)
+  return list(item_set)
 
 
 def check_dependencies():
@@ -243,9 +276,10 @@ def check_dependencies():
       return False, '{} command is needed to complete the build process'.\
           format(x)
   for x in ['opencv',
-            'libavformat',
-            'libavcodec',
-            'libavutil']:
+            'avformat',
+            'avcodec',
+            'avutil',
+            'OpenCL']:
     if not have_library(x):
       return False, '{} library is needed to complete the build process'.\
           format(x)
@@ -254,11 +288,8 @@ def check_dependencies():
                ('opencv', 'libopencv_imgproc.so')]:
     if not have_library_object_file(x, y):
       return False, '{} library is missing object file {}'.format(x, y)
-  for x in ['libOpenCL.so']:
-    if not ld_library_exists(x):
-      return False, '{} is needed to complete the build process'.\
-          format(x)
 
+  # debian based distros use dist-packages
   local_site_pkgs = \
       '/usr/local/lib/python2.7/site-packages'
   local_dist_pkgs = \
@@ -284,7 +315,7 @@ includes = ['/usr/include', '/usr/local/include']
 ldflags = ['/usr/lib', '/usr/local/lib']
 py_includes = pkg_config_res('--cflags', 'python-2.7')
 py_libs = pkg_config_res('--libs', 'python-2.7')
-libav_libs = ['avcodec', 'avformat']
+libav_libs = ['avcodec', 'avformat', 'avutil']
 
 py_libav_info = Extension(
     'butterflow.media.py_libav_info',
@@ -305,15 +336,17 @@ py_libav_info = Extension(
 cflags = ['-g', '-Wall', '-std=c++11']
 cv_includes = pkg_config_res('--cflags', 'opencv')
 cv_libs = pkg_config_res('--libs', 'opencv')
-cl_libs = ['OpenCL']
+# Use install path and a filename namespec to specify the OpenCL library
+cl_ldflag = os.path.dirname(get_lib_installed_path('libOpenCL'))
+cl_lib = get_lib_filename_namespec('libOpenCL')
 
 py_motion = Extension(
     'butterflow.motion.py_motion',
     extra_compile_args=cflags,
     extra_link_args=linkflags,
     include_dirs=build_lst(B_MOTION, includes, cv_includes, py_includes),
-    libraries=build_lst(cv_libs, py_libs, cl_libs),
-    library_dirs=ldflags,
+    libraries=build_lst(cv_libs, py_libs, cl_lib),
+    library_dirs=build_lst(ldflags, cl_ldflag),
     sources=[
         B_MOTION + 'conversion.cpp',
         B_MOTION + 'ocl_interpolate.cpp',
@@ -328,7 +361,6 @@ py_motion = Extension(
     ],
     language='c++'
 )
-
 
 ret, err = check_dependencies()
 if not ret:
