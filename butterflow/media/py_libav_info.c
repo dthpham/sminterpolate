@@ -77,7 +77,7 @@ py_get_video_info(PyObject *self, PyObject *arg) {
     w = v_codec_ctx->width;
     h = v_codec_ctx->height;
 
-    AVRational rational_rate = format_ctx->streams[v_stream_idx]->r_frame_rate;
+    AVRational rational_rate = format_ctx->streams[v_stream_idx]->avg_frame_rate;
 
     rate_num = rational_rate.num;
     rate_den = rational_rate.den;
