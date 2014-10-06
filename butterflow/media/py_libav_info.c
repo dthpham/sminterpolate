@@ -87,8 +87,11 @@ py_get_video_info(PyObject *self, PyObject *arg) {
     min_rate   = num_frames/ (duration / 1000.0);
   }
 
+  // An avformat_free_context call is not needed because
+  // avformat_close_input will automatically perform file cleanup and
+  // free everything associated with the file. Calling free after close
+  // will trigger a segfault for for those using Libav
   avformat_close_input(&format_ctx);
-  avformat_free_context(format_ctx);
 
   PyObject *py_info = PyList_New(10);
 
