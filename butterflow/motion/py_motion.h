@@ -5,6 +5,8 @@
 static PyObject*
 py_ocl_device_available(PyObject *self, PyObject *noargs);
 static PyObject*
+py_print_ocl_devices(PyObject *self, PyObject *noargs);
+static PyObject*
 py_ocl_set_cache_path(PyObject *self, PyObject *arg);
 static PyObject*
 py_ocl_interpolate_flow(PyObject *self, PyObject *args);

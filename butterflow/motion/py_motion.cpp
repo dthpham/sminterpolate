@@ -7,9 +7,7 @@
 #include "ocl_optical_flow.h"
 #include "conversion.h"
 #include <opencv2/ocl/ocl.hpp>
-#define CL_USE_DEPRECATED_OPENCL_1_1_APIS
 #include <CL/cl.hpp>
-#undef CL_VERSION_1_2
 
 using namespace std;
 using namespace cv;
@@ -23,19 +21,52 @@ py_ocl_set_cache_path(PyObject *self, PyObject *arg) {
   return PyBool_FromLong(1);
 }
 
-static int ocl_device_available() {
-  std::vector<cl::Platform> all_platforms;
+static void
+print_ocl_devices() {
+  vector<cl::Platform> all_platforms;
   cl::Platform::get(&all_platforms);
-  if(all_platforms.size() == 0){
-    return 0;
+
+  for (int i = 0; i < all_platforms.size(); i++) {
+    cl::Platform platform = all_platforms[i];
+    cout << "Platform: "  << platform.getInfo<CL_PLATFORM_NAME>()
+         << "\nVendor: "  << platform.getInfo<CL_PLATFORM_VENDOR>()
+         << "\nVersion: " << platform.getInfo<CL_PLATFORM_VERSION>();
+
+    vector<cl::Device> all_devices;
+    all_platforms[i].getDevices(CL_DEVICE_TYPE_ALL, &all_devices);
+    for (int j = 0; j < all_devices.size(); j++) {
+      cl::Device device = all_devices[j];
+      cout << "\n Device: "          << device.getInfo<CL_DEVICE_NAME>()
+           << "\n  Device Version: " << device.getInfo<CL_DEVICE_VERSION>()
+           << "\n  Driver Version: " << device.getInfo<CL_DRIVER_VERSION>()
+           << endl;
+    }
   }
-  cl::Platform default_platform=all_platforms[0];
-  std::vector<cl::Device> all_devices;
-  default_platform.getDevices(CL_DEVICE_TYPE_ALL, &all_devices);
-  if(all_devices.size() == 0){
-    return 0;
+}
+
+static PyObject*
+py_print_ocl_devices(PyObject *self, PyObject *noargs) {
+  print_ocl_devices();
+  Py_RETURN_NONE;
+}
+
+static int
+ocl_device_available() {
+  int n_compat_devices = 0;
+  vector<cl::Platform> all_platforms;
+  cl::Platform::get(&all_platforms);
+
+  for (int i = 0; i < all_platforms.size(); i++) {
+    cl::Platform platform = all_platforms[i];
+    vector<cl::Device> all_devices;
+    all_platforms[i].getDevices(CL_DEVICE_TYPE_ALL, &all_devices);
+
+    for (int j = 0; j < all_devices.size(); j++) {
+      cl::Device device = all_devices[j];
+      n_compat_devices++;
+    }
   }
-  return 1;
+  return n_compat_devices > 0;
 }
 
 static PyObject*
@@ -43,14 +74,14 @@ py_ocl_device_available(PyObject *self, PyObject *noargs) {
   return PyBool_FromLong(ocl_device_available());
 }
 
-static void mat_vector_fill_pylist(vector<Mat>& mats, PyObject* py_list) {
+static void
+mat_vector_fill_pylist(vector<Mat>& mats, PyObject* py_list) {
   NDArrayConverter converter;
   vector<Mat>::iterator it;
 
   for (it = mats.begin(); it != mats.end(); ++it) {
     int idx = it - mats.begin();
     PyObject *obj = converter.toNDArray(*it);
-
     PyList_SetItem(py_list, idx, obj);
   }
 }
@@ -142,6 +173,8 @@ static PyMethodDef module_methods[] = {
       "Calc farneback optical flow"},
   {"py_ocl_device_available", py_ocl_device_available, METH_NOARGS,
       "Checks if an ocl device is available"},
+  {"py_print_ocl_devices", py_print_ocl_devices, METH_NOARGS,
+      "Prints all available OpenCL devices"},
   {"py_ocl_set_cache_path", py_ocl_set_cache_path, METH_O,
       "Sets the path of OpenCL kernel binaries"},
   {NULL, NULL, 0, NULL}

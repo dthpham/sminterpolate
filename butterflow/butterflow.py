@@ -7,6 +7,9 @@ from fractions import Fraction
 import os
 from os.path import expanduser
 
+_NO_OCL_WARNING =\
+    'No compatible OCL device available. Check your OpenCL installation'
+
 
 def main():
   user_home = expanduser('~')
@@ -17,7 +20,19 @@ def main():
   if not os.path.exists(cache_path):
     os.makedirs(cache_path)
 
+  have_ocl = py_motion.py_ocl_device_available()
+
   par = argparse.ArgumentParser(version='0.1')
+
+  par.add_argument('-d', '--ocl-devices', action='store_true',
+                   help='List detected OpenCL devices')
+  args = par.parse_known_args()
+  if args[0].ocl_devices:
+    py_motion.py_print_ocl_devices()
+    if not have_ocl:
+      print(_NO_OCL_WARNING)
+    exit(0)
+
   par.add_argument('video', type=str, help='Specify the input video')
 
   par.add_argument('-r', '--playback-rate', type=str, nargs='?',
@@ -54,11 +69,10 @@ def main():
   playback_rate = args.playback_rate
   timing_regions = args.timing_regions
 
-  have_ocl = py_motion.py_ocl_device_available()
   if have_ocl:
-    py_motion.py_ocl_set_cache_path(cache_path+'/')
+    py_motion.py_ocl_set_cache_path(cache_path)
   else:
-    print('No OCL device available. Check your OpenCL installation.')
+    print(_NO_OCL_WARNING)
     exit(1)
 
   farneback_method = Flow.farneback_optical_flow_ocl if have_ocl \
