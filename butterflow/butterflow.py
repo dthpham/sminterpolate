@@ -7,6 +7,8 @@ from fractions import Fraction
 import os
 from os.path import expanduser
 import subprocess
+from __init__ import __version__
+
 
 _NO_OCL_WARNING =\
     'No compatible OCL device available. Check your OpenCL installation.'
@@ -15,26 +17,16 @@ _NO_OCL_WARNING =\
 def main():
   have_ocl = py_motion.py_ocl_device_available()
 
-  par = argparse.ArgumentParser(version='0.1')
+  par = argparse.ArgumentParser(version=__version__)
   par.add_argument('-d', '--ocl-devices', action='store_true',
                    help='List detected OpenCL devices')
 
-  args = par.parse_known_args()
-
-  if args[0].ocl_devices:
-    py_motion.py_print_ocl_devices()
-    if not have_ocl:
-      print(_NO_OCL_WARNING)
-    exit(0)
-
-  if not have_ocl:
-    print(_NO_OCL_WARNING)
-    exit(0)
-
-  par.add_argument('video', type=str, help='Specify the input video')
+  par.add_argument('video', type=str, nargs='?', default=None,
+                   help='Specify the input video')
 
   par.add_argument('-r', '--playback-rate', type=str, nargs='?',
-                   default='24000/1001', help='Specify the playback rate')
+                   default='23.976', help='Specify the playback rate, '
+                   '(default: %(default)s)')
   par.add_argument('-t', '--timing-regions', type=str, nargs='?',
                    help='Specify rendering sub regions')
 
@@ -43,26 +35,47 @@ def main():
                    help='Set path to the output video')
 
   par.add_argument('--video-scale', type=float, default=1.0,
-                   help='Set the video scale')
+                   help='Set the video scale, '
+                   '(default: %(default)s)')
   par.add_argument('--decimate', action='store_true',
                    help='Specify if should decimate duplicate frames')
 
   par.add_argument('--pyr-scale', type=float, default=0.5,
-                   help='Set pyramid scale factor')
+                   help='Set pyramid scale factor,'
+                   '(default: %(default)s)')
   par.add_argument('--levels', type=int, default=3,
-                   help='Set number of pyramid layers')
+                   help='Set number of pyramid layers, '
+                   '(default: %(default)s)')
   par.add_argument('--winsize', type=int, default=15,
-                   help='Set average window size')
+                   help='Set average window size, '
+                   '(default: %(default)s)')
   par.add_argument('--iters', type=int, default=3,
-                   help='Set number of iterations at each pyramid level')
+                   help='Set number of iterations at each pyramid level, '
+                   '(default: %(default)s)')
   par.add_argument('--poly-n', type=int, default=7,
-                   help='Set size of pixel neighborhood')
+                   help='Set size of pixel neighborhood, '
+                   '(default: %(default)s)')
   par.add_argument('--poly-s', type=float, default=1.5,
-                   help='Set standard deviation to smooth derivatives')
+                   help='Set standard deviation to smooth derivatives, '
+                        '(default: %(default)s)')
 
   args = par.parse_args()
 
+  if args.ocl_devices:
+    py_motion.py_print_ocl_devices()
+    if not have_ocl:
+      print(_NO_OCL_WARNING)
+    exit(0)
+
+  if not have_ocl:
+    print(_NO_OCL_WARNING)
+    exit(1)
+
   src_path = args.video
+  if src_path is None:
+    print('No input video specified.')
+    exit(0)
+
   dst_path = args.out_path
   playback_rate = args.playback_rate
   timing_regions = args.timing_regions
