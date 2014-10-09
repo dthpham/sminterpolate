@@ -22,18 +22,20 @@ class VideoPrep(object):
     audio sync drift. in the future, the process shouldn't be framerate
     sensitive
     '''
+    using_avconv = config.settings['avutil'] == 'avconv'
     if not self.video_info.has_video_stream:
       raise RuntimeError('no video stream detected')
     has_sub = self.video_info.has_subtitle_stream
     has_aud = self.video_info.has_audio_stream
 
+    w = -1 if using_avconv else -2
     h = int(self.video_info.height * vf_scale * 0.5) * 2
     scaler = 'bilinear' if vf_scale >= 1.0 else 'lanczos'
 
     tmp_path = os.path.join(
         os.path.dirname(dst_path), '~' + os.path.basename(dst_path))
 
-    vf = 'scale=-2:{}'.format(h)
+    vf = 'scale={}:{}'.format(w, h)
     if vf_decimate:
       vf = 'fieldmatch,decimate,' + vf
 
@@ -51,7 +53,7 @@ class VideoPrep(object):
           '-c:a', 'libvorbis',
           '-ab', '96k'
       ])
-    if has_sub:
+    if has_sub and not using_avconv:
       call.extend([
           '-c:s', 'mov_text'
       ])
@@ -60,9 +62,12 @@ class VideoPrep(object):
         '-tune', 'film',
         '-preset', 'slow',
         '-crf', '18',
-        '-level', '4.0',
         '-sws_flags', scaler
     ])
+    if not using_avconv:
+      call.extend([
+          '-level', '4.0'
+      ])
     call.extend([tmp_path])
     nrm_proc = subprocess.call(call)
     if nrm_proc == 1:
@@ -89,6 +94,9 @@ class VideoPrep(object):
     '''dump subtitles to a file if it exists'''
     if not self.video_info.has_subtitle_stream:
       raise RuntimeError('no subtitle streams detected')
+    if config.settings['avutil'] == 'avconv':
+      open(dst_path, 'a').close()
+      return
     proc = subprocess.call([
         config.settings['avutil'],
         '-loglevel', self.loglevel,

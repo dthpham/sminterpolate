@@ -3,6 +3,8 @@ from butterflow.prep import VideoPrep
 from butterflow.media.info import LibAvVideoInfo
 from fractions import Fraction
 import os
+import butterflow.config
+
 
 class VideoPrepTestCase(unittest.TestCase):
   def setUp(self):
@@ -16,6 +18,7 @@ class VideoPrepTestCase(unittest.TestCase):
     self.out_v = os.path.join(DIR, 'out.mp4')
     self.out_a = os.path.join(DIR, 'out.ogg')
     self.out_s = os.path.join(DIR, 'out.srt')
+    self.using_avconv = butterflow.config.settings['avutil'] == 'avconv'
     self.remove_temp_files()
 
   def tearDown(self):
@@ -54,7 +57,8 @@ class VideoPrepTestCase(unittest.TestCase):
     i = LibAvVideoInfo(self.out_v)
     self.assertTrue(i.has_video_stream)
     self.assertTrue(i.has_audio_stream)
-    self.assertTrue(i.has_subtitle_stream)
+    if not self.using_avconv:
+      self.assertTrue(i.has_subtitle_stream)
 
   def test_normalize_no_video(self):
     p = VideoPrep(LibAvVideoInfo(self.src_a))
@@ -112,14 +116,16 @@ class VideoPrepTestCase(unittest.TestCase):
     i = LibAvVideoInfo(self.out_v)
     self.assertTrue(i.has_video_stream)
     self.assertFalse(i.has_audio_stream)
-    self.assertTrue(i.has_subtitle_stream)
+    if not self.using_avconv:
+      self.assertTrue(i.has_subtitle_stream)
 
   def test_mux_video_with_audio_and_subtitles(self):
     VideoPrep.mux_video(self.src_v, self.src_a, self.src_s, self.out_v)
     i = LibAvVideoInfo(self.out_v)
     self.assertTrue(i.has_video_stream)
     self.assertTrue(i.has_audio_stream)
-    self.assertTrue(i.has_subtitle_stream)
+    if not self.using_avconv:
+      self.assertTrue(i.has_subtitle_stream)
 
 if __name__ == '__main__':
   unittest.main()
