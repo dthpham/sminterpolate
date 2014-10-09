@@ -88,7 +88,12 @@ def main():
   interpolate_method = Interpolate.interpolate_frames_ocl if have_ocl \
       else Interpolate.interpolate_frames
 
-  project = Project.new(src_path)
+  try:
+    project = Project.new(src_path)
+  except Exception as error:
+    print(error)
+    exit(1)
+
   project.video_path = src_path
   project.playback_rate = Fraction(playback_rate)
   project.flow_method = flow_method
@@ -96,4 +101,8 @@ def main():
   if timing_regions is not None:
     project.set_timing_regions_with_string(timing_regions)
 
-  project.render_video(dst_path, args.video_scale, args.decimate)
+  try:
+    project.render_video(dst_path, args.video_scale, args.decimate)
+  except Exception as error:
+    print(error)
+    exit(1)
