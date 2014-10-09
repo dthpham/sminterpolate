@@ -3,18 +3,15 @@ __all__ = ['butterflow']
 
 import os
 import subprocess
-import motion.py_motion as py_motion
 
 user_home = os.path.expanduser('~')
 data_path = os.path.join(user_home, '.butterflow')
 cache_path = os.path.join(data_path, 'cache')
 conf_path = os.path.join(data_path, 'config')
 if not os.path.exists(data_path):
-  os.makedirs(_data_path)
+  os.makedirs(data_path)
 if not os.path.exists(cache_path):
-  os.makedirs(_cache_path)
-
-py_motion.py_ocl_set_cache_path(cache_path + os.sep)
+  os.makedirs(cache_path)
 
 have_command = lambda(x): (subprocess.call(['which', x],
                                            stdout=open(os.devnull, 'w'),

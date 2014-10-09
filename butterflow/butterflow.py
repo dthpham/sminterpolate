@@ -7,7 +7,8 @@ from fractions import Fraction
 import os
 from os.path import expanduser
 import subprocess
-from __init__ import __version__
+import motion.py_motion as py_motion
+from __init__ import __version__, cache_path
 
 
 _NO_OCL_WARNING =\
@@ -69,7 +70,9 @@ def main():
       print(_NO_OCL_WARNING)
     exit(0)
 
-  if not have_ocl:
+  if have_ocl:
+    py_motion.py_ocl_set_cache_path(cache_path + os.sep)
+  else:
     print(_NO_OCL_WARNING)
     exit(1)
 
