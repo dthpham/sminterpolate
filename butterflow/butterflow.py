@@ -23,16 +23,18 @@ def main():
 
   par.add_argument('video', type=str, nargs='?', default=None,
                    help='Specify the input video')
+  par.add_argument('-o', '--output-path', type=str, nargs='?',
+                   default=os.path.join(os.getcwd(), 'out.mp4'),
+                   help='Set path to the output video')
+
+  par.add_argument('-p', '--preview', action='store_true',
+                   help='Set show video preview while encoding')
 
   par.add_argument('-r', '--playback-rate', type=str, nargs='?',
                    default='23.976', help='Specify the playback rate, '
                    '(default: %(default)s)')
   par.add_argument('-t', '--timing-regions', type=str, nargs='?',
                    help='Specify rendering sub regions')
-
-  par.add_argument('-o', '--out-path', type=str, nargs='?',
-                   default=os.path.join(os.getcwd(), 'out.mp4'),
-                   help='Set path to the output video')
 
   par.add_argument('--video-scale', type=float, default=1.0,
                    help='Set the output video scale, '
@@ -61,7 +63,7 @@ def main():
 
   args = par.parse_args()
 
-  if args.ocl_devices:
+  if args.devices:
     py_motion.py_print_ocl_devices()
     if not have_ocl:
       print(_NO_OCL_WARNING)
@@ -76,7 +78,7 @@ def main():
     print('No input video specified.')
     exit(0)
 
-  dst_path = args.out_path
+  dst_path = args.output_path
   playback_rate = args.playback_rate
   timing_regions = args.timing_regions
 
@@ -102,7 +104,8 @@ def main():
     project.set_timing_regions_with_string(timing_regions)
 
   try:
-    project.render_video(dst_path, args.video_scale, args.decimate)
+    project.render_video(dst_path, args.video_scale, args.decimate,
+                         show_preview=args.preview)
   except Exception as error:
     print(error)
     exit(1)

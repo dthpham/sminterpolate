@@ -73,7 +73,8 @@ class Project(object):
     VideoRegionUtils.validate_region_set(self.vid_info.duration,
                                          self.timing_regions)
 
-  def render_video(self, dst_path, vf_scale=1.0, vf_decimate=False):
+  def render_video(self, dst_path, vf_scale=1.0, vf_decimate=False,
+                   show_preview=False):
     '''normalizes, renders, muxes an interpolated video, if necessary.
     when doing slow/fast motion, audio and subtitles will not be muxed
     into the final video because it wouldnt be in sync'''
@@ -114,7 +115,8 @@ class Project(object):
 
     render_task = Renderer(nrm_vid_info, self.playback_rate,
                            self.timing_regions, self.flow_method,
-                           self.interpolate_method, loglevel='info')
+                           self.interpolate_method, loglevel='info',
+                           show_preview=show_preview)
     render_task.render(rnd_path)
 
     aud_path = None

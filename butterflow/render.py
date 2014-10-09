@@ -16,7 +16,7 @@ class Renderer(object):
   only creates a video. audio/subs will not be muxed in here
   '''
   def __init__(self, vid_info, playback_rate, timing_regions, flow_method,
-               interpolate_method, loglevel='fatal'):
+               interpolate_method, loglevel='fatal', show_preview=False):
     '''should copy of the settings so that any changes to them during
     rendering dont cause any issues
     '''
@@ -27,6 +27,7 @@ class Renderer(object):
     self.interpolate_method = interpolate_method
     self.pipe = None
     self.loglevel = loglevel
+    self.show_preview = show_preview
 
   def init_pipe(self, dst_path):
     '''create pipe to ffmpeg/libav, which will encode the video for us'''
@@ -178,7 +179,8 @@ class Renderer(object):
       frs_made += len(new_frs)
 
       for idx, fr in enumerate(new_frs):
-        cv2.imshow(os.path.basename(vid_name), fr)
+        if self.show_preview:
+          cv2.imshow(os.path.basename(vid_name), fr)
         wrk_idx += 1
 
         if drop_every_n_frs > 0:
