@@ -20,7 +20,7 @@ def main():
 
   par = argparse.ArgumentParser(version=__version__)
   par.add_argument('-d', '--devices', action='store_true',
-                   help='List detected OpenCL devices')
+                   help='Show detected OpenCL devices and exit')
 
   par.add_argument('video', type=str, nargs='?', default=None,
                    help='Specify the input video')
@@ -29,35 +29,36 @@ def main():
                    help='Set path to the output video')
 
   par.add_argument('-p', '--preview', action='store_true',
-                   help='Set show video preview while encoding')
+                   help='Set to show video preview while encoding')
 
   par.add_argument('-r', '--playback-rate', type=str, nargs='?',
-                   default='23.976', help='Specify the playback rate, '
-                   '(default: %(default)s)')
+                   default='23.976',
+                   help='Specify the playback rate, '
+                        '(default: %(default)s)')
   par.add_argument('-t', '--timing-regions', type=str, nargs='?',
                    help='Specify rendering sub regions')
 
   par.add_argument('--video-scale', type=float, default=1.0,
                    help='Set the output video scale, '
-                   '(default: %(default)s)')
+                        '(default: %(default)s)')
   par.add_argument('--decimate', action='store_true',
                    help='Specify if should decimate duplicate frames')
 
   par.add_argument('--pyr-scale', type=float, default=0.6,
-                   help='Set pyramid scale factor,'
-                   '(default: %(default)s)')
+                   help='Set pyramid scale factor, '
+                        '(default: %(default)s)')
   par.add_argument('--levels', type=int, default=3,
                    help='Set number of pyramid layers, '
-                   '(default: %(default)s)')
+                        '(default: %(default)s)')
   par.add_argument('--winsize', type=int, default=25,
                    help='Set average window size, '
-                   '(default: %(default)s)')
+                        '(default: %(default)s)')
   par.add_argument('--iters', type=int, default=3,
                    help='Set number of iterations at each pyramid level, '
-                   '(default: %(default)s)')
+                        '(default: %(default)s)')
   par.add_argument('--poly-n', type=int, default=7,
                    help='Set size of pixel neighborhood, '
-                   '(default: %(default)s)')
+                        '(default: %(default)s)')
   par.add_argument('--poly-s', type=float, default=1.5,
                    help='Set standard deviation to smooth derivatives, '
                         '(default: %(default)s)')
