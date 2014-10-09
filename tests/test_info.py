@@ -3,6 +3,7 @@ from butterflow.media.info import LibAvVideoInfo
 import subprocess
 import os
 from fractions import Fraction
+import butterflow.config
 
 
 class BaseVideoInfoTestCase(unittest.TestCase):
@@ -13,7 +14,7 @@ class BaseVideoInfoTestCase(unittest.TestCase):
     self.test_sub = os.path.join(DIR, 'vid-5s-vs.mp4')
     if not os.path.exists(self.test_vid):
       mk_test_proc = subprocess.call([
-          'ffmpeg',
+          butterflow.config.settings['avutil'],
           '-loglevel', 'info',
           '-y',
           '-f', 'lavfi',

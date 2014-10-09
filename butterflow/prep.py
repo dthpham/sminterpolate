@@ -1,6 +1,7 @@
 import os
 import subprocess
 import shutil
+import config
 
 
 class VideoPrep(object):
@@ -37,7 +38,7 @@ class VideoPrep(object):
       vf = 'fieldmatch,decimate,' + vf
 
     call = [
-        'ffmpeg',
+        config.settings['avutil'],
         '-loglevel', self.loglevel,
         '-y',
         '-threads', '0',
@@ -73,7 +74,7 @@ class VideoPrep(object):
     if not self.video_info.has_audio_stream:
       raise RuntimeError('no audio stream detected')
     proc = subprocess.call([
-        'ffmpeg',
+        config.settings['avutil'],
         '-loglevel', self.loglevel,
         '-y',
         '-i', self.video_info.video_path,
@@ -89,7 +90,7 @@ class VideoPrep(object):
     if not self.video_info.has_subtitle_stream:
       raise RuntimeError('no subtitle streams detected')
     proc = subprocess.call([
-        'ffmpeg',
+        config.settings['avutil'],
         '-loglevel', self.loglevel,
         '-y',
         '-i', self.video_info.video_path,
@@ -115,7 +116,7 @@ class VideoPrep(object):
       return
 
     call = [
-        'ffmpeg',
+        config.settings['avutil'],
         '-loglevel', loglevel,
         '-y',
     ]

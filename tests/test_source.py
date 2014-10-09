@@ -4,6 +4,7 @@ import os
 import subprocess
 import cv2
 import numpy as np
+import butterflow.config
 
 
 class BaseFrameSourceTestCase(unittest.TestCase):
@@ -13,7 +14,7 @@ class BaseFrameSourceTestCase(unittest.TestCase):
     self.test_img = os.path.join(DIR, 'img.png')
     if not os.path.exists(self.test_vid):
       mk_test_proc = subprocess.call([
-          'ffmpeg',
+          butterflow.config.settings['avutil'],
           '-loglevel', 'info',
           '-y',
           '-f', 'lavfi',
@@ -37,7 +38,7 @@ class BaseFrameSourceTestCase(unittest.TestCase):
   def av_frame_at_idx(self, idx):
     '''extract image using libav, read image using opencv'''
     get_fr_proc = subprocess.call([
-        'ffmpeg',
+        butterflow.config.settings['avutil'],
         '-loglevel', 'fatal',
         '-y',
         '-i', self.test_vid,
@@ -53,7 +54,7 @@ class BaseFrameSourceTestCase(unittest.TestCase):
     '''extract image using libav, read image using opencv'''
     secs = time/1000.0
     get_fr_proc = subprocess.call([
-        'ffmpeg',
+        butterflow.config.settings['avutil'],
         '-loglevel', 'fatal',
         '-y',
         '-ss', str(secs),

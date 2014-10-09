@@ -6,6 +6,7 @@ import numpy as np
 import os
 import math
 from region import VideoRegionUtils, RenderingSubRegion
+import config
 
 
 class Renderer(object):
@@ -30,7 +31,7 @@ class Renderer(object):
   def init_pipe(self, dst_path):
     '''create pipe to ffmpeg/libav, which will encode the video for us'''
     self.pipe = subprocess.Popen([
-        'ffmpeg',
+        config.settings['avutil'],
         '-loglevel', self.loglevel,
         '-y',
         '-f', 'rawvideo',
