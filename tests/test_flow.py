@@ -3,6 +3,7 @@ from butterflow.motion.flow import Flow
 import numpy as np
 import cv2
 import os
+import common
 
 class FlowTestCase(unittest.TestCase):
   def setUp(self):

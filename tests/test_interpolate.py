@@ -4,6 +4,7 @@ from butterflow.motion.flow import Flow
 import cv2
 import os
 import numpy as np
+import common
 
 
 class FlowTestCase(unittest.TestCase):
