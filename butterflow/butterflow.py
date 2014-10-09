@@ -18,7 +18,7 @@ def main():
   have_ocl = py_motion.py_ocl_device_available()
 
   par = argparse.ArgumentParser(version=__version__)
-  par.add_argument('-d', '--ocl-devices', action='store_true',
+  par.add_argument('-d', '--devices', action='store_true',
                    help='List detected OpenCL devices')
 
   par.add_argument('video', type=str, nargs='?', default=None,
@@ -35,7 +35,7 @@ def main():
                    help='Set path to the output video')
 
   par.add_argument('--video-scale', type=float, default=1.0,
-                   help='Set the video scale, '
+                   help='Set the output video scale, '
                    '(default: %(default)s)')
   par.add_argument('--decimate', action='store_true',
                    help='Specify if should decimate duplicate frames')
