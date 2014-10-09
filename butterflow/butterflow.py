@@ -40,13 +40,13 @@ def main():
   par.add_argument('--decimate', action='store_true',
                    help='Specify if should decimate duplicate frames')
 
-  par.add_argument('--pyr-scale', type=float, default=0.5,
+  par.add_argument('--pyr-scale', type=float, default=0.6,
                    help='Set pyramid scale factor,'
                    '(default: %(default)s)')
   par.add_argument('--levels', type=int, default=3,
                    help='Set number of pyramid layers, '
                    '(default: %(default)s)')
-  par.add_argument('--winsize', type=int, default=15,
+  par.add_argument('--winsize', type=int, default=25,
                    help='Set average window size, '
                    '(default: %(default)s)')
   par.add_argument('--iters', type=int, default=3,
