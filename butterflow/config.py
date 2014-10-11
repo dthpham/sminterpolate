@@ -9,6 +9,7 @@ class SettingsDictionary(collections.MutableMapping):
   def __init__(self, *args, **kwargs):
     self.store = dict()
     self.update(dict(*args, **kwargs))
+    self.config_path = None
 
   def __getitem__(self, key):
     return self.store[self.__keytransform__(key)]
@@ -28,9 +29,17 @@ class SettingsDictionary(collections.MutableMapping):
   def __keytransform__(self, key):
     return key.lower()
 
+  def save(self):
+    if self.config_path is None:
+      return
+    with open(self.config_path, 'w') as f:
+      for k, v in self.iteritems():
+        f.write('{}={}\n'.format(k, v))
+
   @classmethod
   def from_settings_file(cls, path):
     obj = cls()
+    obj.config_path = path
     with open(path, 'r') as f:
       for line in f.readlines():
         line = line.strip()

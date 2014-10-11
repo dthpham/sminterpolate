@@ -111,41 +111,41 @@ For a full list of options run ```$ butterflow -h```.
 ####Increase a video's frame rate to `120fps`:
 
 ```
-$ butterflow <video> --playback-rate 120
+$ butterflow --playback-rate 120 <video>
 ```
 
 ####Slow-mo a clip with a target frame rate of `400fps`:
 
 ```
-$ butterflow <video> --playback-rate 59.94 -t full,fps=400
+$ butterflow -r 59.94 -s full,fps=400 <video>
 ```
 
 ####Slow-mo a clip to `0.25x` quarter speed:
 
 ```
-$ butterflow <video> --playback-rate 59.94 -t full,factor=0.25
+$ butterflow -r 59.94 -s full,factor=0.25 <video>
 ```
 
 ####Slow-mo a clip to be `30s` long:
 
 ```
-$ butterflow <video> --playback-rate 59.94 -t full,duration=30
+$ butterflow -r 59.94 -s full,duration=30 <video>
 ```
 
 ####Slow-mo a region:
 
 ```
-$ butterflow <video> --playback-rate 24 -t \
-a=00:00:05.0,b=00:00:06.0,factor=0.5
+$ butterflow -r 24 -s a=0:00:05.0,b=0:00:06.0,factor=0.5 <video>
 ```
 
 ####Slow-mo multiple regions:
 
 ```
-$ butterflow <video> --playback-rate 24 -t \
+$ butterflow -r 24 -s \
 "a=00:00:05.0,b=00:00:06.0,fps=200;\
 a=00:00:16.0,b=00:00:18.0,fps=400;\
-a=00:00:18.0,b=00:00:20.0,factor=0.5"
+a=00:00:18.0,b=00:00:20.0,factor=0.5;\
+a=00:00:20.0,b=00:00:21.0,duration=2" <video>
 ```
 
 ##Filters
@@ -156,7 +156,7 @@ Videos may have some judder if your source has duplicate frames. To compensate
 for this, use the `--decimate` option:
 
 ```
-$ butterflow <video> --playback-rate 60 --decimate
+$ butterflow -r 60 --decimate <video>
 ```
 
 ####Video Scale:
@@ -164,7 +164,7 @@ $ butterflow <video> --playback-rate 60 --decimate
 To scale the output video to `75%` of its original size:
 
 ```
-$ butterflow <video> --playback-rate 24 --video-scale 0.75
+$ butterflow -r 24 --video-scale 0.75 <video>
 ```
 
 ##Quality
@@ -172,4 +172,4 @@ $ butterflow <video> --playback-rate 24 --video-scale 0.75
 Butterflow uses the Farneback algorithm to compute dense optical flows for
 frame interpolation. To fine-tune the quality (robustness of image) of the
 resulting videos you can pass in different values to the function. Run
-`$ butterflow -h` for a full list of options and their default values.
+`$ butterflow -h` for a list of advanced options and their default values.

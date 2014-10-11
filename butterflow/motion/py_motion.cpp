@@ -32,17 +32,17 @@ print_ocl_devices() {
 
   for (int i = 0; i < all_platforms.size(); i++) {
     cl::Platform platform = all_platforms[i];
-    cout << "\n  Platform        : " << platform.getInfo<CL_PLATFORM_NAME>()
-         << "\n  Platform Vendor : " << platform.getInfo<CL_PLATFORM_VENDOR>()
-         << "\n  Platform Version: " << platform.getInfo<CL_PLATFORM_VERSION>();
+    cout << "\n  Platform          \t: " << platform.getInfo<CL_PLATFORM_NAME>()
+         << "\n  Platform Vendor   \t: " << platform.getInfo<CL_PLATFORM_VENDOR>()
+         << "\n  Platform Version  \t: " << platform.getInfo<CL_PLATFORM_VERSION>();
 
     vector<cl::Device> all_devices;
     all_platforms[i].getDevices(CL_DEVICE_TYPE_ALL, &all_devices);
     for (int j = 0; j < all_devices.size(); j++) {
       cl::Device device = all_devices[j];
-      cout << "\n    Device        : " << device.getInfo<CL_DEVICE_NAME>()
-           << "\n      Version     : " << device.getInfo<CL_DEVICE_VERSION>()
-           << "\n      Driver      : " << device.getInfo<CL_DRIVER_VERSION>();
+      cout << "\n    Device    \t\t: " << device.getInfo<CL_DEVICE_NAME>()
+           << "\n      Version \t\t: " << device.getInfo<CL_DEVICE_VERSION>()
+           << "\n      Driver  \t\t: " << device.getInfo<CL_DRIVER_VERSION>();
     }
   }
   cout << endl;

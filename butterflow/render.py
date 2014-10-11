@@ -118,24 +118,25 @@ class Renderer(object):
       dupe_every_n_frs = frs_will_make / math.fabs(frs_extra)
     pot_drift_secs = frs_extra / self.playback_rate
 
-    print('region_fr_a', fr_a)
-    print('region_fr_b', fr_b)
-    print('region_time_a', sub_region.time_a)
-    print('region_time_b', sub_region.time_b)
-    print('region_dur', dur_in_region)
-    print('region_len', frs_in_region)
-    print('region_fps', self.playback_rate)
-    print('tgt_frs', tgt_frs)
-    print('fr_factor', fr_factor)
-    print('time_step', time_step)
-    print('frs_inter_each_go', frs_inter_each_go)
-    print('frs_write_per_pair', frs_write_per_pair)
-    print('pairs', pairs)
-    print('frs_will_make', frs_will_make)
-    print('extra_frs', frs_extra)
-    print('drop_every', drop_every_n_frs)
-    print('dupe_every', dupe_every_n_frs)
-    print('potential_drift_secs', float(pot_drift_secs))
+    if config.settings['verbose']:
+      print('region_fr_a', fr_a)
+      print('region_fr_b', fr_b)
+      print('region_time_a', sub_region.time_a)
+      print('region_time_b', sub_region.time_b)
+      print('region_dur', dur_in_region)
+      print('region_len', frs_in_region)
+      print('region_fps', self.playback_rate)
+      print('tgt_frs', tgt_frs)
+      print('fr_factor', fr_factor)
+      print('time_step', time_step)
+      print('frs_inter_each_go', frs_inter_each_go)
+      print('frs_write_per_pair', frs_write_per_pair)
+      print('pairs', pairs)
+      print('frs_will_make', frs_will_make)
+      print('extra_frs', frs_extra)
+      print('drop_every', drop_every_n_frs)
+      print('dupe_every', dupe_every_n_frs)
+      print('potential_drift_secs', float(pot_drift_secs))
 
     frs_made = 0
     frs_dropped = 0
@@ -199,25 +200,28 @@ class Renderer(object):
         self.write_frame_to_pipe(fr)
         frs_written += 1
 
-    print('frs_generated:', frs_gen)
-    print('frs_made:', frs_made)
-    print('frs_dropped:', frs_dropped)
-    print('frs_duped:', frs_duped)
+    if config.settings['verbose']:
+      print('frs_generated:', frs_gen)
+      print('frs_made:', frs_made)
+      print('frs_dropped:', frs_dropped)
+      print('frs_duped:', frs_duped)
 
     fr_write_ratio = frs_written * 1.0 / tgt_frs
     est_drift_secs = float(tgt_frs - frs_written) / self.playback_rate
 
-    print('frs_written: {}/{} ({:.2f}%)'.format(
-        frs_written, tgt_frs, fr_write_ratio * 100))
-    print('est_drift:', est_drift_secs)
+    if config.settings['verbose']:
+      print('frs_written: {}/{} ({:.2f}%)'.format(
+          frs_written, tgt_frs, fr_write_ratio * 100))
+      print('est_drift:', est_drift_secs)
 
   def render(self, dst_path):
     '''separates video regions to render them individually'''
     self.init_pipe(dst_path)
     src = OpenCvFrameSource(self.vid_info.video_path)
 
-    print('src_dur', src.duration)
-    print('src_frs', src.num_frames)
+    if config.settings['verbose']:
+      print('src_dur', src.duration)
+      print('src_frs', src.num_frames)
 
     new_sub_regions = []
     regions_to_make = 1
@@ -289,7 +293,8 @@ class Renderer(object):
     VideoRegionUtils.validate_region_set(src.duration, new_sub_regions)
 
     for x in new_sub_regions:
-      print(x.__dict__)
+      if config.settings['verbose']:
+        print(x.__dict__)
     if len(new_sub_regions) != regions_to_make:
       raise RuntimeError('unexpected len of subregions to render')
 

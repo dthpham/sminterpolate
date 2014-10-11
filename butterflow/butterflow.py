@@ -9,6 +9,7 @@ from os.path import expanduser
 import subprocess
 import motion.py_motion as py_motion
 from __init__ import __version__, cache_path
+import config
 
 
 _NO_OCL_WARNING =\
@@ -18,52 +19,61 @@ _NO_OCL_WARNING =\
 def main():
   have_ocl = py_motion.py_ocl_device_available()
 
-  par = argparse.ArgumentParser(version=__version__)
+  par = argparse.ArgumentParser()
+  par.add_argument('-V', '--version', action='store_true',
+                   help='Show program\'s version number and exit')
+  par.add_argument('-v', '--verbose', action='store_true',
+                   help='Set to increase output verbosity')
   par.add_argument('-d', '--devices', action='store_true',
                    help='Show detected OpenCL devices and exit')
 
+  par.add_argument('--no-preview', action='store_false',
+                   help='Set to disable video preview while encoding')
+
   par.add_argument('video', type=str, nargs='?', default=None,
                    help='Specify the input video')
-  par.add_argument('-o', '--output-path', type=str, nargs='?',
+
+  par.add_argument('-o', '--output-path', type=str,
                    default=os.path.join(os.getcwd(), 'out.mp4'),
                    help='Set path to the output video')
-
-  par.add_argument('-p', '--preview', action='store_true',
-                   help='Set to show video preview while encoding')
-
-  par.add_argument('-r', '--playback-rate', type=str, nargs='?',
-                   default='23.976',
+  par.add_argument('-r', '--playback-rate', type=str, default='23.976',
                    help='Specify the playback rate, '
                         '(default: %(default)s)')
-  par.add_argument('-t', '--timing-regions', type=str, nargs='?',
+  par.add_argument('-s', '--sub-regions', type=str,
                    help='Specify rendering sub regions')
-
   par.add_argument('--video-scale', type=float, default=1.0,
                    help='Set the output video scale, '
                         '(default: %(default)s)')
   par.add_argument('--decimate', action='store_true',
                    help='Specify if should decimate duplicate frames')
 
-  par.add_argument('--pyr-scale', type=float, default=0.6,
-                   help='Set pyramid scale factor, '
-                        '(default: %(default)s)')
-  par.add_argument('--levels', type=int, default=3,
-                   help='Set number of pyramid layers, '
-                        '(default: %(default)s)')
-  par.add_argument('--winsize', type=int, default=25,
-                   help='Set average window size, '
-                        '(default: %(default)s)')
-  par.add_argument('--iters', type=int, default=3,
-                   help='Set number of iterations at each pyramid level, '
-                        '(default: %(default)s)')
-  par.add_argument('--poly-n', type=int, default=7,
-                   help='Set size of pixel neighborhood, '
-                        '(default: %(default)s)')
-  par.add_argument('--poly-s', type=float, default=1.5,
-                   help='Set standard deviation to smooth derivatives, '
-                        '(default: %(default)s)')
+  farneback_gr = par.add_argument_group('advanced arguments')
+  farneback_gr.add_argument('--pyr-scale', type=float, default=0.6,
+                            help='Set pyramid scale factor, '
+                            '(default: %(default)s)')
+  farneback_gr.add_argument('--levels', type=int, default=3,
+                            help='Set number of pyramid layers, '
+                            '(default: %(default)s)')
+  farneback_gr.add_argument('--winsize', type=int, default=25,
+                            help='Set average window size, '
+                            '(default: %(default)s)')
+  farneback_gr.add_argument('--iters', type=int, default=3,
+                            help='Set number of iterations at each pyramid'
+                            ' level, (default: %(default)s)')
+  farneback_gr.add_argument('--poly-n', type=int, default=7,
+                            help='Set size of pixel neighborhood, '
+                            '(default: %(default)s)')
+  farneback_gr.add_argument('--poly-s', type=float, default=1.5,
+                            help='Set standard deviation to smooth'
+                            ' derivatives, (default: %(default)s)')
 
   args = par.parse_args()
+
+  if args.version:
+    print(__version__)
+    exit(0)
+
+  config.settings['verbose'] = args.verbose
 
   if args.devices:
     py_motion.py_print_ocl_devices()
@@ -84,7 +94,7 @@ def main():
 
   dst_path = args.output_path
   playback_rate = args.playback_rate
-  timing_regions = args.timing_regions
+  timing_regions = args.sub_regions
 
   farneback_method = Flow.farneback_optical_flow_ocl if have_ocl \
       else Flow.farneback_optical_flow
@@ -109,7 +119,7 @@ def main():
 
   try:
     project.render_video(dst_path, args.video_scale, args.decimate,
-                         show_preview=args.preview)
+                         show_preview=args.no_preview)
   except Exception as error:
     print(error)
     exit(1)
