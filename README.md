@@ -3,7 +3,7 @@
 *Butterflow* is an easy to use command line tool that lets you create fluid slow
 motion and smooth motion videos.
 
-#####How does it work?
+####How does it work?
 
 It works by generating intermediate frames between existing frames. For example,
 given two existing frames `A` and `B`, this program can generate frames `C.1`,
@@ -15,83 +15,54 @@ Butterflow takes advantage of this increase in frame rates to generate high fps
 videos that are needed to make smooth and slow motion videos with minimal
 judder.
 
-#####See it for yourself:
+####See it for yourself:
 
 * [Video @30fps slowed down with butterflow (210fps)](https://dl.dropboxusercontent.com/u/103239050/INK-SIDE.mp4)
 * [Video @12fps frame rate increased with butterflow (96fps)](https://dl.dropboxusercontent.com/u/103239050/GEL-SIDE.mp4)
 
+
 ##Installation
 
-####On Ubuntu:
-
-1. `$ apt-add-repository ppa:dthpham/butterflow`
-2. `$ apt-get update`
-3. `$ apt-get install butterflow`
-
-If you need [`ffmpeg`]():
-
-1. `$ apt-add-repository ppa:jon-severinsson/ffmpeg`
-2. `$ apt-get update`
-3. `$ apt-get install ffmpeg`
-
-####On Arch Linux:
+####Arch Linux:
 
 A package is available in the AUR under [butterflow](https://aur.archlinux.org/packages/butterflow/).
+
+####From Source:
+
+1. Satisfy all the dependencies
+2. Clone this repository
+3. `$ cd butterflow`
+4. `$ python2 setup.py init`
+5. `$ python2 setup.py install`
 
 ####With pip:
 
 1. Satisfy all the dependencies
 2. `$ pip2 install butterflow`
 
-####From Source:
-
-1. Satisfy all the dependencies
-2. Clone this repository or download a [source package](https://github.com/dthpham/butterflow/releases).
-3. `$ python2 setup.py init`
-4. `$ python2 setup.py develop`
-5. `$ python2 setup.py test`
-6. `$ python2 setup.py install`
 
 ##Dependencies
 
-Installing these aren't necessary if you installed using a package.
-
-####On Ubuntu, Debian:
-
-* [`git`]()
-* [`build-essential`]()
-* [`pkg-config`]()
-* [`ffmpeg`]()
-* [`python-dev`]()
-* [`python-setuptools`]()
-* [`python-numpy`]()
-* [`python-opencv`]()
-* [`opencl-headers`]()
-* [`libopencv-dev (>=2.4.8)`]()
-* [`libopencv-ocl-dev`]()
-* [`mesa-common-dev`]()
-* [`ocl-icd-libopencl1`]()
-
-####On Arch Linux:
-
-* [`git`]()
-* [`libcl`]()
-* [`ffmpeg (>=2.4.1)`]()
-* [`opencv (>=2.4.9)`]()
-* [`python2-numpy`]()
+Installing these aren't necessary if you installed using a package. See the
+[Dependencies wiki page](https://github.com/dthpham/butterflow/wiki/Dependencies)
+for more information.
 
 ##Setup
 
 After installing the package, you still need to install ***at least one***
 vendor-specific implementation of OpenCL that matches your hardware:
 
-####On Ubuntu:
+####Arch Linux:
 
-* [`nvidia-opencl-icd-304-updates`]()
-* [`nvidia-opencl-icd-331-updates`]()
-* [`beignet`]()
+* [`opencl-nvidia`]()
+* [`opencl-nvidia-304xx`]()
+* [`opencl-nvidia-340xx`]()
+* [`amdapp-sdk`]()
+* [`opencl-mesa`]()
+* [`intel-opencl-runtime`]()
+* [`beignet-git`]()
 
-####On Debian:
+####Debian:
 
 * [`nvidia-opencl-icd`]()
 * [`amd-opencl-icd`]()
@@ -99,19 +70,11 @@ vendor-specific implementation of OpenCL that matches your hardware:
 * [`mesa-opencl-icd`]()
 * [`beignet`]()
 
-####On Arch Linux:
-
-* [`opencl-nvidia`](https://developer.nvidia.com/opencl)
-* [`opencl-nvidia-304xx`]()
-* [`intel-opencl-sdk`](https://software.intel.com/en-us/intel-opencl)
-* [`intel-opencl-runtime`]()
-* [`amdapp-sdk`](http://developer.amd.com/tools-and-sdks/opencl-zone/)
-* [`opencl-mesa`](http://www.x.org/wiki/GalliumStatus/)
-* [`beignet`](http://cgit.freedesktop.org/beignet/)
 
 For more information on how to satisfy the OpenCL requirements, please read
 [this page](http://wiki.tiker.net/OpenCLHowTo). If you're on Arch Linux, see
 [this page](https://wiki.archlinux.org/index.php/Opencl).
+
 
 ##Usage
 
