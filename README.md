@@ -27,6 +27,34 @@ judder.
 
 A package is available in the AUR under [butterflow](https://aur.archlinux.org/packages/butterflow/).
 
+####Debian:
+
+Add `contrib` and `non-free` components to your `/etc/apt/sources.list`.
+
+```
+deb <repos> jessie main contrib non-free
+```
+
+Add a new repository to `/etc/apt/sources.list`.
+
+```
+deb http://repo.dthpham.me/ jessie main
+```
+
+Import key that is used to sign the release:
+
+```
+$ gpg --keyserver pgp.mit.edu --recv-keys 458C370A
+$ gpg -a --export 458C370A | sudo apt-key add -
+```
+
+Finally install it like any other software package:
+
+```
+$ apt-get update
+$ apt-get install butterflow
+```
+
 ####From Source:
 
 1. Satisfy all the dependencies
@@ -138,3 +166,10 @@ To scale the output video to `75%` of its original size:
 ```
 $ butterflow <video> --playback-rate 24 --video-scale 0.75
 ```
+
+##Quality
+
+Butterflow uses the Farneback algorithm to compute dense optical flows for
+frame interpolation. To fine-tune the quality (robustness of image) of the
+resulting videos you can pass in different values to the function. Run
+`$ butterflow -h` for a full list of options and their default values.
