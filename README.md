@@ -27,7 +27,7 @@ judder.
 
 A package is available in the AUR under [butterflow](https://aur.archlinux.org/packages/butterflow/).
 
-####Debian:
+####Debian 8.x:
 
 Add `contrib` and `non-free` components to your `/etc/apt/sources.list`.
 
@@ -97,6 +97,7 @@ vendor-specific implementation of OpenCL that matches your hardware:
 * [`amd-opencl-icd-legacy`]()
 * [`mesa-opencl-icd`]()
 * [`beignet`]()
+* [`pocl-opencl-icd`]()
 
 
 For more information on how to satisfy the OpenCL requirements, please read
@@ -169,7 +170,7 @@ $ butterflow -r 24 --video-scale 0.75 <video>
 
 ##Quality
 
-Butterflow uses the Farneback algorithm to compute dense optical flows for
+Butterflow uses the Farneback algorithm to compute dense optical flows to use in
 frame interpolation. To fine-tune the quality (robustness of image) of the
 resulting videos you can pass in different values to the function. Run
 `$ butterflow -h` for a list of advanced options and their default values.
