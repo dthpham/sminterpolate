@@ -92,6 +92,10 @@ def main():
     print('No input video specified.')
     exit(0)
 
+  if config.settings['avutil'] == 'none':
+    print('You need FFMPEG or Libav to use this app.')
+    exit(1)
+
   dst_path = args.output_path
   playback_rate = args.playback_rate
   timing_regions = args.sub_regions

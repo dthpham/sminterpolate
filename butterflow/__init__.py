@@ -19,13 +19,12 @@ have_command = lambda(x): (subprocess.call(['which', x],
 av_util = None
 have_ffmpeg = have_command('ffmpeg')
 have_avconv = have_command('avconv')
-if not have_ffmpeg and not have_avconv:
-  print('You need FFMPEG or Libav to use this app.')
-  exit(1)
 if have_avconv:
   av_util = 'avconv'
-if have_ffmpeg:
+elif have_ffmpeg:
   av_util = 'ffmpeg'
+else:
+  av_util = 'none'
 
 with open(conf_path, 'w') as f:
   f.write('avutil={}'.format(av_util))
