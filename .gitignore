@@ -6,6 +6,7 @@
 
 # misc
 *~
+*.DS_Store
 
 #virtualenv
 bin
@@ -19,3 +20,4 @@ butterflow/motion/conversion.*
 build
 dist
 *.egg-info
+.Python

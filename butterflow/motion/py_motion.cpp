@@ -7,7 +7,13 @@
 #include "ocl_optical_flow.h"
 #include "conversion.h"
 #include <opencv2/ocl/ocl.hpp>
-#include <CL/cl.hpp>
+#if defined(__APPLE__) && defined(__MACH__)
+  #include <OpenCL/opencl.h>
+#else
+  #include <CL/cl.hpp>
+#endif
+
+#define BUF_SZ (1024)
 
 using namespace std;
 using namespace cv;
@@ -23,6 +29,47 @@ py_ocl_set_cache_path(PyObject *self, PyObject *arg) {
 
 static void
 print_ocl_devices() {
+#if defined(__APPLE__) && defined(__MACH__)
+  cl_platform_id platforms[32];
+  cl_uint n_platforms;
+  clGetPlatformIDs(32, platforms, &n_platforms);
+
+  if (n_platforms > 0) {
+    cout << "opencl devices:";
+  }
+
+  for (int i = 0; i < n_platforms; i++) {
+    char platform_name[BUF_SZ];
+    char platform_vendor[BUF_SZ];
+    char platform_version[BUF_SZ];
+    clGetPlatformInfo(platforms[i], CL_PLATFORM_NAME, BUF_SZ, platform_name, NULL);
+    clGetPlatformInfo(platforms[i], CL_PLATFORM_VENDOR, BUF_SZ, platform_vendor, NULL);
+    clGetPlatformInfo(platforms[i], CL_PLATFORM_VERSION, BUF_SZ, platform_version, NULL);
+    cout << "\n  Platform          \t: " << platform_name
+         << "\n  Platform Vendor   \t: " << platform_vendor
+         << "\n  Platform Version  \t: " << platform_version;
+
+    cl_uint n_devices;
+    clGetDeviceIDs(NULL, CL_DEVICE_TYPE_ALL, 0, NULL, &n_devices);
+
+    cl_device_id *devices = (cl_device_id*)calloc(sizeof(cl_device_id), n_devices);
+    clGetDeviceIDs(NULL, CL_DEVICE_TYPE_ALL, n_devices, devices, NULL);
+
+    for (int j = 0; j < n_devices; j++) {
+      char dev_name[BUF_SZ];
+      char dev_version[BUF_SZ];
+      char drv_version[BUF_SZ];
+      clGetDeviceInfo(devices[j], CL_DEVICE_NAME, BUF_SZ, dev_name, NULL);
+      clGetDeviceInfo(devices[j], CL_DEVICE_VERSION, BUF_SZ, dev_version, NULL);
+      clGetDeviceInfo(devices[j], CL_DRIVER_VERSION, BUF_SZ, drv_version, NULL);
+      cout << "\n    Device    \t\t: " << dev_name
+           << "\n      Version \t\t: " << dev_version
+           << "\n      Driver  \t\t: " << drv_version;
+    }
+    free(devices);
+  }
+  cout << endl;
+#else
   vector<cl::Platform> all_platforms;
   cl::Platform::get(&all_platforms);
 
@@ -46,6 +93,7 @@ print_ocl_devices() {
     }
   }
   cout << endl;
+#endif
 }
 
 static PyObject*
@@ -56,7 +104,13 @@ py_print_ocl_devices(PyObject *self, PyObject *noargs) {
 
 static int
 ocl_device_available() {
+#if defined(__APPLE__) && defined(__MACH__)
+  cl_uint n_devices;
+  clGetDeviceIDs(NULL, CL_DEVICE_TYPE_ALL, 0, NULL, &n_devices);
+  return (int)n_devices;
+#else
   int n_compat_devices = 0;
+
   vector<cl::Platform> all_platforms;
   cl::Platform::get(&all_platforms);
 
@@ -71,6 +125,7 @@ ocl_device_available() {
     }
   }
   return n_compat_devices > 0;
+#endif
 }
 
 static PyObject*

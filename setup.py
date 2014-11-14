@@ -272,6 +272,8 @@ def check_dependencies():
   '''verifies if all dependencies have been met'''
   for x in ['pkg-config',
             'ldconfig']:
+    if x == 'ldconfig' and sys.platform.startswith('darwin'):
+        continue
     if not have_command(x):
       return False, '{} command is needed to complete the build process'.\
           format(x)
@@ -310,12 +312,33 @@ def check_dependencies():
 
 
 cflags = ['-g', '-Wall']
-linkflags = ['-shared', '-Wl,--export-dynamic']
+linkflags = []
 includes = ['/usr/include', '/usr/local/include']
 ldflags = ['/usr/lib', '/usr/local/lib']
-py_includes = pkg_config_res('--cflags', 'python-2.7')
-py_libs = pkg_config_res('--libs', 'python-2.7')
+py_includes = None
+py_libs = None
 libav_libs = ['avcodec', 'avformat', 'avutil']
+homebrew_prefix = None
+if sys.platform.startswith('linux'):
+  py_includes = pkg_config_res('--cflags', 'python-2.7')
+  py_libs = pkg_config_res('--libs', 'python-2.7')
+  linkflags.extend(['-shared', '-Wl,--export-dynamic'])
+elif sys.platform.startswith('darwin'):
+  linkflags.extend(['-arch', 'x86_64'])
+  homebrew_prefix = None
+  try:
+      homebrew_prefix = subprocess.Popen(['brew', '--prefix'],
+                                         stdout=subprocess.PIPE,
+                                         env=get_extra_envs()).stdout.read().strip()
+  except Exception:
+    # fall back to environment variable if brew command is not found
+    if 'HOMEBREW_PREFIX' in os.environ:
+        homebrew_prefix = os.environ['HOMEBREW_PREFIX']
+  if homebrew_prefix is not None:
+    includes.append(os.path.join(homebrew_prefix, 'include'))
+    includes.append(os.path.join(homebrew_prefix, 'lib'))
+  # py_libs and py_includes is not being found under osx
+  # py_libs.append('python2.7')
 
 py_libav_info = Extension(
     'butterflow.media.py_libav_info',
@@ -336,9 +359,20 @@ py_libav_info = Extension(
 cflags = ['-g', '-Wall', '-std=c++11']
 cv_includes = pkg_config_res('--cflags', 'opencv')
 cv_libs = pkg_config_res('--libs', 'opencv')
-# Use install path and a filename namespec to specify the OpenCL library
-cl_ldflag = os.path.dirname(get_lib_installed_path('libOpenCL'))
-cl_lib = get_lib_filename_namespec('libOpenCL')
+cl_ldflag = None
+cl_lib = None
+if sys.platform.startswith('linux'):
+  # Use install path and a filename namespec to specify the OpenCL library
+  cl_ldflag = os.path.dirname(get_lib_installed_path('libOpenCL'))
+  cl_lib = get_lib_filename_namespec('libOpenCL')
+elif sys.platform.startswith('darwin'):
+  # Expecting python and numpy installed with homebrew
+  # Ideally, all python2.x packages with headers should be placed in
+  # /usr/include/python2.x/<package> or /usr/local/include/... but that doesn't
+  # happen when using the numpy package from homebrew
+  includes.append(os.path.join(homebrew_prefix,
+                               'lib/python2.7/site-packages/numpy/core/include'))
+  linkflags.extend(['-framework', 'OpenCL'])
 
 py_motion = Extension(
     'butterflow.motion.py_motion',

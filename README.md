@@ -17,11 +17,20 @@ judder.
 
 ####See it for yourself:
 
-* [Video @30fps slowed down with butterflow (210fps)](https://dl.dropboxusercontent.com/u/103239050/INK-SIDE.mp4)
-* [Video @12fps frame rate increased with butterflow (96fps)](https://dl.dropboxusercontent.com/u/103239050/GEL-SIDE.mp4)
+* [Video @30fps slowed down (210fps)](https://dl.dropboxusercontent.com/u/103239050/ink-s.mp4)
+* [Video @30fps slowed down (400fps)](https://dl.dropboxusercontent.com/u/103239050/retro-s.mp4)
+* [Video @10fps frame rate increased (60fps)](https://dl.dropboxusercontent.com/u/103239050/spin-s.mp4)
 
 
 ##Installation
+
+####Mac OS X:
+
+First, install [`numpy`]() using `homebrew` or `pip`, then:
+
+```
+$ brew install butterflow
+```
 
 ####Arch Linux:
 
@@ -57,17 +66,13 @@ $ apt-get install butterflow
 
 ####From Source:
 
-1. Satisfy all the dependencies
-2. Clone this repository
-3. `$ cd butterflow`
-4. `$ python2 setup.py init`
-5. `$ python2 setup.py install`
+ Satisfy all the dependencies and clone this repository, then:
 
-####With pip:
-
-1. Satisfy all the dependencies
-2. `$ pip2 install butterflow`
-
+```
+$ cd butterflow
+$ python2 setup.py init
+$ python2 setup.py install
+```
 
 ##Dependencies
 
@@ -78,8 +83,8 @@ for more information.
 ##Setup
 
 After installing the package, you still need to install ***at least one***
-vendor-specific implementation of OpenCL that matches your hardware:
-
+vendor-specific implementation of OpenCL that matches your hardware. If you're
+on OS X, no setup is necessary because support is provided by default.
 ####Arch Linux:
 
 * [`opencl-nvidia`]()
@@ -99,11 +104,11 @@ vendor-specific implementation of OpenCL that matches your hardware:
 * [`beignet`]()
 * [`pocl-opencl-icd`]()
 
+When finished, you can run `$ butterflow -d` to print a list of all detected devices.
 
 For more information on how to satisfy the OpenCL requirements, please read
 [this page](http://wiki.tiker.net/OpenCLHowTo). If you're on Arch Linux, see
 [this page](https://wiki.archlinux.org/index.php/Opencl).
-
 
 ##Usage
 
@@ -143,10 +148,10 @@ $ butterflow -r 24 -s a=0:00:05.0,b=0:00:06.0,factor=0.5 <video>
 
 ```
 $ butterflow -r 24 -s \
-"a=00:00:05.0,b=00:00:06.0,fps=200;\
-a=00:00:16.0,b=00:00:18.0,fps=400;\
-a=00:00:18.0,b=00:00:20.0,factor=0.5;\
-a=00:00:20.0,b=00:00:21.0,duration=2" <video>
+"a=0:00:05.0,b=0:00:06.0,fps=200;\
+a=0:00:16.0,b=0:00:18.0,fps=400;\
+a=0:00:18.0,b=0:00:20.0,factor=0.5;\
+a=0:00:20.0,b=0:00:21.0,duration=2" <video>
 ```
 
 ##Filters
@@ -170,7 +175,7 @@ $ butterflow -r 24 --video-scale 0.75 <video>
 
 ##Quality
 
-Butterflow uses the Farneback algorithm to compute dense optical flows to use in
-frame interpolation. To fine-tune the quality (robustness of image) of the
-resulting videos you can pass in different values to the function. Run
+Butterflow uses the Farneback algorithm to compute dense optical flows for use
+in frame interpolation. You can pass in different values to the function to
+fine-tune the quality (robustness of image) of the resulting videos. Run
 `$ butterflow -h` for a list of advanced options and their default values.
