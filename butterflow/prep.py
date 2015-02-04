@@ -59,15 +59,12 @@ class VideoPrep(object):
       ])
     call.extend([
         '-c:v', 'libx264',
-        '-tune', 'film',
-        '-preset', 'slow',
+        '-preset', 'fast',
         '-crf', '18',
         '-sws_flags', scaler
     ])
     if not using_avconv:
-      call.extend([
-          '-level', '4.0'
-      ])
+      call.extend(['-level', '4.2'])
     call.extend([tmp_path])
     nrm_proc = subprocess.call(call)
     if nrm_proc == 1:
@@ -129,27 +126,15 @@ class VideoPrep(object):
         '-y',
     ]
     if aud_path:
-      call.extend([
-          '-i', aud_path
-      ])
-    call.extend([
-        '-i', vid_path
-    ])
+      call.extend(['-i', aud_path])
+    call.extend(['-i', vid_path])
     if sub_path:
-      call.extend([
-          '-i', sub_path
-      ])
+      call.extend(['-i', sub_path])
     if aud_path:
-      call.extend([
-          '-c:a', 'copy'
-      ])
-    call.extend([
-        '-c:v', 'copy'
-    ])
+      call.extend(['-c:a', 'copy'])
+    call.extend(['-c:v', 'copy'])
     if sub_path:
-      call.extend([
-          '-c:s', 'mov_text'
-      ])
+      call.extend(['-c:s', 'mov_text'])
     call.extend([dst_path])
     proc = subprocess.call(call)
     if proc == 1:

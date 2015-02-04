@@ -11,8 +11,7 @@ import motion.py_motion as py_motion
 from __init__ import __version__, cache_path
 import config
 
-
-_NO_OCL_WARNING =\
+NO_OCL_WARNING =\
     'No compatible OCL device available. Check your OpenCL installation.'
 
 
@@ -26,9 +25,10 @@ def main():
                    help='Set to increase output verbosity')
   par.add_argument('-d', '--devices', action='store_true',
                    help='Show detected OpenCL devices and exit')
-
   par.add_argument('--no-preview', action='store_false',
                    help='Set to disable video preview while encoding')
+  par.add_argument('--embed-info', action='store_true',
+                   help='Set to embed debugging info into the output video')
 
   par.add_argument('video', type=str, nargs='?', default=None,
                    help='Specify the input video')
@@ -47,25 +47,22 @@ def main():
   par.add_argument('--decimate', action='store_true',
                    help='Specify if should decimate duplicate frames')
 
-  farneback_gr = par.add_argument_group('advanced arguments')
-  farneback_gr.add_argument('--pyr-scale', type=float, default=0.6,
-                            help='Set pyramid scale factor, '
-                            '(default: %(default)s)')
-  farneback_gr.add_argument('--levels', type=int, default=3,
-                            help='Set number of pyramid layers, '
-                            '(default: %(default)s)')
-  farneback_gr.add_argument('--winsize', type=int, default=25,
-                            help='Set average window size, '
-                            '(default: %(default)s)')
-  farneback_gr.add_argument('--iters', type=int, default=3,
-                            help='Set number of iterations at each pyramid'
-                            ' level, (default: %(default)s)')
-  farneback_gr.add_argument('--poly-n', type=int, default=7,
-                            help='Set size of pixel neighborhood, '
-                            '(default: %(default)s)')
-  farneback_gr.add_argument('--poly-s', type=float, default=1.5,
-                            help='Set standard deviation to smooth'
-                            ' derivatives, (default: %(default)s)')
+  fgr = par.add_argument_group('advanced arguments')
+  fgr.add_argument('--pyr-scale', type=float, default=0.6,
+                   help='Set pyramid scale factor, (default: %(default)s)')
+  fgr.add_argument('--levels', type=int, default=3,
+                   help='Set number of pyramid layers, (default: %(default)s)')
+  fgr.add_argument('--winsize', type=int, default=25,
+                   help='Set average window size, (default: %(default)s)')
+  fgr.add_argument('--iters', type=int, default=3,
+                   help='Set number of iterations at each pyramid level, '
+                   '(default: %(default)s)')
+  fgr.add_argument('--poly-n', type=int, default=7,
+                   help='Set size of pixel neighborhood, '
+                   '(default: %(default)s)')
+  fgr.add_argument('--poly-s', type=float, default=1.5,
+                   help='Set standard deviation to smooth derivatives, '
+                   '(default: %(default)s)')
 
   args = par.parse_args()
 
@@ -73,18 +70,20 @@ def main():
     print(__version__)
     exit(0)
 
+  config.settings['args'] = args
   config.settings['verbose'] = args.verbose
+  config.settings['embed_info'] = args.embed_info
 
   if args.devices:
     py_motion.py_print_ocl_devices()
     if not have_ocl:
-      print(_NO_OCL_WARNING)
+      print(NO_OCL_WARNING)
     exit(0)
 
   if have_ocl:
     py_motion.py_ocl_set_cache_path(cache_path + os.sep)
   else:
-    print(_NO_OCL_WARNING)
+    print(NO_OCL_WARNING)
     exit(1)
 
   src_path = args.video
@@ -108,11 +107,7 @@ def main():
   interpolate_method = Interpolate.interpolate_frames_ocl if have_ocl \
       else Interpolate.interpolate_frames
 
-  try:
-    project = Project.new(src_path)
-  except Exception as error:
-    print(error)
-    exit(1)
+  project = Project.new(src_path)
 
   project.video_path = src_path
   project.playback_rate = Fraction(playback_rate)
@@ -121,9 +116,5 @@ def main():
   if timing_regions is not None:
     project.set_timing_regions_with_string(timing_regions)
 
-  try:
-    project.render_video(dst_path, args.video_scale, args.decimate,
-                         show_preview=args.no_preview)
-  except Exception as error:
-    print(error)
-    exit(1)
+  project.render_video(dst_path, args.video_scale, args.decimate,
+                       show_preview=args.no_preview)

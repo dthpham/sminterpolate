@@ -5,7 +5,7 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include "ocl_interpolate.h"
 #include "ocl_optical_flow.h"
-#include "conversion.h"
+#include "opencv-ndarray-conversion/conversion.h"
 #include <opencv2/ocl/ocl.hpp>
 #if defined(__APPLE__) && defined(__MACH__)
   #include <OpenCL/opencl.h>

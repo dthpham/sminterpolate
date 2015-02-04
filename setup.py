@@ -1,95 +1,18 @@
 #!/usr/bin/env python2
 
-from setuptools import setup, find_packages, Extension, Command
+from setuptools import setup, find_packages, Extension
 import subprocess
 import sys
 import os
 import re
-import shutil
 from butterflow.__init__ import __version__ as version
 from ctypes.util import find_library
 
 F_NULL = open(os.devnull, 'w')
-
-B_MEDIA = 'butterflow/media/'
-B_MOTION = 'butterflow/motion/'
-
-
-class ProjectInit(Command):
-  description = 'inits the project'
-  user_options = []
-
-  def initialize_options(self):
-    self.root_path = None
-    self.repo_path = None
-
-  def finalize_options(self):
-    self.root_path = os.path.dirname(os.path.realpath(__file__))
-    self.repo_path = os.path.join(self.root_path, 'repos')
-
-  def run(self):
-    if not have_command('git'):
-      print('Must have git installed to run init')
-      return
-
-    os.chdir(self.root_path)
-    if not os.path.exists(self.repo_path):
-      os.makedirs(self.repo_path)
-    subprocess.call([
-        'git',
-        'submodule',
-        'init'
-    ])
-    subprocess.call([
-        'git',
-        'submodule',
-        'update'
-    ])
-    submod_path = os.path.join(self.repo_path, 'opencv-ndarray-conversion')
-    motion_path = os.path.join(self.root_path, 'butterflow', 'motion')
-    shutil.copy(os.path.join(submod_path, 'conversion.cpp'), motion_path)
-    shutil.copy(os.path.join(submod_path, 'conversion.h'), motion_path)
-
-
-class Reset(Command):
-  description = 'resets project to original state'
-  user_options = []
-
-  def initialize_options(self):
-    self.cwd = None
-    self.root_path = None
-
-  def finalize_options(self):
-    self.cwd = os.getcwd()
-    self.root_path = os.path.dirname(os.path.realpath(__file__))
-
-  def run(self):
-    if self.cwd != self.root_path:
-      raise RuntimeWarning(
-          'Must be in pkg root ({}) to run clean'.format(self.root_path))
-    else:
-      os.system('rm -f out.mp4')
-      os.system('rm -rf *.clb')
-      os.system('rm -rf *.pyc')
-      os.system('rm -rf ~/.butterflow')
-      os.system('rm -rf build')
-      os.system('rm -rf dist')
-      os.system('rm -rf butterflow.egg-info')
-      os.system('rm -rf repos')
-      os.system('rm -rf butterflow/motion/conversion.*')
-      will_rem = set()
-      will_walk = [
-          os.path.join(self.root_path, 'butterflow'),
-          os.path.join(self.root_path, 'tests'),
-      ]
-      for w in will_walk:
-        for root, dirs, files in os.walk(w):
-          for f in files:
-            name, ext = os.path.splitext(f)
-            if ext in ['.so', '.pyc']:
-              will_rem.add(os.path.join(root, f))
-      for x in will_rem:
-        os.remove(x)
+ROOT_PATH = os.path.dirname(os.path.realpath(__file__))
+B_MEDIA  = os.path.join(ROOT_PATH, 'butterflow', 'media')
+B_MOTION = os.path.join(ROOT_PATH, 'butterflow', 'motion')
+B_VENDOR = os.path.join(ROOT_PATH, 'butterflow', '3rdparty')
 
 
 def get_long_description():
@@ -327,9 +250,9 @@ elif sys.platform.startswith('darwin'):
   linkflags.extend(['-arch', 'x86_64'])
   homebrew_prefix = None
   try:
-      homebrew_prefix = subprocess.Popen(['brew', '--prefix'],
-                                         stdout=subprocess.PIPE,
-                                         env=get_extra_envs()).stdout.read().strip()
+    homebrew_prefix = subprocess.Popen(['brew', '--prefix'],
+                                       stdout=subprocess.PIPE,
+                                       env=get_extra_envs()).stdout.read().strip()
   except Exception:
     # fall back to environment variable if brew command is not found
     if 'HOMEBREW_PREFIX' in os.environ:
@@ -348,10 +271,10 @@ py_libav_info = Extension(
     libraries=build_lst(libav_libs, py_libs),
     library_dirs=ldflags,
     sources=[
-        B_MEDIA + 'py_libav_info.c'
+        os.path.join(B_MEDIA, 'py_libav_info.c')
     ],
     depends=[
-        B_MEDIA + 'py_libav_info.h'
+        os.path.join(B_MEDIA, 'py_libav_info.h')
     ],
     language='c'
 )
@@ -378,20 +301,20 @@ py_motion = Extension(
     'butterflow.motion.py_motion',
     extra_compile_args=cflags,
     extra_link_args=linkflags,
-    include_dirs=build_lst(B_MOTION, includes, cv_includes, py_includes),
+    include_dirs=build_lst(B_VENDOR, B_MOTION, includes, cv_includes, py_includes),
     libraries=build_lst(cv_libs, py_libs, cl_lib),
     library_dirs=build_lst(ldflags, cl_ldflag),
     sources=[
-        B_MOTION + 'conversion.cpp',
-        B_MOTION + 'ocl_interpolate.cpp',
-        B_MOTION + 'ocl_optical_flow.cpp',
-        B_MOTION + 'py_motion.cpp'
+        os.path.join(B_VENDOR, 'opencv-ndarray-conversion', 'conversion.cpp'),
+        os.path.join(B_MOTION, 'ocl_interpolate.cpp'),
+        os.path.join(B_MOTION, 'ocl_optical_flow.cpp'),
+        os.path.join(B_MOTION, 'py_motion.cpp')
     ],
     depends=[
-        B_MOTION + 'conversion.h',
-        B_MOTION + 'ocl_interpolate.h',
-        B_MOTION + 'ocl_optical_flow.h',
-        B_MOTION + 'py_motion.h',
+        os.path.join(B_VENDOR, 'opencv-ndarray-conversion', 'conversion.h'),
+        os.path.join(B_MOTION, 'ocl_interpolate.h'),
+        os.path.join(B_MOTION, 'ocl_optical_flow.h'),
+        os.path.join(B_MOTION, 'py_motion.h'),
     ],
     language='c++'
 )
@@ -413,13 +336,9 @@ setup(
         version),
     description='Lets you create slow motion and smooth motion videos',
     long_description=get_long_description(),
-    keywords=['slowmo', 'slow motion', 'interpolation'],
+    keywords=['slowmo', 'slow motion', 'motion interpolation'],
     entry_points={
         'console_scripts': ['butterflow = butterflow.butterflow:main']
-    },
-    cmdclass={
-        'init': ProjectInit,
-        'reset': Reset
     },
     test_suite='tests'
 )

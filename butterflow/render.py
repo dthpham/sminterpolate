@@ -7,6 +7,8 @@ import os
 import math
 from region import VideoRegionUtils, RenderingSubRegion
 import config
+import sys
+from __init__ import __version__ as version
 
 
 class Renderer(object):
@@ -28,6 +30,9 @@ class Renderer(object):
     self.pipe = None
     self.loglevel = loglevel
     self.show_preview = show_preview
+    self.total_frames_written = 0
+    self.num_sub_regions = 0
+    self.curr_sub_region_idx = 0
 
   def init_pipe(self, dst_path):
     '''create pipe to ffmpeg/libav, which will encode the video for us'''
@@ -43,7 +48,7 @@ class Renderer(object):
         '-pix_fmt', 'yuv420p',
         '-c:a', 'none',
         '-c:v', 'libx264',
-        '-preset', 'slow',
+        '-preset', 'fast',
         '-crf', '18',
         '-r', str(self.playback_rate),
         dst_path],
@@ -64,6 +69,7 @@ class Renderer(object):
     '''writes a frame to the pipe'''
     try:
       self.pipe.stdin.write(bytes(frame.data))
+      self.total_frames_written += 1
     except Exception as err:
       print('error writing to pipe: ', err)
 
@@ -96,6 +102,10 @@ class Renderer(object):
       tgt_frs = int(self.playback_rate * reg_dur_secs * tgt_factor)
 
     fr_factor = tgt_frs * 1.0 / frs_in_region
+    # prevent division by zero when only one frame needs to be written
+    if fr_factor == 0:
+      tgt_frs = 1
+      fr_factor = 1
     time_step = 1 / fr_factor
 
     time_step = min(time_step, 1.0)
@@ -144,45 +154,51 @@ class Renderer(object):
     frs_written = 0
     frs_gen = 1
     wrk_idx = 0
+    only_write_one = False
 
     fr_1 = None
     fr_2 = src.frame_at_idx(fr_a)
-    src.seek_to_frame(fr_a + 1)
+    if fr_a == fr_b:
+      times_to_run = 1
+      only_write_one = True
+    else:
+      src.seek_to_frame(fr_a + 1)
+      times_to_run = frs_in_region - 1
 
-    for x in xrange(0, frs_in_region - 1):
+    for x in xrange(0, times_to_run):
       ch = 0xff & cv2.waitKey(30)
       if ch == 23:
         break
 
       new_frs = []
       fr_1 = fr_2
-      try:
-        fr_2 = src.read_frame()
-      except Exception as ex:
-        print('couldn\'t read a frame {} breaking: {}'.format(x, ex))
-        break
-      frs_gen += 1
+      if only_write_one:
+        new_frs.append(fr_1)
+      else:
+        try:
+          fr_2 = src.read_frame()
+          frs_gen += 1
+        except Exception as ex:
+          print('couldn\'t read a frame {} breaking: {}'.format(x, ex))
+          break
 
-      fr_1_gr = cv2.cvtColor(fr_1, cv2.COLOR_BGR2GRAY)
-      fr_2_gr = cv2.cvtColor(fr_2, cv2.COLOR_BGR2GRAY)
+        fr_1_gr = cv2.cvtColor(fr_1, cv2.COLOR_BGR2GRAY)
+        fr_2_gr = cv2.cvtColor(fr_2, cv2.COLOR_BGR2GRAY)
+        fu, fv = self.flow_method([fr_1_gr, fr_2_gr])
+        bu, bv = self.flow_method([fr_2_gr, fr_1_gr])
+        fr_1_32 = np.float32(fr_1) * 1 / 255.0
+        fr_2_32 = np.float32(fr_2) * 1 / 255.0
 
-      fu, fv = self.flow_method([fr_1_gr, fr_2_gr])
-      bu, bv = self.flow_method([fr_2_gr, fr_1_gr])
-
-      fr_1_32 = np.float32(fr_1) * 1 / 255.0
-      fr_2_32 = np.float32(fr_2) * 1 / 255.0
-
-      i_frs = self.interpolate_method(
-          fr_1_32, fr_2_32, fu, fv, bu, bv, time_step)
-      new_frs.append(fr_1)
-      new_frs.extend(i_frs)
+        i_frs = self.interpolate_method(
+            fr_1_32, fr_2_32, fu, fv, bu, bv, time_step)
+        new_frs.append(fr_1)
+        new_frs.extend(i_frs)
 
       frs_made += len(new_frs)
 
       for idx, fr in enumerate(new_frs):
-        if self.show_preview:
-          cv2.imshow(os.path.basename(vid_name), fr)
         wrk_idx += 1
+        should_dupe = False
 
         if drop_every_n_frs > 0:
           drop_rem = math.fmod(wrk_idx, drop_every_n_frs)
@@ -194,11 +210,125 @@ class Renderer(object):
           dupe_rem = math.fmod(wrk_idx, dupe_every_n_frs)
           should_dupe = dupe_rem < 1.0
           if should_dupe:
-            self.write_frame_to_pipe(fr)
             frs_duped += 1
 
-        self.write_frame_to_pipe(fr)
-        frs_written += 1
+        for k in range(2 if should_dupe else 1):
+          frs_written += 1
+          fr_to_write = fr
+
+          if config.settings['embed_info']:
+            T_PADDING = 20.0
+            L_PADDING = 20.0
+            R_PADDING = 20.0
+            LINE_D_PADDING = 10.0
+
+            # the copy here has a minimal effect on performance
+            img_mat = cv2.cv.fromarray(fr.copy())
+            # 768x216 is the minimum size in which the unscaled
+            # CV_FONT_HERSHEY_PLAIN font fits. The font is scaled up and down
+            # based on that reference point
+            h_scale = min(self.vid_info.width / 768.0, 1.0)
+            v_scale = min(self.vid_info.height / 216.0, 1.0)
+            scale = min(h_scale, v_scale)
+            font = cv2.cv.InitFont(cv2.cv.CV_FONT_HERSHEY_PLAIN, scale, scale,
+                                   0.0, 1, cv2.cv.CV_AA)
+            font_color = cv2.cv.RGB(255, 255, 255)
+
+            # embed text starting from the top left going down
+            args = config.settings['args']
+
+            t = ('butterflow {} ({})\n'
+                 'Res: {},{}\n'
+                 'Playback Rate: {} fps\n'
+                 'Pyr: {}, L: {}, W: {}, I: {}, PolyN: {}, PolyS: {}\n\n'
+                 'Frame: {}\n'
+                 'Work Index: {}, {}, {}\n'
+                 'Type Src: {}, Dup: {}\n'
+                 'Mem: {}')
+            t = t.format(version,
+                         sys.platform,
+                         self.vid_info.width,
+                         self.vid_info.height,
+                         args.playback_rate,
+                         args.pyr_scale,
+                         args.levels,
+                         args.winsize,
+                         args.iters,
+                         args.poly_n,
+                         args.poly_s,
+                         self.total_frames_written,
+                         x,
+                         x + 1,
+                         idx,
+                         'Y' if idx == 0 else 'N',
+                         'Y' if k > 0 else 'N',
+                         hex(id(fr)))
+
+            for y, line in enumerate(t.split('\n')):
+              line_sz, _ = cv2.cv.GetTextSize(line, font)
+              _, line_h = line_sz
+              origin = (int(L_PADDING),
+                        int(T_PADDING +
+                        (y * (line_h + LINE_D_PADDING))))
+              cv2.cv.PutText(img_mat, line, origin, font, font_color)
+
+            # embed text from the top right going down
+            sub_time_a_sec = sub_region.time_a / 1000
+            sub_time_b_sec = sub_region.time_b / 1000
+            sub_target_dur = '_'
+            sub_target_fps = '_'
+            sub_target_fac = '_'
+            if sub_region.target_duration:
+              dur_in_secs = sub_region.target_duration / 1000
+              sub_target_dur = '{:.2f}s'.format(dur_in_secs)
+            if sub_region.target_rate:
+              sub_target_fps = '{}'.format(sub_region.target_rate)
+            if sub_region.target_factor:
+              sub_target_fac = '{:.2f}'.format(sub_region.target_factor)
+            sub_dur = dur_in_region / 1000.0
+            tgt_dur = tgt_frs / float(self.playback_rate)
+            write_ratio = frs_written * 100.0 / tgt_frs
+            t = ('Region {}/{} F: [{}, {}] T: [{:.2f}s, {:.2f}s]\n'
+                 'Len F: {}, T: {:.2f}s\n'
+                 'Target Dur: {}, Fac: {}, fps: {}\n'
+                 'Out Len F: {}, Dur: {:.2f}s\n'
+                 'Drp every {:.1f}, Dup every {:.1f}\n'
+                 'Gen: {}, Made: {}, Drp: {}, Dup: {}\n'
+                 'Write Ratio: {}/{} ({:.2f}%)')
+            t = t.format(self.curr_sub_region_idx,
+                         self.num_sub_regions - 1,
+                         fr_a,
+                         fr_b,
+                         sub_time_a_sec,
+                         sub_time_b_sec,
+                         frs_in_region,
+                         sub_dur,
+                         sub_target_dur,
+                         sub_target_fac,
+                         sub_target_fps,
+                         tgt_frs, tgt_dur,
+                         drop_every_n_frs,
+                         dupe_every_n_frs,
+                         frs_gen,
+                         frs_made,
+                         frs_dropped,
+                         frs_duped,
+                         frs_written,
+                         tgt_frs,
+                         write_ratio)
+
+            for y, line in enumerate(t.split('\n')):
+              line_sz, _ = cv2.cv.GetTextSize(line, font)
+              line_w, line_h = line_sz
+              origin = (int(self.vid_info.width - R_PADDING - line_w),
+                        int(T_PADDING +
+                        (y * (line_h + LINE_D_PADDING))))
+              cv2.cv.PutText(img_mat, line, origin, font, font_color)
+
+            fr_to_write = np.asarray(img_mat)
+          if self.show_preview:
+            cv2.imshow(os.path.basename(vid_name), fr_to_write)
+          self.write_frame_to_pipe(fr_to_write)
 
     if config.settings['verbose']:
       print('frs_generated:', frs_gen)
@@ -206,7 +336,7 @@ class Renderer(object):
       print('frs_dropped:', frs_dropped)
       print('frs_duped:', frs_duped)
 
-    fr_write_ratio = frs_written * 1.0 / tgt_frs
+    fr_write_ratio = 0 if tgt_frs == 0 else frs_written * 1.0 / tgt_frs
     est_drift_secs = float(tgt_frs - frs_written) / self.playback_rate
 
     if config.settings['verbose']:
@@ -216,6 +346,7 @@ class Renderer(object):
 
   def render(self, dst_path):
     '''separates video regions to render them individually'''
+    self.total_frames_written = 0
     self.init_pipe(dst_path)
     src = OpenCvFrameSource(self.vid_info.video_path)
 
@@ -292,13 +423,15 @@ class Renderer(object):
 
     VideoRegionUtils.validate_region_set(src.duration, new_sub_regions)
 
-    for x in new_sub_regions:
+    for r in new_sub_regions:
       if config.settings['verbose']:
-        print(x.__dict__)
+        print(r.__dict__)
     if len(new_sub_regions) != regions_to_make:
       raise RuntimeError('unexpected len of subregions to render')
 
-    for r in new_sub_regions:
+    self.num_sub_regions = len(new_sub_regions)
+    for x, r in enumerate(new_sub_regions):
+      self.curr_sub_region_idx = x
       self.render_subregion(src, r)
 
     cv2.destroyAllWindows()

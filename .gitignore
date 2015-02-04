@@ -7,17 +7,16 @@
 # misc
 *~
 *.DS_Store
+*.directory
 
 #virtualenv
 bin
 lib
 include
 
-#links
-butterflow/motion/conversion.*
-
 #setuptools
 build
 dist
 *.egg-info
 .Python
+__pycache__

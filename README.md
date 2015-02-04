@@ -5,22 +5,21 @@ motion and smooth motion videos.
 
 ####How does it work?
 
-It works by generating intermediate frames between existing frames. For example,
+It works by rendering intermediate frames between existing frames. For example,
 given two existing frames `A` and `B`, this program can generate frames `C.1`,
 `C.2`...`C.n` that are positioned between the two. This process, called
 [motion interpolation](http://en.wikipedia.org/wiki/Motion_interpolation),
 increases frame rates and can give the perception of smoother motion and more
 fluid animation, an effect most people know as the "soap opera effect".
-Butterflow takes advantage of this increase in frame rates to generate high fps
-videos that are needed to make smooth and slow motion videos with minimal
-judder.
+Butterflow takes advantage of this increase in frame rates to make high speed
+and slow motion videos with minimal judder.
 
-####See it for yourself:
+##Sample
 
-* [Video @30fps slowed down (210fps)](https://dl.dropboxusercontent.com/u/103239050/ink-s.mp4)
-* [Video @30fps slowed down (400fps)](https://dl.dropboxusercontent.com/u/103239050/retro-s.mp4)
-* [Video @10fps frame rate increased (60fps)](https://dl.dropboxusercontent.com/u/103239050/spin-s.mp4)
-
+* [Slow motion with multiple sub regions](http://srv.dthpham.me/video/jet.mp4).
+The source clip on the right has 116 unique frames. Butterflow rendered an
+additional 840 unique intermediate frames between source frames for the final
+video shown on the left.
 
 ##Installation
 
@@ -29,7 +28,8 @@ judder.
 First, install [`numpy`]() using `homebrew` or `pip`, then:
 
 ```
-$ brew install butterflow
+brew tap homebrew/science
+brew install butterflow
 ```
 
 ####Arch Linux:
@@ -53,38 +53,32 @@ deb http://repo.dthpham.me/ jessie main
 Import key that is used to sign the release:
 
 ```
-$ gpg --keyserver pgp.mit.edu --recv-keys 458C370A
-$ gpg -a --export 458C370A | sudo apt-key add -
+gpg --keyserver pgp.mit.edu --recv-keys 458C370A
+gpg -a --export 458C370A | sudo apt-key add -
 ```
-
 Finally install it like any other software package:
 
 ```
-$ apt-get update
-$ apt-get install butterflow
+apt-get update
+apt-get install butterflow
 ```
 
 ####From Source:
 
- Satisfy all the dependencies and clone this repository, then:
+Satisfy all the [dependencies](https://github.com/dthpham/butterflow/wiki/Dependencies)
+and clone this repository, then:
 
 ```
-$ cd butterflow
-$ python2 setup.py init
-$ python2 setup.py install
+cd butterflow
+python2 setup.py install
 ```
-
-##Dependencies
-
-Installing these aren't necessary if you installed using a package. See the
-[Dependencies wiki page](https://github.com/dthpham/butterflow/wiki/Dependencies)
-for more information.
 
 ##Setup
 
 After installing the package, you still need to install ***at least one***
-vendor-specific implementation of OpenCL that matches your hardware. If you're
+vendor-specific implementation of OpenCL that supports your hardware. If you're
 on OS X, no setup is necessary because support is provided by default.
+
 ####Arch Linux:
 
 * [`opencl-nvidia`]()
@@ -95,7 +89,7 @@ on OS X, no setup is necessary because support is provided by default.
 * [`intel-opencl-runtime`]()
 * [`beignet-git`]()
 
-####Debian:
+####Debian 8.x:
 
 * [`nvidia-opencl-icd`]()
 * [`amd-opencl-icd`]()
@@ -117,41 +111,37 @@ For a full list of options run ```$ butterflow -h```.
 ####Increase a video's frame rate to `120fps`:
 
 ```
-$ butterflow --playback-rate 120 <video>
+butterflow --playback-rate 120 <video>
 ```
 
 ####Slow-mo a clip with a target frame rate of `400fps`:
 
 ```
-$ butterflow -r 59.94 -s full,fps=400 <video>
+butterflow -r 59.94 -s full,fps=400 <video>
 ```
 
 ####Slow-mo a clip to `0.25x` quarter speed:
 
 ```
-$ butterflow -r 59.94 -s full,factor=0.25 <video>
+butterflow -r 59.94 -s full,factor=0.25 <video>
 ```
 
 ####Slow-mo a clip to be `30s` long:
 
 ```
-$ butterflow -r 59.94 -s full,duration=30 <video>
+butterflow -r 59.94 -s full,duration=30 <video>
 ```
 
 ####Slow-mo a region:
 
 ```
-$ butterflow -r 24 -s a=0:00:05.0,b=0:00:06.0,factor=0.5 <video>
+butterflow -r 24 -s "a=0:00:05.0,b=0:00:06.0,factor=0.5" <video>
 ```
 
 ####Slow-mo multiple regions:
 
 ```
-$ butterflow -r 24 -s \
-"a=0:00:05.0,b=0:00:06.0,fps=200;\
-a=0:00:16.0,b=0:00:18.0,fps=400;\
-a=0:00:18.0,b=0:00:20.0,factor=0.5;\
-a=0:00:20.0,b=0:00:21.0,duration=2" <video>
+butterflow -r 24 -s "a=4.3,b=5,factor=0.25;a=6,b=8.5,duration=20" <video>
 ```
 
 ##Filters
@@ -162,7 +152,7 @@ Videos may have some judder if your source has duplicate frames. To compensate
 for this, use the `--decimate` option:
 
 ```
-$ butterflow -r 60 --decimate <video>
+butterflow -r 60 --decimate <video>
 ```
 
 ####Video Scale:
@@ -170,12 +160,12 @@ $ butterflow -r 60 --decimate <video>
 To scale the output video to `75%` of its original size:
 
 ```
-$ butterflow -r 24 --video-scale 0.75 <video>
+butterflow -r 24 --video-scale 0.75 <video>
 ```
 
 ##Quality
 
-Butterflow uses the Farneback algorithm to compute dense optical flows for use
-in frame interpolation. You can pass in different values to the function to
+Butterflow uses the Farneback algorithm to compute dense optical flows for frame
+interpolation. You can pass in different values to the function to
 fine-tune the quality (robustness of image) of the resulting videos. Run
 `$ butterflow -h` for a list of advanced options and their default values.
