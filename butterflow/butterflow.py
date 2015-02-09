@@ -41,11 +41,14 @@ def main():
                         '(default: %(default)s)')
   par.add_argument('-s', '--sub-regions', type=str,
                    help='Specify rendering sub regions')
+
   par.add_argument('--video-scale', type=float, default=1.0,
                    help='Set the output video scale, '
                         '(default: %(default)s)')
   par.add_argument('--decimate', action='store_true',
                    help='Specify if should decimate duplicate frames')
+  par.add_argument('--grayscale', action='store_true',
+                   help='Specify to enhance grayscale coloring')
 
   fgr = par.add_argument_group('advanced arguments')
   fgr.add_argument('--pyr-scale', type=float, default=0.6,
@@ -71,8 +74,6 @@ def main():
     exit(0)
 
   config.settings['args'] = args
-  config.settings['verbose'] = args.verbose
-  config.settings['embed_info'] = args.embed_info
 
   if args.devices:
     py_motion.py_print_ocl_devices()

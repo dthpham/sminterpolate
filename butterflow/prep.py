@@ -38,6 +38,9 @@ class VideoPrep(object):
     vf = 'scale={}:{}'.format(w, h)
     if vf_decimate:
       vf = 'fieldmatch,decimate,' + vf
+    pix_fmt = 'yuv420p'
+    if config.settings['args'].grayscale:
+      pix_fmt = 'gray'
 
     call = [
         config.settings['avutil'],
@@ -45,7 +48,7 @@ class VideoPrep(object):
         '-y',
         '-threads', '0',
         '-i', self.video_info.video_path,
-        '-pix_fmt', 'yuv420p',
+        '-pix_fmt', pix_fmt,
         '-filter:v', vf,
     ]
     if has_aud:
