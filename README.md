@@ -21,15 +21,6 @@ Butterflow rendered an additional 840 unique intermediate frames from 166 source
 
 ##Installation
 
-####Mac OS X:
-
-With [`homebrew`]():
-
-```
-brew tap homebrew/science
-brew install butterflow
-```
-
 ####Arch Linux:
 
 A package is available in the AUR under [butterflow](https://aur.archlinux.org/packages/butterflow/).
