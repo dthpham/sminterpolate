@@ -14,21 +14,12 @@ fluid animation, an effect most people know as the "soap opera effect".
 Butterflow takes advantage of this increase in frame rates to make high speed
 and slow motion videos with minimal judder.
 
-##Sample
+##Demo
 
 * [Slow motion with multiple sub regions](http://srv.dthpham.me/video/jet.mp4).
 Butterflow rendered an additional 840 unique intermediate frames from 166 source frames for the slow-mo video on the left.
 
 ##Installation
-
-####Mac OS X:
-
-With [`homebrew`]():
-
-```
-brew tap homebrew/science
-brew install butterflow
-```
 
 ####Arch Linux:
 
@@ -96,7 +87,7 @@ on OS X, no setup is necessary because support is provided by default.
 * [`beignet`]()
 * [`pocl-opencl-icd`]()
 
-When finished, you can run `$ butterflow -d` to print a list of all detected devices.
+When finished, you can run `butterflow -d` to print a list of all detected devices.
 
 For more information on how to satisfy the OpenCL requirements, please read
 [this page](http://wiki.tiker.net/OpenCLHowTo). If you're on Arch Linux, see
@@ -104,7 +95,7 @@ For more information on how to satisfy the OpenCL requirements, please read
 
 ##Usage
 
-For a full list of options run ```$ butterflow -h```.
+For a full list of options run `butterflow -h`.
 
 ####Increase a video's frame rate to `120fps`:
 
@@ -166,4 +157,4 @@ butterflow -r 24 --video-scale 0.75 <video>
 Butterflow uses the Farneback algorithm to compute dense optical flows for frame
 interpolation. You can pass in different values to the function to
 fine-tune the quality (robustness of image) of the resulting videos. Run
-`$ butterflow -h` for a list of advanced options and their default values.
+`butterflow -h` for a list of advanced options and their default values.
