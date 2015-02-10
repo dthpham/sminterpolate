@@ -17,15 +17,13 @@ and slow motion videos with minimal judder.
 ##Sample
 
 * [Slow motion with multiple sub regions](http://srv.dthpham.me/video/jet.mp4).
-The source clip on the right has 116 unique frames. Butterflow rendered an
-additional 840 unique intermediate frames between source frames for the final
-video shown on the left.
+Butterflow rendered an additional 840 unique intermediate frames from 166 source frames for the slow-mo video on the left.
 
 ##Installation
 
 ####Mac OS X:
 
-First, install [`numpy`]() using `homebrew` or `pip`, then:
+With [`homebrew`]():
 
 ```
 brew tap homebrew/science
