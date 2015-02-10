@@ -252,7 +252,8 @@ elif sys.platform.startswith('darwin'):
   try:
     homebrew_prefix = subprocess.Popen(['brew', '--prefix'],
                                        stdout=subprocess.PIPE,
-                                       env=get_extra_envs()).stdout.read().strip()
+                                       env=get_extra_envs())
+    homebrew_prefix = homebrew_prefix.stdout.read().strip()
   except Exception:
     # fall back to environment variable if brew command is not found
     if 'HOMEBREW_PREFIX' in os.environ:
@@ -294,14 +295,19 @@ elif sys.platform.startswith('darwin'):
   # /usr/include/python2.x/<package> or /usr/local/include/... but that doesn't
   # happen when using the numpy package from homebrew
   includes.append(os.path.join(homebrew_prefix,
-                               'lib/python2.7/site-packages/numpy/core/include'))
+                               'lib/python2.7/site-packages/numpy/core/include'
+                               ))
+  includes.append(os.path.join('/System/Library/Frameworks/Python.framework/'
+                               'Versions/2.7/Extras/lib/python/numpy/core/'
+                               'include'))
   linkflags.extend(['-framework', 'OpenCL'])
 
 py_motion = Extension(
     'butterflow.motion.py_motion',
     extra_compile_args=cflags,
     extra_link_args=linkflags,
-    include_dirs=build_lst(B_VENDOR, B_MOTION, includes, cv_includes, py_includes),
+    include_dirs=build_lst(B_VENDOR, B_MOTION, includes, cv_includes,
+                           py_includes),
     libraries=build_lst(cv_libs, py_libs, cl_lib),
     library_dirs=build_lst(ldflags, cl_ldflag),
     sources=[
