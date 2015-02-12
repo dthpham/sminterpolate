@@ -35,7 +35,14 @@ def main():
                    help='Specify the playback rate, '
                         '(default: %(default)s)')
   par.add_argument('-s', '--sub-regions', type=str,
-                   help='Specify rendering sub regions')
+                   help='Specify rendering sub regions in the form: '
+                   '"a=TIME,b=TIME,TARGET=FLOAT" where '
+                   'TARGET is either `fps`, `duration`, `factor`. '
+                   'Valid TIME syntaxes are [hr:m:s], [m:s], or [s.xxx]. '
+                   'You can specify multiple sub regions by separting them '
+                   'with a semi-colon `;`. A special region format that '
+                   'conveniently describes the entire clip is available in '
+                   'the form: "full,TARGET=FLOAT".')
 
   par.add_argument('--video-scale', type=float, default=1.0,
                    help='Set the output video scale, '
