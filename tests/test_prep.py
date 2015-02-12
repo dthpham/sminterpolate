@@ -1,9 +1,8 @@
 import unittest
 from butterflow.prep import VideoPrep
 from butterflow.media.info import LibAvVideoInfo
-from fractions import Fraction
 import os
-import butterflow.config
+from butterflow.butterflow import config
 
 
 class VideoPrepTestCase(unittest.TestCase):
@@ -18,7 +17,7 @@ class VideoPrepTestCase(unittest.TestCase):
     self.out_v = os.path.join(DIR, 'out.mp4')
     self.out_a = os.path.join(DIR, 'out.ogg')
     self.out_s = os.path.join(DIR, 'out.srt')
-    self.using_avconv = butterflow.config.settings['avutil'] == 'avconv'
+    self.using_avconv = config['avutil'] == 'avconv'
     self.remove_temp_files()
 
   def tearDown(self):

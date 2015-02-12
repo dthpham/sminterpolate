@@ -1,6 +1,3 @@
-import os
-
-
 class Config(dict):
   """Works exactly like a dict but can load a config file with key and
   value pairs in the form `key = value` with at most one pair on each line.
@@ -28,8 +25,3 @@ class Config(dict):
           k, v = l.split('=')
           obj[k.lower()] = v.lower()
     return obj
-
-from __init__ import conf_path
-if not os.path.exists(conf_path):
-  open(conf_path, 'a').close()
-settings = Config.from_file(conf_path)

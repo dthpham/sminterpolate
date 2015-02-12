@@ -1,2 +1,2 @@
-from butterflow.butterflow import main
+from butterflow.cli import main
 main()

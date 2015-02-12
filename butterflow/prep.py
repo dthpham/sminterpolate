@@ -1,7 +1,7 @@
 import os
 import subprocess
 import shutil
-import config
+from .butterflow import config
 
 
 class VideoPrep(object):
@@ -22,7 +22,7 @@ class VideoPrep(object):
     audio sync drift. in the future, the process shouldn't be framerate
     sensitive
     '''
-    using_avconv = config.settings['avutil'] == 'avconv'
+    using_avconv = config['avutil'] == 'avconv'
     if not self.video_info.has_video_stream:
       raise RuntimeError('no video stream detected')
     has_sub = self.video_info.has_subtitle_stream
@@ -39,11 +39,11 @@ class VideoPrep(object):
     if vf_decimate:
       vf = 'fieldmatch,decimate,' + vf
     pix_fmt = 'yuv420p'
-    if config.settings['args'].grayscale:
+    if config['args'].grayscale:
       pix_fmt = 'gray'
 
     call = [
-        config.settings['avutil'],
+        config['avutil'],
         '-loglevel', self.loglevel,
         '-y',
         '-threads', '0',
@@ -79,7 +79,7 @@ class VideoPrep(object):
     if not self.video_info.has_audio_stream:
       raise RuntimeError('no audio stream detected')
     proc = subprocess.call([
-        config.settings['avutil'],
+        config['avutil'],
         '-loglevel', self.loglevel,
         '-y',
         '-i', self.video_info.video_path,
@@ -94,11 +94,11 @@ class VideoPrep(object):
     '''dump subtitles to a file if it exists'''
     if not self.video_info.has_subtitle_stream:
       raise RuntimeError('no subtitle streams detected')
-    if config.settings['avutil'] == 'avconv':
+    if config['avutil'] == 'avconv':
       open(dst_path, 'a').close()
       return
     proc = subprocess.call([
-        config.settings['avutil'],
+        config['avutil'],
         '-loglevel', self.loglevel,
         '-y',
         '-i', self.video_info.video_path,
@@ -124,7 +124,7 @@ class VideoPrep(object):
       return
 
     call = [
-        config.settings['avutil'],
+        config['avutil'],
         '-loglevel', loglevel,
         '-y',
     ]

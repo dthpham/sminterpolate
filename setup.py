@@ -344,7 +344,7 @@ setup(
     long_description=get_long_description(),
     keywords=['slowmo', 'slow motion', 'motion interpolation'],
     entry_points={
-        'console_scripts': ['butterflow = butterflow.butterflow:main']
+        'console_scripts': ['butterflow = butterflow.cli:main']
     },
     test_suite='tests'
 )
