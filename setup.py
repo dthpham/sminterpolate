@@ -297,6 +297,8 @@ elif sys.platform.startswith('darwin'):
   includes.append(os.path.join(homebrew_prefix,
                                'lib/python2.7/site-packages/numpy/core/include'
                                ))
+  # homebrew opencv uses a brewed numpy by default but it's possible for the
+  # user to their own or the system one
   includes.append(os.path.join('/System/Library/Frameworks/Python.framework/'
                                'Versions/2.7/Extras/lib/python/numpy/core/'
                                'include'))
