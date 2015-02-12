@@ -17,9 +17,22 @@ and slow motion videos with minimal judder.
 ##Demo
 
 * [Slow motion with multiple sub regions](http://srv.dthpham.me/video/jet.mp4).
-Butterflow rendered an additional 840 unique intermediate frames from 166 source frames for the slow-mo video on the left.
+Butterflow rendered an additional 840 unique intermediate frames from 166 source
+frames for the slow-mo video on the left.
 
 ##Installation
+
+####OS X:
+
+Clone this repo, then with [`homebrew`]():
+
+```
+brew tap homebrew/science
+brew install ffmpeg --with-libvorbis --with-libass
+brew install opencv --with-ffmpeg
+cd butterflow
+python setup.py install
+```
 
 ####Arch Linux:
 
@@ -54,7 +67,8 @@ apt-get install butterflow
 
 ####From Source:
 
-Satisfy all the [dependencies](https://github.com/dthpham/butterflow/wiki/Dependencies)
+Satisfy all the
+[dependencies](https://github.com/dthpham/butterflow/wiki/Dependencies)
 and clone this repository, then:
 
 ```
@@ -87,7 +101,8 @@ on OS X, no setup is necessary because support is provided by default.
 * [`beignet`]()
 * [`pocl-opencl-icd`]()
 
-When finished, you can run `butterflow -d` to print a list of all detected devices.
+When finished, you can run `butterflow -d` to print a list of all detected
+devices.
 
 For more information on how to satisfy the OpenCL requirements, please read
 [this page](http://wiki.tiker.net/OpenCLHowTo). If you're on Arch Linux, see

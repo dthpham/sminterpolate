@@ -6,9 +6,9 @@ import numpy as np
 import os
 import math
 from region import VideoRegionUtils, RenderingSubRegion
-import config
 import sys
 from __init__ import __version__ as version
+from .butterflow import config
 
 
 class Renderer(object):
@@ -37,10 +37,10 @@ class Renderer(object):
   def init_pipe(self, dst_path):
     '''create pipe to ffmpeg/libav, which will encode the video for us'''
     pix_fmt = 'yuv420p'
-    if config.settings['args'].grayscale:
+    if config['args'].grayscale:
       pix_fmt = 'gray'
     self.pipe = subprocess.Popen([
-        config.settings['avutil'],
+        config['avutil'],
         '-loglevel', self.loglevel,
         '-y',
         '-f', 'rawvideo',
@@ -131,7 +131,7 @@ class Renderer(object):
       dupe_every_n_frs = frs_will_make / math.fabs(frs_extra)
     pot_drift_secs = frs_extra / self.playback_rate
 
-    if config.settings['args'].verbose:
+    if config['args'].verbose:
       print('region_fr_a', fr_a)
       print('region_fr_b', fr_b)
       print('region_time_a', sub_region.time_a)
@@ -219,7 +219,7 @@ class Renderer(object):
           frs_written += 1
           fr_to_write = fr
 
-          if config.settings['args'].embed_info:
+          if config['args'].embed_info:
             T_PADDING = 20.0
             L_PADDING = 20.0
             R_PADDING = 20.0
@@ -238,7 +238,7 @@ class Renderer(object):
             font_color = cv2.cv.RGB(255, 255, 255)
 
             # embed text starting from the top left going down
-            args = config.settings['args']
+            args = config['args']
 
             t = ('butterflow {} ({})\n'
                  'Res: {},{}\n'
@@ -333,7 +333,7 @@ class Renderer(object):
             cv2.imshow(os.path.basename(vid_name), fr_to_write)
           self.write_frame_to_pipe(fr_to_write)
 
-    if config.settings['args'].verbose:
+    if config['args'].verbose:
       print('frs_generated:', frs_gen)
       print('frs_made:', frs_made)
       print('frs_dropped:', frs_dropped)
@@ -342,7 +342,7 @@ class Renderer(object):
     fr_write_ratio = 0 if tgt_frs == 0 else frs_written * 1.0 / tgt_frs
     est_drift_secs = float(tgt_frs - frs_written) / self.playback_rate
 
-    if config.settings['args'].verbose:
+    if config['args'].verbose:
       print('frs_written: {}/{} ({:.2f}%)'.format(
           frs_written, tgt_frs, fr_write_ratio * 100))
       print('est_drift:', est_drift_secs)
@@ -353,7 +353,7 @@ class Renderer(object):
     self.init_pipe(dst_path)
     src = OpenCvFrameSource(self.vid_info.video_path)
 
-    if config.settings['args'].verbose:
+    if config['args'].verbose:
       print('src_dur', src.duration)
       print('src_frs', src.num_frames)
 
@@ -427,7 +427,7 @@ class Renderer(object):
     VideoRegionUtils.validate_region_set(src.duration, new_sub_regions)
 
     for r in new_sub_regions:
-      if config.settings['args'].verbose:
+      if config['args'].verbose:
         print(r.__dict__)
     if len(new_sub_regions) != regions_to_make:
       raise RuntimeError('unexpected len of subregions to render')

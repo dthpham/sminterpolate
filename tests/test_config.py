@@ -1,9 +1,9 @@
 import unittest
 import tempfile
-from butterflow.config import SettingsDictionary
+from butterflow.config import Config
 
 
-class DictionarySettingsTestCase(unittest.TestCase):
+class ConfigTestCase(unittest.TestCase):
   def setUp(self):
     config = '''
         # This is a comment
@@ -18,7 +18,7 @@ class DictionarySettingsTestCase(unittest.TestCase):
     self.temp_file.close()
 
   def test_dict_from_file(self):
-    s = SettingsDictionary.from_settings_file(self.config_file)
+    s = Config.from_file(self.config_file)
     self.assertEquals(len(s), 1)
     self.assertTrue(s['avutil'], 'ffmpeg')
 
