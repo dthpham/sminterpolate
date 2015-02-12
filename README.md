@@ -24,14 +24,11 @@ frames for the slow-mo video on the left.
 
 ####OS X:
 
-Clone this repo, then with [`homebrew`]():
+With [`homebrew`]():
 
 ```
 brew tap homebrew/science
-brew install ffmpeg --with-libvorbis --with-libass
-brew install opencv --with-ffmpeg
-cd butterflow
-python setup.py install
+brew install butterflow
 ```
 
 ####Arch Linux:
