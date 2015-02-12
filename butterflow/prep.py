@@ -39,7 +39,7 @@ class VideoPrep(object):
     if vf_decimate:
       vf = 'fieldmatch,decimate,' + vf
     pix_fmt = 'yuv420p'
-    if config['args'].grayscale:
+    if 'args' in config and config['args'].grayscale:
       pix_fmt = 'gray'
 
     call = [

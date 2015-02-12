@@ -37,7 +37,7 @@ class Renderer(object):
   def init_pipe(self, dst_path):
     '''create pipe to ffmpeg/libav, which will encode the video for us'''
     pix_fmt = 'yuv420p'
-    if config['args'].grayscale:
+    if 'args' in config and config['args'].grayscale:
       pix_fmt = 'gray'
     self.pipe = subprocess.Popen([
         config['avutil'],
