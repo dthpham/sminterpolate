@@ -3,7 +3,7 @@
 *Butterflow* is an easy to use command line tool that lets you create fluid slow
 motion and smooth motion videos.
 
-####How does it work?
+##How does it work?
 
 It works by rendering intermediate frames between existing frames. For example,
 given two existing frames `A` and `B`, this program can generate frames `C.1`,
@@ -16,24 +16,22 @@ and slow motion videos with minimal judder.
 
 ##Demo
 
-* [Slow motion with multiple sub regions](http://srv.dthpham.me/video/jet.mp4).
-Butterflow rendered an additional 840 unique intermediate frames from 166 source
-frames for the slow-mo video on the left.
+* [Slow motion with multiple sub regions](http://srv.dthpham.me/video/jet.mp4)
 
 ##Installation
 
 ####OS X:
 
-With [`homebrew`]():
+With [`homebrew`](http://brew.sh/):
 
 ```
 brew tap homebrew/science
-brew install butterflow
+brew install --build-from-source butterflow
 ```
 
 ####Arch Linux:
 
-A package is available in the AUR under [butterflow](https://aur.archlinux.org/packages/butterflow/).
+A package is available in the AUR under [`butterflow`](https://aur.archlinux.org/packages/butterflow/).
 
 ####Debian 8.x:
 
