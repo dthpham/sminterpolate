@@ -76,7 +76,7 @@ def main():
     print(__version__)
     exit(0)
 
-  NO_OCL_WARNING = 'No compatible OCL devices detected. Check your OpenCL'\
+  NO_OCL_WARNING = 'No compatible OCL devices detected. Check your OpenCL '\
                    'installation.'
 
   have_ocl = py_motion.py_ocl_device_available()
