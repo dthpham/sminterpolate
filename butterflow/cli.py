@@ -53,7 +53,7 @@ def main():
                    help='Specify to enhance grayscale coloring')
 
   fgr = par.add_argument_group('advanced arguments')
-  fgr.add_argument('--pyr-scale', type=float, default=0.6,
+  fgr.add_argument('--pyr-scale', type=float, default=0.5,
                    help='Set pyramid scale factor, (default: %(default)s)')
   fgr.add_argument('--levels', type=int, default=3,
                    help='Set number of pyramid layers, (default: %(default)s)')
