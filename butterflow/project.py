@@ -56,8 +56,11 @@ class Project(object):
         val = v[1].split('=')[1]
         if tgt == 'fps':
           if '/' in val:
-            frac = val.split('/')
-            sr.target_rate = Fraction(int(frac[0]), int(frac[1]))
+            n, d = val.split('/')
+            if '.' in val:
+              sr.target_rate = float(n) / float(d)
+            else:
+              sr.target_rate = Fraction(int(n), int(d))
           else:
             sr.target_rate = float(val)
         elif tgt == 'duration':

@@ -166,8 +166,11 @@ class RenderingSubRegion(VideoSubRegion):
 
     if tgt == 'fps':
       if '/' in val:
-        frac = val.split('/')
-        fps = Fraction(int(frac[0]), int(frac[1]))
+        n, d = val.split('/')
+        if '.' in val:
+          fps = float(n) / float(d)
+        else:
+          fps = Fraction(int(n), int(d))
       else:
         fps = float(val)
     elif tgt == 'duration':

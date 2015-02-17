@@ -76,7 +76,7 @@ def main():
                    '(default: %(default)s)')
 
   args = par.parse_args()
-  config['args'] = args
+  config.update(dict(vars(args)))
 
   if args.version:
     print(__version__)
@@ -120,13 +120,18 @@ def main():
       else Interpolate.interpolate_frames
 
   project = Project.new(src_path)
-
   project.video_path = src_path
+
+  if '/' in playback_rate and '.' in playback_rate:
+    n, d = playback_rate.split('/')
+    playback_rate = float(n) / float(d)
   project.playback_rate = Fraction(playback_rate)
+
   project.flow_method = flow_method
   project.interpolate_method = interpolate_method
   if timing_regions is not None:
     project.set_timing_regions_with_string(timing_regions)
 
-  project.render_video(dst_path, args.video_scale, args.decimate, args.grayscale,
-                       args.lossless, args.trim, show_preview=args.no_preview)
+  project.render_video(dst_path, args.video_scale, args.decimate,
+                       args.grayscale, args.lossless, args.trim,
+                       show_preview=args.no_preview)
