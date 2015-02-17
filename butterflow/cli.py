@@ -44,6 +44,9 @@ def main():
                    'conveniently describes the entire clip is available in '
                    'the form: "full,TARGET=FLOAT".')
 
+  par.add_argument('--trim', action='store_true',
+                   help='Set to trim subregions that are not explicity '
+                        'specified')
   par.add_argument('--video-scale', type=float, default=1.0,
                    help='Set the output video scale, '
                         '(default: %(default)s)')

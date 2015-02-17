@@ -408,6 +408,7 @@ class Renderer(object):
         for r in self.timing_regions:
           if r.frame_a == fa and r.frame_b == fb:
             region_for_range = r
+            setattr(r, 'trim', False)
             break
 
         if region_for_range is None:
@@ -421,6 +422,7 @@ class Renderer(object):
           r.target_duration = tb - ta
           r.target_factor = 1.0
           region_for_range = r
+          setattr(r, 'trim', config['args'].trim)
 
         new_sub_regions.append(r)
 
@@ -435,6 +437,8 @@ class Renderer(object):
     self.num_sub_regions = len(new_sub_regions)
     for x, r in enumerate(new_sub_regions):
       self.curr_sub_region_idx = x
+      if r.trim:
+        continue
       self.render_subregion(src, r)
 
     cv2.destroyAllWindows()
