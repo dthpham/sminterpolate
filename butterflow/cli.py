@@ -38,11 +38,11 @@ def main():
                    help='Specify rendering sub regions in the form: '
                    '"a=TIME,b=TIME,TARGET=FLOAT" where '
                    'TARGET is either `fps`, `duration`, `factor`. '
-                   'Valid TIME syntaxes are [hr:m:s], [m:s], or [s.xxx]. '
-                   'You can specify multiple sub regions by separting them '
-                   'with a semi-colon `;`. A special region format that '
-                   'conveniently describes the entire clip is available in '
-                   'the form: "full,TARGET=FLOAT".')
+                   'Valid TIME syntaxes are [hr:m:s], [m:s], [s.xxx], '
+                   'or `end`. You can specify multiple sub regions by '
+                   'separting them with a semi-colon `;`. A special region '
+                   'format that conveniently describes the entire clip is '
+                   'available in the form: "full,TARGET=FLOAT".')
 
   fil = par.add_argument_group('video filters')
   fil.add_argument('--video-scale', type=float, default=1.0,
