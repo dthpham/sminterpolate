@@ -13,7 +13,9 @@ class VideoPrep(object):
     self.loglevel = loglevel
 
   def normalize_for_interpolation(self, dst_path, vf_scale=1.0,
-                                  vf_decimate=False):
+                                  vf_decimate=False,
+                                  vf_grayscale=False,
+                                  vf_lossless=False):
     '''transcode the video to a standard format so that interpolation
     yields the the best results. the main goal is to retranscode to the
     lowest possible constant rate in which all unique frames in the vid
@@ -39,7 +41,7 @@ class VideoPrep(object):
     if vf_decimate:
       vf = 'fieldmatch,decimate,' + vf
     pix_fmt = 'yuv420p'
-    if 'args' in config and config['args'].grayscale:
+    if vf_grayscale:
       pix_fmt = 'gray'
 
     call = [
@@ -50,6 +52,7 @@ class VideoPrep(object):
         '-i', self.video_info.video_path,
         '-pix_fmt', pix_fmt,
         '-filter:v', vf,
+        '-sws_flags', scaler
     ]
     if has_aud:
       call.extend([
@@ -63,9 +66,11 @@ class VideoPrep(object):
     call.extend([
         '-c:v', 'libx264',
         '-preset', 'fast',
-        '-crf', '18',
-        '-sws_flags', scaler
     ])
+    quality = ['-crf', '18']
+    if vf_lossless:
+      quality = ['-qp', '0']
+    call.extend(quality)
     if not using_avconv:
       call.extend(['-level', '4.2'])
     call.extend([tmp_path])

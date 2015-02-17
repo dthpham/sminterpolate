@@ -74,6 +74,7 @@ class Project(object):
                                          self.timing_regions)
 
   def render_video(self, dst_path, vf_scale=1.0, vf_decimate=False,
+                   vf_grayscale=False, vf_lossless=False, vf_trim=False,
                    show_preview=False):
     '''normalizes, renders, muxes an interpolated video, if necessary.
     when doing slow/fast motion, audio and subtitles will not be muxed
@@ -98,14 +99,18 @@ class Project(object):
     unix_time = lambda(dt):\
         (dt - datetime.datetime.utcfromtimestamp(0)).total_seconds()
 
-    nrm_name = '{}_{}_{}_{}.mp4'.format(vid_name,
-                                        str(unix_time(vid_mod_utc)),
-                                        vf_scale,
-                                        'd' if vf_decimate else 'n')
+    nrm_name = '{}_{}_{}_{}_{}_{}.mp4'.format(
+        vid_name,
+        str(unix_time(vid_mod_utc)),
+        vf_scale,
+        'd' if vf_decimate else 'n',
+        'g' if vf_grayscale else 'n',
+        'l' if vf_lossless else 'n')
     nrm_name = nrm_name.lower()
     nrm_path = os.path.join(tmp_path, nrm_name)
     if not os.path.exists(nrm_path):
-      vid_prep.normalize_for_interpolation(nrm_path, vf_scale, vf_decimate)
+      vid_prep.normalize_for_interpolation(nrm_path, vf_scale, vf_decimate,
+                                           vf_grayscale, vf_lossless)
 
     nrm_name_no_ext, _ = os.path.splitext(nrm_name)
     rnd_path = os.path.join(
@@ -115,7 +120,9 @@ class Project(object):
 
     render_task = Renderer(nrm_vid_info, self.playback_rate,
                            self.timing_regions, self.flow_method,
-                           self.interpolate_method, loglevel='info',
+                           self.interpolate_method, vf_trim=vf_trim,
+                           vf_grayscale=vf_grayscale,
+                           vf_lossless=vf_lossless, loglevel='info',
                            show_preview=show_preview)
     render_task.render(rnd_path)
 

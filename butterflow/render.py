@@ -18,7 +18,8 @@ class Renderer(object):
   only creates a video. audio/subs will not be muxed in here
   '''
   def __init__(self, vid_info, playback_rate, timing_regions, flow_method,
-               interpolate_method, loglevel='fatal', show_preview=False):
+               interpolate_method, vf_trim=False, vf_grayscale=False,
+               vf_lossless=False, loglevel='fatal', show_preview=False):
     '''should copy of the settings so that any changes to them during
     rendering dont cause any issues
     '''
@@ -33,13 +34,16 @@ class Renderer(object):
     self.total_frames_written = 0
     self.num_sub_regions = 0
     self.curr_sub_region_idx = 0
+    self.vf_trim = vf_trim
+    self.vf_grayscale = vf_grayscale
+    self.vf_lossless = vf_lossless
 
   def init_pipe(self, dst_path):
     '''create pipe to ffmpeg/libav, which will encode the video for us'''
     pix_fmt = 'yuv420p'
-    if 'args' in config and config['args'].grayscale:
+    if self.vf_grayscale:
       pix_fmt = 'gray'
-    self.pipe = subprocess.Popen([
+    call = [
         config['avutil'],
         '-loglevel', self.loglevel,
         '-y',
@@ -49,12 +53,17 @@ class Renderer(object):
         '-r', str(self.playback_rate),
         '-i', '-',
         '-pix_fmt', pix_fmt,
+        '-r', str(self.playback_rate),
         '-c:a', 'none',
         '-c:v', 'libx264',
-        '-preset', 'fast',
-        '-crf', '18',
-        '-r', str(self.playback_rate),
-        dst_path],
+        '-preset', 'fast']
+    quality = ['-crf', '18']
+    if self.vf_lossless:
+      quality = ['-qp', '0']
+    call.extend(quality)
+    call.extend([dst_path])
+    self.pipe = subprocess.Popen(
+        call,
         stdin=subprocess.PIPE
     )
     if self.pipe == 1:
@@ -422,7 +431,7 @@ class Renderer(object):
           r.target_duration = tb - ta
           r.target_factor = 1.0
           region_for_range = r
-          setattr(r, 'trim', config['args'].trim)
+          setattr(r, 'trim', self.vf_trim)
 
         new_sub_regions.append(r)
 

@@ -27,6 +27,7 @@ def main():
 
   par.add_argument('video', type=str, nargs='?', default=None,
                    help='Specify the input video')
+
   par.add_argument('-o', '--output-path', type=str,
                    default=os.path.join(os.getcwd(), 'out.mp4'),
                    help='Set path to the output video')
@@ -44,12 +45,14 @@ def main():
                    'the form: "full,TARGET=FLOAT".')
 
   fil = par.add_argument_group('video filters')
-  fil.add_argument('--scale', type=float, default=1.0,
+  fil.add_argument('--video-scale', type=float, default=1.0,
                    help='Set the output video scale, '
                         '(default: %(default)s)')
   fil.add_argument('--trim', action='store_true',
                    help='Set to trim subregions that are not explicity '
                         'specified')
+  fil.add_argument('--lossless', action='store_true',
+                   help='Set to use lossless encoding settings')
   fil.add_argument('--decimate', action='store_true',
                    help='Set to decimate duplicate frames')
   fil.add_argument('--grayscale', action='store_true',
@@ -125,5 +128,5 @@ def main():
   if timing_regions is not None:
     project.set_timing_regions_with_string(timing_regions)
 
-  project.render_video(dst_path, args.scale, args.decimate,
-                       show_preview=args.no_preview)
+  project.render_video(dst_path, args.video_scale, args.decimate, args.grayscale,
+                       args.lossless, args.trim, show_preview=args.no_preview)
