@@ -20,14 +20,13 @@ def main():
                    help='Set to increase output verbosity')
   par.add_argument('-d', '--devices', action='store_true',
                    help='Show detected OpenCL devices and exit')
+  par.add_argument('--debug', action='store_true',
+                   help='Set to embed debugging info into the output video')
   par.add_argument('--no-preview', action='store_false',
                    help='Set to disable video preview while encoding')
-  par.add_argument('--embed-info', action='store_true',
-                   help='Set to embed debugging info into the output video')
 
   par.add_argument('video', type=str, nargs='?', default=None,
                    help='Specify the input video')
-
   par.add_argument('-o', '--output-path', type=str,
                    default=os.path.join(os.getcwd(), 'out.mp4'),
                    help='Set path to the output video')
@@ -44,16 +43,17 @@ def main():
                    'conveniently describes the entire clip is available in '
                    'the form: "full,TARGET=FLOAT".')
 
-  par.add_argument('--trim', action='store_true',
-                   help='Set to trim subregions that are not explicity '
-                        'specified')
-  par.add_argument('--video-scale', type=float, default=1.0,
+  fil = par.add_argument_group('video filters')
+  fil.add_argument('--scale', type=float, default=1.0,
                    help='Set the output video scale, '
                         '(default: %(default)s)')
-  par.add_argument('--decimate', action='store_true',
-                   help='Specify if should decimate duplicate frames')
-  par.add_argument('--grayscale', action='store_true',
-                   help='Specify to enhance grayscale coloring')
+  fil.add_argument('--trim', action='store_true',
+                   help='Set to trim subregions that are not explicity '
+                        'specified')
+  fil.add_argument('--decimate', action='store_true',
+                   help='Set to decimate duplicate frames')
+  fil.add_argument('--grayscale', action='store_true',
+                   help='Set to enhance grayscale coloring')
 
   fgr = par.add_argument_group('advanced arguments')
   fgr.add_argument('--pyr-scale', type=float, default=0.5,
@@ -125,5 +125,5 @@ def main():
   if timing_regions is not None:
     project.set_timing_regions_with_string(timing_regions)
 
-  project.render_video(dst_path, args.video_scale, args.decimate,
+  project.render_video(dst_path, args.scale, args.decimate,
                        show_preview=args.no_preview)

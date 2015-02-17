@@ -219,7 +219,7 @@ class Renderer(object):
           frs_written += 1
           fr_to_write = fr
 
-          if config['args'].embed_info:
+          if config['args'].debug:
             T_PADDING = 20.0
             L_PADDING = 20.0
             R_PADDING = 20.0
