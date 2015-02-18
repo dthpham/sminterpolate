@@ -104,14 +104,19 @@ class VideoSubRegion(object):
 
   def __lt__(self, other):
     return self.time_a < other.time_a and self.time_b <= other.time_a
+
   def __gt__(self, other):
     return self.time_a >= other.time_b and self.time_b > other.time_b
+
   def __eq__(self, other):
     return self.time_a == other.time_a and self.time_b == other.time_b
+
   def __le__(self, other):
     return NotImplemented
+
   def __ge__(self, other):
     return NotImplemented
+
   def __ne__(self, other):
       return self.time_a != other.time_a and self.time_b != other.time_b
 
