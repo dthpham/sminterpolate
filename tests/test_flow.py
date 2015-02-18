@@ -5,6 +5,7 @@ import cv2
 import os
 import common
 
+
 class FlowTestCase(unittest.TestCase):
   def setUp(self):
     DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'samples')
@@ -13,7 +14,7 @@ class FlowTestCase(unittest.TestCase):
     self.fr_1 = cv2.cvtColor(cv2.imread(img_1), cv2.COLOR_BGR2GRAY)
     self.fr_2 = cv2.cvtColor(cv2.imread(img_2), cv2.COLOR_BGR2GRAY)
 
-  def do_test_optical_flow_form(self, u, v):
+  def _test_optical_flow_form(self, u, v):
     self.assertIsInstance(u, np.ndarray)
     self.assertIsInstance(v, np.ndarray)
     self.assertEquals(u.dtype, v.dtype)
@@ -57,12 +58,12 @@ class FlowTestCase(unittest.TestCase):
   def test_farneback_optical_flow_form(self):
     '''test if returns a flow field in the right form, doesnt verify values'''
     u,v = Flow.farneback_optical_flow(self.fr_1, self.fr_2,0.5,3,15,3,7,1.5,0)
-    self.do_test_optical_flow_form(u,v)
+    self._test_optical_flow_form(u,v)
 
   def test_farneback_optical_flow_ocl_form(self):
     '''test if returns a flow field in the right form, doesnt verify values'''
     u,v = Flow.farneback_optical_flow_ocl(self.fr_1, self.fr_2,0.5,3,15,3,7,1.5,0)
-    self.do_test_optical_flow_form(u,v)
+    self._test_optical_flow_form(u,v)
 
   @unittest.skip('todo')
   def test_brox_optical_flow_form(self): pass

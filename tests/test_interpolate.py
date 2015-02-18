@@ -7,7 +7,7 @@ import numpy as np
 import common
 
 
-class FlowTestCase(unittest.TestCase):
+class InterpolateTestCase(unittest.TestCase):
   def setUp(self):
     DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'samples')
     img_1 = os.path.join(DIR, 'img-1280x720-1.png')

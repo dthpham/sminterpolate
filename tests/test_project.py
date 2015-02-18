@@ -28,12 +28,14 @@ class ProjectTestCase(unittest.TestCase):
     self.assertEquals(len(p.timing_regions),1)
     p.set_timing_regions_with_string(
         'a=00:00:00.5,b=00:00:01.2,fps=48;'
+        'a=00:00:01.3,b=00:00:01.5,fps=60/1.001;'
         'a=00:00:02.3,b=00:00:03.3,fps=24000/1001;'
         'a=00:00:03.3,b=00:00:04.999,duration=5')
-    self.assertEquals(len(p.timing_regions),3)
+    self.assertEquals(len(p.timing_regions),4)
     p = Project(self.test_vid)
-    p.set_timing_regions_with_string('a=00:00:01.5,b=00:00:04.9,fps=48')
-    self.assertEquals(len(p.timing_regions),1)
+    with self.assertRaises(RuntimeError):
+      p.set_timing_regions_with_string('a=00:00:00,b=00:00:05.1,fps=24')
+      self.assertEquals(len(p.timing_regions),0)
 
   def test_set_timing_regions_with_full_string(self):
     p = Project(self.test_vid)
@@ -46,6 +48,25 @@ class ProjectTestCase(unittest.TestCase):
           'full,fps=48;'
           'a=00:00:02.3,b=00:00:03.3,fps=24000/1001')
     self.assertEquals(len(p.timing_regions),0)
+
+  def test_set_timing_regions_with_end_string(self):
+    p = Project(self.test_vid)
+    p.set_timing_regions_with_string('a=00:00:00.0,b=end,fps=1')
+    self.assertEquals(len(p.timing_regions),1)
+    p.set_timing_regions_with_string('a=end,b=end,fps=1')
+    self.assertEquals(len(p.timing_regions),1)
+    p.set_timing_regions_with_string(
+        'a=00:00:00.0,b=00:00:01.0,fps=1;'
+        'a=00:00:01.0,b=end,fps=1')
+    self.assertEquals(len(p.timing_regions),2)
+    with self.assertRaises(ValueError):
+      p.set_timing_regions_with_string('a=end,b=00:00:01.0,fps=1')
+      self.assertEquals(len(p.timing_regions),0)
+    with self.assertRaises(RuntimeError):
+      p.set_timing_regions_with_string(
+          'a=end,b=end,fps=1;'
+          'a=end,b=end,fps=1')
+      self.assertEquals(len(p.timing_regions),0)
 
   @unittest.skip('todo')
   def test_render_video(self):pass

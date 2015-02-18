@@ -174,6 +174,14 @@ class RenderingSubRegionTestCase(unittest.TestCase):
     self.assertEqual(r.time_b,1.0*1000)
     self.assertEqual(r.target_rate,Fraction(24000,1001))
 
+  def test_create_from_string_fps_fraction_with_decimal(self):
+    r = RenderingSubRegion.from_string(
+        'a=00:00:00.5,b=00:00:01.0,fps=24/1.001')
+    self.assertIsInstance(r, RenderingSubRegion)
+    self.assertEqual(r.time_a,0.5*1000)
+    self.assertEqual(r.time_b,1.0*1000)
+    self.assertEqual(r.target_rate,24/1.001)
+
   def test_create_from_string_duration(self):
     r = RenderingSubRegion.from_string(
         'a=01:20:31.59,b=01:21:34.0,duration=3')

@@ -50,8 +50,6 @@ class Project(object):
     for x in sub_regions:
       # set time_b to length of video if `full` option is specified
       v = x.split(',')
-      a = v[0].split('=')[1]
-      b = v[1].split('=')[1]
       if v[0] == 'full':
         sr = RenderingSubRegion(0, self.vid_info.duration)
         tgt = v[1].split('=')[0]
@@ -72,7 +70,9 @@ class Project(object):
         if len(sub_regions) > 1:
           raise ValueError(
               'more than 1 region specified after specifying a full region')
-      elif a == 'end' or b == 'end':
+      elif 'end' in x:
+        a = v[0].split('=')[1]
+        b = v[1].split('=')[1]
         new_str = x.replace('=end',
                             '={}'.format(self.vid_info.duration / 1000))
         sr = RenderingSubRegion.from_string(new_str)

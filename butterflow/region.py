@@ -67,7 +67,7 @@ class VideoSubRegion(object):
 
   def validate(self, a, b):
     if a < 0 or a > b:
-      raise ValueError('a ({}) must be nonzero and <= b ({})'.format(a, b))
+      raise ValueError('a ({}) > 0 and <= b ({})'.format(a, b))
     if b < a:
       raise ValueError('b ({}) must be >= than a ({})'.format(a, b))
 

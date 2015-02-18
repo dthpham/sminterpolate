@@ -23,8 +23,7 @@ class BaseVideoInfo(object):
     self.duration = 0.0
     self.rate = None
     self.min_rate = None
-    # actual number of frames coded in the video
-    self.num_frames = 0
+    self.num_frames = 0  # actual number of frames coded in the video
 
 
 class LibAvVideoInfo(BaseVideoInfo):
