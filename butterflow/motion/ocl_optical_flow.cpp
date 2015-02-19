@@ -16,7 +16,7 @@ ocl_farneback_optical_flow(Mat& fr_1, Mat& fr_2, double scale, int levels,
   calc_flow.numIters  = iters;
   calc_flow.polyN     = poly_n;
   calc_flow.polySigma = poly_sigma;
-  calc_flow.flags     = OPTFLOW_FARNEBACK_GAUSSIAN;
+  calc_flow.flags     = flags;
 
   oclMat ocl_fr_1(fr_1);
   oclMat ocl_fr_2(fr_2);

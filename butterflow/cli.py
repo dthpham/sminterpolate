@@ -30,7 +30,7 @@ def main():
 
   par.add_argument('-o', '--output-path', type=str,
                    default=os.path.join(os.getcwd(), 'out.mp4'),
-                   help='Set path to the output video')
+                   help='Specify path to the output video')
   par.add_argument('-r', '--playback-rate', type=str, default='23.976',
                    help='Specify the playback rate, '
                         '(default: %(default)s)')
@@ -74,6 +74,9 @@ def main():
   fgr.add_argument('--poly-s', type=float, default=1.5,
                    help='Set standard deviation to smooth derivatives, '
                    '(default: %(default)s)')
+  fgr.add_argument('--gaussian', action='store_true',
+                   help='Set to use Gaussian filter instead of box filter '
+                   'for flow estimation')
 
   args = par.parse_args()
   config.update(dict(vars(args)))
@@ -113,9 +116,13 @@ def main():
 
   farneback_method = Flow.farneback_optical_flow_ocl if have_ocl \
       else Flow.farneback_optical_flow
+  flags = 0
+  if args.gaussian:
+    import cv2
+    flags = cv2.OPTFLOW_FARNEBACK_GAUSSIAN
   flow_method = lambda(x, y): \
       farneback_method(x, y, args.pyr_scale, args.levels, args.winsize,
-                       args.iters, args.poly_n, args.poly_s, 0)
+                       args.iters, args.poly_n, args.poly_s, flags)
   interpolate_method = Interpolate.interpolate_frames_ocl if have_ocl \
       else Interpolate.interpolate_frames
 
