@@ -20,7 +20,7 @@ def main():
                    help='Set to increase output verbosity')
   par.add_argument('-d', '--devices', action='store_true',
                    help='Show detected OpenCL devices and exit')
-  par.add_argument('--debug', action='store_true',
+  par.add_argument('--embed-info', action='store_true',
                    help='Set to embed debugging info into the output video')
   par.add_argument('--no-preview', action='store_false',
                    help='Set to disable video preview while encoding')
@@ -45,12 +45,12 @@ def main():
                    'available in the form: "full,TARGET=FLOAT".')
 
   fil = par.add_argument_group('video filters')
+  fil.add_argument('-t', '--trim-regions', action='store_true',
+                   help='Set to trim subregions that are not explicity '
+                        'specified')
   fil.add_argument('--video-scale', type=float, default=1.0,
                    help='Set the output video scale, '
                         '(default: %(default)s)')
-  fil.add_argument('--trim', action='store_true',
-                   help='Set to trim subregions that are not explicity '
-                        'specified')
   fil.add_argument('--lossless', action='store_true',
                    help='Set to use lossless encoding settings')
   fil.add_argument('--decimate', action='store_true',
@@ -133,5 +133,5 @@ def main():
     project.set_timing_regions_with_string(timing_regions)
 
   project.render_video(dst_path, args.video_scale, args.decimate,
-                       args.grayscale, args.lossless, args.trim,
+                       args.grayscale, args.lossless, args.trim_regions,
                        show_preview=args.no_preview)

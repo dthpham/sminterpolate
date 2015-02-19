@@ -228,7 +228,7 @@ class Renderer(object):
           frs_written += 1
           fr_to_write = fr
 
-          if config['debug']:
+          if config['embed_info']:
             T_PADDING = 20.0
             L_PADDING = 20.0
             R_PADDING = 20.0
@@ -377,6 +377,7 @@ class Renderer(object):
       r.target_rate = self.playback_rate
       r.target_duration = tb - ta
       r.target_factor = 1.0
+      setattr(r, 'trim', False)
 
       new_sub_regions.append(r)
 
