@@ -337,7 +337,9 @@ class Renderer(object):
 
             fr_to_write = np.asarray(img_mat)
           if self.show_preview:
-            cv2.imshow(os.path.basename(vid_name), fr_to_write)
+            vid_name = os.path.basename(config['video'])
+            win_title = '{} - Butterflow'.format(vid_name)
+            cv2.imshow(win_title, fr_to_write)
           self.write_frame_to_pipe(fr_to_write)
 
     if config['verbose']:
