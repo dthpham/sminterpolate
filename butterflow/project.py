@@ -84,7 +84,7 @@ class Project(object):
 
   def render_video(self, dst_path, vf_scale=1.0, vf_decimate=False,
                    vf_grayscale=False, vf_lossless=False, vf_trim=False,
-                   show_preview=False):
+                   show_preview=False, render_flows=False):
     '''normalizes, renders, muxes an interpolated video, if necessary.
     when doing slow/fast motion, audio and subtitles will not be muxed
     into the final video because it wouldnt be in sync'''
@@ -124,16 +124,20 @@ class Project(object):
     nrm_name_no_ext, _ = os.path.splitext(nrm_name)
     rnd_path = os.path.join(
         tmp_path, '{}_R.mp4'.format(nrm_name_no_ext))
+    rnd_ff_path = os.path.join(
+        tmp_path, '{}_ff.mp4'.format(nrm_name_no_ext))
+    rnd_bf_path = os.path.join(
+        tmp_path, '{}_bf.mp4'.format(nrm_name_no_ext))
 
     nrm_vid_info = LibAvVideoInfo(nrm_path)
-
-    render_task = Renderer(nrm_vid_info, self.playback_rate,
+    render_task = Renderer(self.vid_info, nrm_vid_info, self.playback_rate,
                            self.timing_regions, self.flow_method,
                            self.interpolate_method, vf_trim=vf_trim,
                            vf_grayscale=vf_grayscale,
                            vf_lossless=vf_lossless, loglevel='info',
-                           show_preview=show_preview)
-    render_task.render(rnd_path)
+                           show_preview=show_preview,
+                           render_flows=render_flows)
+    render_task.render(rnd_path, rnd_ff_path, rnd_bf_path)
 
     aud_path = None
     sub_path = None
@@ -153,7 +157,13 @@ class Project(object):
     try:
       VideoPrep.mux_video(rnd_path, aud_path, sub_path, dst_path, 'info')
     except RuntimeError:
-      shutil.copy(rnd_path, dst_path)
+      shutil.move(rnd_path, dst_path)
 
-    if os.path.exists(rnd_path):
-      os.remove(rnd_path)
+    if render_flows:
+      dst_dir = os.path.dirname(dst_path)
+      dst_name, ext = os.path.splitext(os.path.basename(dst_path))
+      ff_dst_path = os.path.join(dst_dir, '{}_ff{}'.format(dst_name, ext))
+      bf_dst_path = os.path.join(dst_dir, '{}_bf{}'.format(dst_name, ext))
+
+      shutil.move(rnd_ff_path, ff_dst_path)
+      shutil.move(rnd_bf_path, bf_dst_path)

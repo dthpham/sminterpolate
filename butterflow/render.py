@@ -9,6 +9,38 @@ from region import VideoRegionUtils, RenderingSubRegion
 import sys
 from __init__ import __version__ as version
 from .butterflow import config
+from motion.flow import Flow
+
+# FONT_MIN_H, FONT_MIN_V is the minimum size in which the unscaled
+# CV_FONT_HERSHEY_PLAIN font fits. The font is scaled up and down
+# based on that reference point
+FONT_MIN_H_FITS = 768
+FONT_MIN_V_FITS = 216
+
+# constants for info text overlayed over the rendered video
+TXT_T_PADDING = 20
+TXT_L_PADDING = 20
+TXT_R_PADDING = 20
+TXT_LINE_D_PADDING = 10
+
+TXT_TOP_L = """\
+butterflow {} ({})
+Res: {},{}
+Playback Rate: {} fps
+Pyr: {}, L: {}, W: {}, I: {}, PolyN: {}, PolyS: {}\n
+Frame: {}
+Work Index: {}, {}, {}
+Type Src: {}, Dup: {}
+Mem: {}"""
+
+TXT_TOP_R = """\
+Region {}/{} F: [{}, {}] T: [{:.2f}s, {:.2f}s]
+Len F: {}, T: {:.2f}s
+Target Dur: {}, Fac: {}, fps: {}
+Out Len F: {}, Dur: {:.2f}s
+Drp every {:.1f}, Dup every {:.1f}
+Gen: {}, Made: {}, Drp: {}, Dup: {}
+Write Ratio: {}/{} ({:.2f}%)"""
 
 
 class Renderer(object):
@@ -17,18 +49,22 @@ class Renderer(object):
   rate, timing regions, and flow method, interpolation method. this
   only creates a video. audio/subs will not be muxed in here
   '''
-  def __init__(self, vid_info, playback_rate, timing_regions, flow_method,
-               interpolate_method, vf_trim=False, vf_grayscale=False,
-               vf_lossless=False, loglevel='fatal', show_preview=False):
+  def __init__(self, src_vid_info, vid_info, playback_rate, timing_regions,
+               flow_method, interpolate_method, vf_trim=False,
+               vf_grayscale=False, vf_lossless=False, loglevel='fatal',
+               show_preview=False, render_flows=False):
     '''should copy of the settings so that any changes to them during
     rendering dont cause any issues
     '''
+    self.src_vid_info = src_vid_info
     self.vid_info = vid_info
     self.playback_rate = playback_rate
     self.timing_regions = timing_regions
     self.flow_method = flow_method
     self.interpolate_method = interpolate_method
     self.pipe = None
+    self.ff_pipe = None
+    self.bf_pipe = None
     self.loglevel = loglevel
     self.show_preview = show_preview
     self.total_frames_written = 0
@@ -37,8 +73,9 @@ class Renderer(object):
     self.vf_trim = vf_trim
     self.vf_grayscale = vf_grayscale
     self.vf_lossless = vf_lossless
+    self.render_flows = render_flows
 
-  def init_pipe(self, dst_path):
+  def make_pipe(self, dst_path, rate):
     '''create pipe to ffmpeg/libav, which will encode the video for us'''
     pix_fmt = 'yuv420p'
     if self.vf_grayscale:
@@ -50,10 +87,10 @@ class Renderer(object):
         '-f', 'rawvideo',
         '-pix_fmt', 'bgr24',
         '-s', '{}x{}'.format(self.vid_info.width, self.vid_info.height),
-        '-r', str(self.playback_rate),
+        '-r', str(rate),
         '-i', '-',
         '-pix_fmt', pix_fmt,
-        '-r', str(self.playback_rate),
+        '-r', str(rate),
         '-c:a', 'none',
         '-c:v', 'libx264',
         '-preset', 'fast']
@@ -62,26 +99,29 @@ class Renderer(object):
       quality = ['-qp', '0']
     call.extend(quality)
     call.extend([dst_path])
-    self.pipe = subprocess.Popen(
+    pipe = subprocess.Popen(
         call,
         stdin=subprocess.PIPE
     )
-    if self.pipe == 1:
+    if pipe == 1:
       raise RuntimeError('could not create pipe')
+    return pipe
 
-  def close_pipe(self):
+  def close_pipes(self):
     '''closes pipe to the encoder if it is open'''
-    if self.pipe is not None:
-      self.pipe.stdin.flush()
-      self.pipe.stdin.close()
-      self.pipe.wait()
-      self.pipe = None
+    for pipe in [self.pipe, self.ff_pipe, self.bf_pipe]:
+      if pipe is not None:
+        pipe.stdin.flush()
+        pipe.stdin.close()
+        pipe.wait()
+    self.pipe = None
+    self.ff_pipe = None
+    self.bf_pipe = None
 
-  def write_frame_to_pipe(self, frame):
+  def write_frame_to_pipe(self, pipe, frame):
     '''writes a frame to the pipe'''
     try:
-      self.pipe.stdin.write(bytes(frame.data))
-      self.total_frames_written += 1
+      pipe.stdin.write(bytes(frame.data))
     except Exception as err:
       print('error writing to pipe: ', err)
 
@@ -90,6 +130,7 @@ class Renderer(object):
     to be encoded into a video
     '''
     src = source
+    input_vid_name = os.path.basename(self.src_vid_info.video_path)
     vid_name = os.path.basename(self.vid_info.video_path)
     vid_name, _ = os.path.splitext(vid_name)
 
@@ -196,8 +237,29 @@ class Renderer(object):
 
         fr_1_gr = cv2.cvtColor(fr_1, cv2.COLOR_BGR2GRAY)
         fr_2_gr = cv2.cvtColor(fr_2, cv2.COLOR_BGR2GRAY)
+
         fu, fv = self.flow_method([fr_1_gr, fr_2_gr])
         bu, bv = self.flow_method([fr_2_gr, fr_1_gr])
+
+        if config['preview_flows'] or self.render_flows:
+          ff = Flow.merge_flow_components(fu, fv)
+          bf = Flow.merge_flow_components(bu, bv)
+
+          ff_hsv = Flow.hsv_from_flow(Flow.merge_flow_components(fu, fv))
+          bf_hsv = Flow.hsv_from_flow(Flow.merge_flow_components(bu, bv))
+
+          ff_bgr = cv2.cvtColor(ff_hsv, cv2.COLOR_HSV2BGR)
+          bf_bgr = cv2.cvtColor(bf_hsv, cv2.COLOR_HSV2BGR)
+
+          if self.show_preview:
+            win_title = '{} - Butterflow'
+            cv2.imshow(win_title.format('Forward Flow'), ff_bgr)
+            cv2.imshow(win_title.format('Backward Flow'), bf_bgr)
+
+          if self.render_flows:
+            self.write_frame_to_pipe(self.ff_pipe, ff_bgr)
+            self.write_frame_to_pipe(self.bf_pipe, bf_bgr)
+
         fr_1_32 = np.float32(fr_1) * 1 / 255.0
         fr_2_32 = np.float32(fr_2) * 1 / 255.0
 
@@ -228,33 +290,28 @@ class Renderer(object):
           frs_written += 1
           fr_to_write = fr
 
-          if config['embed_info']:
-            T_PADDING = 20.0
-            L_PADDING = 20.0
-            R_PADDING = 20.0
-            LINE_D_PADDING = 10.0
-
+          if config['add_info']:
             # the copy here has a minimal effect on performance
             img_mat = cv2.cv.fromarray(fr.copy())
-            # 768x216 is the minimum size in which the unscaled
-            # CV_FONT_HERSHEY_PLAIN font fits. The font is scaled up and down
-            # based on that reference point
-            h_scale = min(self.vid_info.width / 768.0, 1.0)
-            v_scale = min(self.vid_info.height / 216.0, 1.0)
+
+            h_scale = min(self.vid_info.width / float(FONT_MIN_H_FITS), 1.0)
+            v_scale = min(self.vid_info.height / float(FONT_MIN_V_FITS), 1.0)
             scale = min(h_scale, v_scale)
             font = cv2.cv.InitFont(cv2.cv.CV_FONT_HERSHEY_PLAIN, scale, scale,
                                    0.0, 1, cv2.cv.CV_AA)
             font_color = cv2.cv.RGB(255, 255, 255)
 
             # embed text starting from the top left going down
-            t = ('butterflow {} ({})\n'
-                 'Res: {},{}\n'
-                 'Playback Rate: {} fps\n'
-                 'Pyr: {}, L: {}, W: {}, I: {}, PolyN: {}, PolyS: {}\n\n'
-                 'Frame: {}\n'
-                 'Work Index: {}, {}, {}\n'
-                 'Type Src: {}, Dup: {}\n'
-                 'Mem: {}')
+            y_or_n = lambda(x): 'Y' if x else 'N'
+
+            wrk_idx_1 = x      # idx of original frame_1
+            wrk_idx_2 = x + 1  # idx of original frame_2
+            wrk_idx_i = idx    # idx of interpolated frame
+            is_src_fr = y_or_n(idx == 0)
+            is_dup_fr = y_or_n(k > 0)
+            mem = hex(id(fr))
+
+            t = TXT_TOP_L
             t = t.format(version,
                          sys.platform,
                          self.vid_info.width,
@@ -267,19 +324,19 @@ class Renderer(object):
                          config['poly_n'],
                          config['poly_s'],
                          self.total_frames_written,
-                         x,
-                         x + 1,
-                         idx,
-                         'Y' if idx == 0 else 'N',
-                         'Y' if k > 0 else 'N',
-                         hex(id(fr)))
+                         wrk_idx_1,
+                         wrk_idx_2,
+                         wrk_idx_i,
+                         is_src_fr,
+                         is_dup_fr,
+                         mem)
 
             for y, line in enumerate(t.split('\n')):
               line_sz, _ = cv2.cv.GetTextSize(line, font)
               _, line_h = line_sz
-              origin = (int(L_PADDING),
-                        int(T_PADDING +
-                        (y * (line_h + LINE_D_PADDING))))
+              origin = (int(TXT_L_PADDING),
+                        int(TXT_T_PADDING +
+                        (y * (line_h + TXT_LINE_D_PADDING))))
               cv2.cv.PutText(img_mat, line, origin, font, font_color)
 
             # embed text from the top right going down
@@ -298,13 +355,8 @@ class Renderer(object):
             sub_dur = dur_in_region / 1000.0
             tgt_dur = tgt_frs / float(self.playback_rate)
             write_ratio = frs_written * 100.0 / tgt_frs
-            t = ('Region {}/{} F: [{}, {}] T: [{:.2f}s, {:.2f}s]\n'
-                 'Len F: {}, T: {:.2f}s\n'
-                 'Target Dur: {}, Fac: {}, fps: {}\n'
-                 'Out Len F: {}, Dur: {:.2f}s\n'
-                 'Drp every {:.1f}, Dup every {:.1f}\n'
-                 'Gen: {}, Made: {}, Drp: {}, Dup: {}\n'
-                 'Write Ratio: {}/{} ({:.2f}%)')
+
+            t = TXT_TOP_R
             t = t.format(self.curr_sub_region_idx,
                          self.num_sub_regions - 1,
                          fr_a,
@@ -330,17 +382,17 @@ class Renderer(object):
             for y, line in enumerate(t.split('\n')):
               line_sz, _ = cv2.cv.GetTextSize(line, font)
               line_w, line_h = line_sz
-              origin = (int(self.vid_info.width - R_PADDING - line_w),
-                        int(T_PADDING +
-                        (y * (line_h + LINE_D_PADDING))))
+              origin = (int(self.vid_info.width - TXT_R_PADDING - line_w),
+                        int(TXT_T_PADDING +
+                        (y * (line_h + TXT_LINE_D_PADDING))))
               cv2.cv.PutText(img_mat, line, origin, font, font_color)
 
             fr_to_write = np.asarray(img_mat)
           if self.show_preview:
-            vid_name = os.path.basename(config['video'])
-            win_title = '{} - Butterflow'.format(vid_name)
+            win_title = '{} - Butterflow'.format(input_vid_name)
             cv2.imshow(win_title, fr_to_write)
-          self.write_frame_to_pipe(fr_to_write)
+          self.write_frame_to_pipe(self.pipe, fr_to_write)
+          self.total_frames_written += 1
 
     if config['verbose']:
       print('frs_generated:', frs_gen)
@@ -356,10 +408,13 @@ class Renderer(object):
           frs_written, tgt_frs, fr_write_ratio * 100))
       print('est_drift:', est_drift_secs)
 
-  def render(self, dst_path):
+  def render(self, dst_path, ff_dst_path=None, bf_dst_path=None):
     '''separates video regions to render them individually'''
     self.total_frames_written = 0
-    self.init_pipe(dst_path)
+    self.pipe = self.make_pipe(dst_path, self.playback_rate)
+    if self.render_flows:
+      self.ff_pipe = self.make_pipe(ff_dst_path, self.src_vid_info.rate)
+      self.bf_pipe = self.make_pipe(bf_dst_path, self.src_vid_info.rate)
     src = OpenCvFrameSource(self.vid_info.video_path)
 
     if config['verbose']:
@@ -452,9 +507,8 @@ class Renderer(object):
       self.render_subregion(src, r)
 
     cv2.destroyAllWindows()
-    self.close_pipe()
+    self.close_pipes()
 
   def __del__(self):
     '''closes the pipe if it was left open'''
-    if self.pipe is not None:
-      self.close_pipe()
+    self.close_pipes()
