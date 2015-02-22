@@ -81,7 +81,7 @@ def main():
   fgr.add_argument('--iters', type=int, default=3,
                    help='Set number of iterations at each pyramid level, '
                    '(default: %(default)s)')
-  fgr.add_argument('--poly-n', type=int, default=7,
+  fgr.add_argument('--poly-n', type=int, choices=[5, 7], default=7,
                    help='Set size of pixel neighborhood, '
                    '(default: %(default)s)')
   fgr.add_argument('--poly-s', type=float, default=1.5,
