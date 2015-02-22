@@ -25,16 +25,49 @@ class FlowTestCase(unittest.TestCase):
     self.assertEquals(r, 720)
     self.assertEquals(c, 1280)
 
-  def test_hsv_from_flow(self):
+  def test_hsv_ang_from_flow(self):
     flow = np.zeros((10,10,2), np.float32)
+    hsv1 = np.zeros((10,10,3), np.uint8)
+    hsv1[...,1] = 255
+    hsv1[...,2] = 0
+    flow[...,0] = 0
+    flow[...,1] = 0
+    hsv1[...,0] = np.uint8(0)
+    self.assertTrue(np.array_equal(hsv1, Flow.hsv_from_flow(flow)))
     flow[...,0] = 1.0
     flow[...,1] = 1.0
-    hsv1 = Flow.hsv_from_flow(flow)
-    hsv2 = np.zeros((10,10,3), np.uint8)
-    hsv2[...,0] = 45
-    hsv2[...,1] = 255
-    hsv2[...,2] = 0
-    self.assertTrue(np.array_equal(hsv1, hsv2))
+    hsv1[...,0] = np.uint8(45)
+    self.assertTrue(np.array_equal(hsv1, Flow.hsv_from_flow(flow)))
+    flow[...,0] = 1.0
+    flow[...,1] = -1.0
+    hsv1[...,0] = np.uint8(315)
+    self.assertTrue(np.array_equal(hsv1, Flow.hsv_from_flow(flow)))
+    flow[...,0] = -1.0
+    flow[...,1] = 1.0
+    hsv1[...,0] = np.uint8(135)
+    self.assertTrue(np.array_equal(hsv1, Flow.hsv_from_flow(flow)))
+    flow[...,0] = -1.0
+    flow[...,1] = -1.0
+    hsv1[...,0] = np.uint8(225)
+    self.assertTrue(np.array_equal(hsv1, Flow.hsv_from_flow(flow)))
+
+  def test_hsv_mag_from_flow(self):
+    flow = np.zeros((10,10,2), np.float32)
+    hsv1 = np.zeros((10,10,3), np.uint8)
+    mag = np.zeros((10,10,1), np.float32)
+    hsv1[...,0] = np.uint8(45)
+    hsv1[...,1] = 255
+    flow[...,0] = 1.0
+    flow[...,1] = 1.0
+    mag[...] = np.sqrt(np.square(1.0)+np.square(1.0))
+    hsv1[...,2] = cv2.normalize(mag, None, 0, 255, cv2.NORM_MINMAX)
+    self.assertTrue(np.array_equal(hsv1, Flow.hsv_from_flow(flow)))
+    flow[...,0] = 2.0
+    flow[...,1] = 3.5
+    mag[...] = np.sqrt(np.square(2.0)+np.square(3.5))
+    hsv1[...,2] = cv2.normalize(mag, None, 0, 255, cv2.NORM_MINMAX)
+    hsv1[...,0] = np.uint8(60)
+    self.assertTrue(np.array_equal(hsv1, Flow.hsv_from_flow(flow)))
 
   def test_split_flow_components(self):
     flow = np.zeros((16,9,2), np.float32)
@@ -64,6 +97,14 @@ class FlowTestCase(unittest.TestCase):
     '''test if returns a flow field in the right form, doesnt verify values'''
     u,v = Flow.farneback_optical_flow_ocl(self.fr_1, self.fr_2,0.5,3,15,3,7,1.5,0)
     self._test_optical_flow_form(u,v)
+
+  @unittest.skip('todo')
+  def test_farneback_optical_flow_ocl_vs_sw(self):
+    '''test if opencl and software versions return the same values'''
+    u1,v1 = Flow.farneback_optical_flow_ocl(self.fr_1, self.fr_2,0.5,3,15,3,7,1.5,0)
+    u2,v2 = Flow.farneback_optical_flow(self.fr_1, self.fr_2,0.5,3,15,3,7,1.5,0)
+    self.assertTrue(np.array_equal(u1, u2))
+    self.assertTrue(np.array_equal(v1, v2))
 
   @unittest.skip('todo')
   def test_brox_optical_flow_form(self): pass

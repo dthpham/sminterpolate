@@ -17,9 +17,8 @@ class Flow(object):
     '''
     r, c = flow.shape[:2]
     hsv = np.zeros((r, c, 3), np.uint8)
-    mag, ang = cv2.cartToPolar(flow[...,0], flow[...,1])
-
-    hsv[...,0] = (ang * (180 / np.pi)) + 0.5
+    mag, ang = cv2.cartToPolar(flow[...,0], flow[...,1], None, None, True)
+    hsv[...,0] = ang + 0.5
     hsv[...,1] = 255
     hsv[...,2] = cv2.normalize(mag, None, 0, 255, cv2.NORM_MINMAX)
     return hsv
