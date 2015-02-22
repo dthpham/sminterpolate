@@ -156,11 +156,12 @@ py_ocl_farneback_optical_flow(PyObject *self, PyObject *args) {
   PyObject *py_iters;
   PyObject *py_poly_n;
   PyObject *py_poly_sigma;
+  PyObject *py_fast_pyramids;
   PyObject *py_flags;
 
-  if (!PyArg_UnpackTuple(args, "", 9, 9, &py_fr_1,
+  if (!PyArg_UnpackTuple(args, "", 10, 10, &py_fr_1,
       &py_fr_2, &py_scale, &py_levels, &py_winsize, &py_iters, &py_poly_n,
-      &py_poly_sigma, &py_flags)) {
+      &py_poly_sigma, &py_fast_pyramids, &py_flags)) {
     printf("Error unpacking tuple\n");
     Py_RETURN_NONE;
   }
@@ -171,6 +172,7 @@ py_ocl_farneback_optical_flow(PyObject *self, PyObject *args) {
   int iters     = PyInt_AsLong(py_iters);
   int poly_n    = PyInt_AsLong(py_poly_n);
   double poly_sigma = PyFloat_AsDouble(py_poly_sigma);
+  bool fast_pyramids = PyObject_IsTrue(py_fast_pyramids);
   int flags     = PyInt_AsLong(py_flags);
 
   NDArrayConverter converter;
@@ -178,7 +180,7 @@ py_ocl_farneback_optical_flow(PyObject *self, PyObject *args) {
   Mat fr_2 = converter.toMat(py_fr_2);
 
   vector<Mat> flows = ocl_farneback_optical_flow(fr_1, fr_2, scale, levels,
-      winsize, iters, poly_n, poly_sigma, flags);
+      winsize, iters, poly_n, poly_sigma, fast_pyramids, flags);
   PyObject *py_flows = PyList_New(flows.size());
 
   mat_vector_fill_pylist(flows, py_flows);

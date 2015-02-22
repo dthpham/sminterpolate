@@ -25,7 +25,7 @@ class Project(object):
     self.timing_regions = timing_regions
     if flow_method is None:
       flow_method = lambda(x, y): \
-          Flow.farneback_optical_flow_ocl(x, y, 0.5, 3, 15, 3, 7, 1.5, 0)
+          Flow.farneback_optical_flow_ocl(x, y, 0.5, 3, 15, 3, 7, 1.5, False, 0)
     self.flow_method = flow_method
     if interpolate_method is None:
       interpolate_method = Interpolate.interpolate_frames

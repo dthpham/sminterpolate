@@ -95,13 +95,13 @@ class FlowTestCase(unittest.TestCase):
 
   def test_farneback_optical_flow_ocl_form(self):
     '''test if returns a flow field in the right form, doesnt verify values'''
-    u,v = Flow.farneback_optical_flow_ocl(self.fr_1, self.fr_2,0.5,3,15,3,7,1.5,0)
+    u,v = Flow.farneback_optical_flow_ocl(self.fr_1, self.fr_2,0.5,3,15,3,7,1.5,False,0)
     self._test_optical_flow_form(u,v)
 
   @unittest.skip('todo')
   def test_farneback_optical_flow_ocl_vs_sw(self):
     '''test if opencl and software versions return the same values'''
-    u1,v1 = Flow.farneback_optical_flow_ocl(self.fr_1, self.fr_2,0.5,3,15,3,7,1.5,0)
+    u1,v1 = Flow.farneback_optical_flow_ocl(self.fr_1, self.fr_2,0.5,3,15,3,7,1.5,False,0)
     u2,v2 = Flow.farneback_optical_flow(self.fr_1, self.fr_2,0.5,3,15,3,7,1.5,0)
     self.assertTrue(np.array_equal(u1, u2))
     self.assertTrue(np.array_equal(v1, v2))

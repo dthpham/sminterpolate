@@ -35,9 +35,9 @@ def main():
   gen.add_argument('-v', '--verbose', action='store_true',
                    help='Set to increase output verbosity')
   gen.add_argument('--no-preview', action='store_false',
-                   help='Set to disable video preview while rendering')
+                   help='Set to disable video preview')
   gen.add_argument('--preview-flows', action='store_true',
-                   help='Set to preview optical flows while rendering')
+                   help='Set to preview optical flows')
   gen.add_argument('--render-flows', action='store_true',
                    help='Set to render optical flows and write them to a file')
   gen.add_argument('--render-info', action='store_true',
@@ -91,6 +91,8 @@ def main():
                    default='box',
                    help='Set which filter to use for optical flow estimation, '
                    '(default: %(default)s)')
+  fgr.add_argument('--fast-pyr', action='store_true',
+                   help='Set to use fast pyramids')
 
   args = par.parse_args()
   config.update(dict(vars(args)))
@@ -132,7 +134,8 @@ def main():
     flags = cv2.OPTFLOW_FARNEBACK_GAUSSIAN
   flow_method = lambda(x, y): \
       farneback_method(x, y, args.pyr_scale, args.levels, args.winsize,
-                       args.iters, args.poly_n, args.poly_s, flags)
+                       args.iters, args.poly_n, args.poly_s, args.fast_pyr,
+                       flags)
   interpolate_method = Interpolate.interpolate_frames_ocl if have_ocl \
       else Interpolate.interpolate_frames
 

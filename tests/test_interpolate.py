@@ -17,9 +17,9 @@ class InterpolateTestCase(unittest.TestCase):
     fr_1_gr = cv2.cvtColor(fr_1, cv2.COLOR_BGR2GRAY)
     fr_2_gr = cv2.cvtColor(fr_2, cv2.COLOR_BGR2GRAY)
     self.fu, self.fv = \
-        Flow.farneback_optical_flow_ocl(fr_1_gr,fr_2_gr,0.5,3,15,3,7,1.5,0)
+        Flow.farneback_optical_flow_ocl(fr_1_gr,fr_2_gr,0.5,3,15,3,7,1.5,False,0)
     self.bu, self.bv = \
-        Flow.farneback_optical_flow_ocl(fr_1_gr,fr_2_gr,0.5,3,15,3,7,1.5,0)
+        Flow.farneback_optical_flow_ocl(fr_1_gr,fr_2_gr,0.5,3,15,3,7,1.5,False,0)
     self.fr_1_32 = np.float32(fr_1)*1/255.0
     self.fr_2_32 = np.float32(fr_2)*1/255.0
 

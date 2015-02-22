@@ -55,12 +55,13 @@ class Flow(object):
 
   @staticmethod
   def farneback_optical_flow_ocl(fr_1, fr_2, scale, levels, winsize, iters,
-                                 poly_n, poly_sigma, flags):
+                                 poly_n, poly_sigma, fast_pyramids, flags):
     '''computes a dense optical flow using Gunnar Farneback's algorithm
     on a gpu using the opencl framework, if available
     '''
     flow = py_motion.py_ocl_farneback_optical_flow(
-        fr_1, fr_2, scale, levels, winsize, iters, poly_n, poly_sigma, flags)
+        fr_1, fr_2, scale, levels, winsize, iters, poly_n, poly_sigma,
+        fast_pyramids, flags)
     u, v = flow
     return u, v
 

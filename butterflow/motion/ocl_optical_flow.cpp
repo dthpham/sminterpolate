@@ -7,7 +7,8 @@ using namespace cv::ocl;
 
 vector<Mat>
 ocl_farneback_optical_flow(Mat& fr_1, Mat& fr_2, double scale, int levels,
-  int winsize, int iters, int poly_n, double poly_sigma, int flags) {
+  int winsize, int iters, int poly_n, double poly_sigma, bool fast_pyramids,
+  int flags) {
 
   FarnebackOpticalFlow calc_flow;
   calc_flow.numLevels = levels;
@@ -16,6 +17,7 @@ ocl_farneback_optical_flow(Mat& fr_1, Mat& fr_2, double scale, int levels,
   calc_flow.numIters  = iters;
   calc_flow.polyN     = poly_n;
   calc_flow.polySigma = poly_sigma;
+  calc_flow.fastPyramids = fast_pyramids;
   calc_flow.flags     = flags;
 
   oclMat ocl_fr_1(fr_1);
