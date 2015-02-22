@@ -40,7 +40,7 @@ def main():
                    help='Set to preview optical flows while rendering')
   gen.add_argument('--render-flows', action='store_true',
                    help='Set to render optical flows and write them to a file')
-  gen.add_argument('--add-info', action='store_true',
+  gen.add_argument('--render-info', action='store_true',
                    help='Set to embed debugging info into the output video')
 
   vid.add_argument('-o', '--output-path', type=str,
@@ -87,9 +87,10 @@ def main():
   fgr.add_argument('--poly-s', type=float, default=1.5,
                    help='Set standard deviation to smooth derivatives, '
                    '(default: %(default)s)')
-  fgr.add_argument('--gaussian', action='store_true',
-                   help='Set to use Gaussian filter instead of box filter '
-                   'for flow estimation')
+  fgr.add_argument('-ff', '--flow-filter', choices=['box', 'gaussian'],
+                   default='box',
+                   help='Set which filter to use for optical flow estimation, '
+                   '(default: %(default)s)')
 
   args = par.parse_args()
   config.update(dict(vars(args)))
@@ -126,7 +127,7 @@ def main():
   farneback_method = Flow.farneback_optical_flow_ocl if have_ocl \
       else Flow.farneback_optical_flow
   flags = 0
-  if args.gaussian:
+  if args.flow_filter == 'gaussian':
     import cv2
     flags = cv2.OPTFLOW_FARNEBACK_GAUSSIAN
   flow_method = lambda(x, y): \

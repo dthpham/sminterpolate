@@ -290,7 +290,7 @@ class Renderer(object):
           frs_written += 1
           fr_to_write = fr
 
-          if config['add_info']:
+          if config['render_info']:
             # the copy here has a minimal effect on performance
             img_mat = cv2.cv.fromarray(fr.copy())
 
