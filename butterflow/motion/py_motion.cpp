@@ -35,7 +35,7 @@ print_ocl_devices() {
   clGetPlatformIDs(32, platforms, &n_platforms);
 
   if (n_platforms > 0) {
-    cout << "opencl devices:";
+    cout << "OpenCL devices:";
   }
 
   for (int i = 0; i < n_platforms; i++) {
@@ -74,7 +74,7 @@ print_ocl_devices() {
   cl::Platform::get(&all_platforms);
 
   if (all_platforms.size() > 0) {
-    cout << "opencl devices:";
+    cout << "OpenCL devices:";
   }
 
   for (int i = 0; i < all_platforms.size(); i++) {

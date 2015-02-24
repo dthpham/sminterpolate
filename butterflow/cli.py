@@ -15,15 +15,19 @@ NO_AVUTIL_WARNING = 'You need FFMPEG or Libav to use this app.'
 NO_OCL_WARNING = 'No compatible OCL devices detected. Check your OpenCL '\
                  'installation.'
 NO_VID_WARNING = 'No input video specified'
+EPILOG = 'Send bugs and questions to dthpham@gmail.com.'
 
 
 def main():
-  par = argparse.ArgumentParser(add_help=False)
-  gen = par.add_argument_group('general arguments')
-  vid = par.add_argument_group('video arguments')
-  fgr = par.add_argument_group('advanced arguments')
+  par = argparse.ArgumentParser(usage='%(prog)s [options] [video]',
+                                add_help=False,
+                                epilog=EPILOG)
+  req = par.add_argument_group('Required arguments')
+  gen = par.add_argument_group('General arguments')
+  vid = par.add_argument_group('Video arguments')
+  fgr = par.add_argument_group('Advanced arguments')
 
-  par.add_argument('video', type=str, nargs='?', default=None,
+  req.add_argument('video', type=str, nargs='?', default=None,
                    help='Specify the input video')
 
   gen.add_argument('-h', '--help', action='help',
@@ -41,7 +45,7 @@ def main():
   gen.add_argument('--render-flows', action='store_true',
                    help='Set to render optical flows and write them to a file')
   gen.add_argument('--render-info', action='store_true',
-                   help='Set to embed debugging info into the output video')
+                   help='Set to add debugging info into the output video')
 
   vid.add_argument('-o', '--output-path', type=str,
                    default=os.path.join(os.getcwd(), 'out.mp4'),
@@ -63,7 +67,7 @@ def main():
                    help='Set to trim subregions that are not explicity '
                         'specified')
   vid.add_argument('-vs', '--video-scale', type=float, default=1.0,
-                   help='Set the output video scale, '
+                   help='Specify the output video scale, '
                         '(default: %(default)s)')
   vid.add_argument('-l', '--lossless', action='store_true',
                    help='Set to use lossless encoding settings')
@@ -72,27 +76,28 @@ def main():
   vid.add_argument('--grayscale', action='store_true',
                    help='Set to enhance grayscale coloring')
 
+  fgr.add_argument('--fast-pyr', action='store_true',
+                   help='Set to use fast pyramids')
   fgr.add_argument('--pyr-scale', type=float, default=0.5,
-                   help='Set pyramid scale factor, (default: %(default)s)')
+                   help='Specify pyramid scale factor, (default: %(default)s)')
   fgr.add_argument('--levels', type=int, default=3,
-                   help='Set number of pyramid layers, (default: %(default)s)')
+                   help='Specify number of pyramid layers, '
+                   '(default: %(default)s)')
   fgr.add_argument('--winsize', type=int, default=25,
-                   help='Set average window size, (default: %(default)s)')
+                   help='Specify average window size, (default: %(default)s)')
   fgr.add_argument('--iters', type=int, default=3,
-                   help='Set number of iterations at each pyramid level, '
+                   help='Specify number of iterations at each pyramid level, '
                    '(default: %(default)s)')
   fgr.add_argument('--poly-n', type=int, choices=[5, 7], default=7,
-                   help='Set size of pixel neighborhood, '
+                   help='Specify size of pixel neighborhood, '
                    '(default: %(default)s)')
   fgr.add_argument('--poly-s', type=float, default=1.5,
-                   help='Set standard deviation to smooth derivatives, '
+                   help='Specify standard deviation to smooth derivatives, '
                    '(default: %(default)s)')
   fgr.add_argument('-ff', '--flow-filter', choices=['box', 'gaussian'],
                    default='box',
-                   help='Set which filter to use for optical flow estimation, '
-                   '(default: %(default)s)')
-  fgr.add_argument('--fast-pyr', action='store_true',
-                   help='Set to use fast pyramids')
+                   help='Specify which filter to use for optical flow '
+                   'estimation, (default: %(default)s)')
 
   args = par.parse_args()
   config.update(dict(vars(args)))
