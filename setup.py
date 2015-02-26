@@ -92,7 +92,8 @@ def have_library(name):
     proc = subprocess.call(['pkg-config', '--exists', name],
                            env=get_extra_envs())
     return (proc == 0)
-  return True
+  else:
+    return True
 
 
 def have_library_object_file(libname, name):
@@ -107,6 +108,8 @@ def have_library_object_file(libname, name):
     res = res.split(' ')
     res = map(get_lib_short_name, res)
     return get_lib_short_name(name) in res
+  else:
+    return False
 
 
 def pkg_config_res(*opts):
@@ -191,15 +194,48 @@ def build_lst(*items):
   return list(item_set)
 
 
+def brew_pkg_installed(pkg):
+  """Returns True if a brewed package is installed"""
+  if have_command('brew'):
+    brew_ls = subprocess.Popen(['brew', 'ls', '--versions', pkg],
+                               stdout=subprocess.PIPE,
+                               env=get_extra_envs()).stdout.read().strip()
+    return (brew_ls != '')
+  else:
+    return False
+
+
+py_ver_X = sys.version_info.major
+py_ver_Y = sys.version_info.minor
+py_ver = '{}.{}'.format(py_ver_X, py_ver_Y)
+homebrew_prefix = None
+homebrew_site_pkgs = None
+try:
+  homebrew_prefix = subprocess.Popen(['brew', '--prefix'],
+                                     stdout=subprocess.PIPE,
+                                     env=get_extra_envs())
+  homebrew_prefix = homebrew_prefix.stdout.read().strip()
+except Exception:
+  # fall back to environment variable if brew command is not found
+  if 'HOMEBREW_PREFIX' in os.environ:
+      homebrew_prefix = os.environ['HOMEBREW_PREFIX']
+if homebrew_prefix is not None:
+  homebrew_site_pkgs = os.path.join(homebrew_prefix, 'lib/python{}/'
+                                    'site-packages/'.format(py_ver))
+
+
 def check_dependencies():
   '''verifies if all dependencies have been met'''
-  for x in ['pkg-config',
-            'ldconfig']:
-    if x == 'ldconfig' and sys.platform.startswith('darwin'):
-        continue
+  if py_ver_X != 2:
+    return False, 'Python {} is not version 2.x'.format(py_ver)
+  tools = ['pkg-config']
+  # ldconfig is not guaranteed on OS X
+  if sys.platform.startswith('linux'):
+    tools.append('ldconfig')
+  tools.append('python{}-config'.format(py_ver))
+  for x in tools:
     if not have_command(x):
-      return False, '{} command is needed to complete the build process'.\
-          format(x)
+      return False, '{} is needed to complete the build process'.format(x)
   for x in ['opencv',
             'avformat',
             'avcodec',
@@ -215,18 +251,20 @@ def check_dependencies():
       return False, '{} library is missing object file {}'.format(x, y)
 
   # debian based distros use dist-packages
-  local_site_pkgs = \
-      '/usr/local/lib/python2.7/site-packages'
-  local_dist_pkgs = \
-      '/usr/local/lib/python2.7/dist-packages'
-  systm_site_pkgs = \
-      '/usr/lib/python2.7/site-packages'
-  systm_dist_pkgs = \
-      '/usr/lib/python2.7/dist-packages'
+  local_site_pkgs = '/usr/local/lib/python{}/site-packages'.format(py_ver)
+  local_dist_pkgs = '/usr/local/lib/python{}/dist-packages'.format(py_ver)
+  systm_site_pkgs = '/usr/lib/python{}/site-packages'.format(py_ver)
+  systm_dist_pkgs = '/usr/lib/python{}/dist-packages'.format(py_ver)
   sys.path.insert(1, local_site_pkgs)
   sys.path.insert(2, local_dist_pkgs)
   sys.path.insert(3, systm_site_pkgs)
   sys.path.insert(4, systm_dist_pkgs)
+  if homebrew_site_pkgs is not None:
+    # Because some formulae provide python bindings, homebrew builds bindings
+    # against the first `python` (and `python-config`) in `PATH`
+    # (check `which python`). Hombrew site-packages should preceed all others
+    # on sys.path if it exists
+    sys.path.insert(1, homebrew_site_pkgs)
   try:
     import cv2
   except ImportError:
@@ -241,28 +279,36 @@ ldflags = ['/usr/lib', '/usr/local/lib']
 py_includes = None
 py_libs = None
 libav_libs = ['avcodec', 'avformat', 'avutil']
-homebrew_prefix = None
+py_prefix = subprocess.Popen(['python{}-config'.format(py_ver), '--prefix'],
+                             stdout=subprocess.PIPE,
+                             env=get_extra_envs()).stdout.read().strip()
 if sys.platform.startswith('linux'):
-  py_includes = pkg_config_res('--cflags', 'python-2.7')
-  py_libs = pkg_config_res('--libs', 'python-2.7')
+  py_includes = pkg_config_res('--cflags', 'python-{}'.format(py_ver))
+  py_libs = pkg_config_res('--libs', 'python-{}'.format(py_ver))
   linkflags.extend(['-shared', '-Wl,--export-dynamic'])
 elif sys.platform.startswith('darwin'):
   linkflags.extend(['-arch', 'x86_64'])
-  homebrew_prefix = None
-  try:
-    homebrew_prefix = subprocess.Popen(['brew', '--prefix'],
-                                       stdout=subprocess.PIPE,
-                                       env=get_extra_envs())
-    homebrew_prefix = homebrew_prefix.stdout.read().strip()
-  except Exception:
-    # fall back to environment variable if brew command is not found
-    if 'HOMEBREW_PREFIX' in os.environ:
-        homebrew_prefix = os.environ['HOMEBREW_PREFIX']
   if homebrew_prefix is not None:
+    # The system python may not know which compiler flags to set to build
+    # bindings for software installed in Homebrew so this is needed:
     includes.append(os.path.join(homebrew_prefix, 'include'))
-    includes.append(os.path.join(homebrew_prefix, 'lib'))
-  # py_libs and py_includes is not being found under osx
-  # py_libs.append('python2.7')
+    ldflags.append(os.path.join(homebrew_prefix, 'lib'))
+  # Because butterflow depends on opencv and a brewed opencv depends on the
+  # special `:python` target, both are botted against the homebrew python and
+  # require it to be installed. This can be avoided by building formulae with
+  # the `--build-from-source` flag. However, it is still possible for both
+  # to be built without using homebrew at all.
+  ldflags.append(os.path.join(py_prefix, 'lib'))
+  py_includes = os.path.join(py_prefix, 'include', 'python{}'.format(py_ver))
+  # Don't link against the system python if using a brewed python. Should link
+  # against it explicitly or else it will pick up the system python first
+  # due to the fact that the `includes` and `ldflag` variables contain search
+  # paths (`/usr/lib` and `/usr/include`) leading to the system python.
+  # Linking to the system python may lead to errors with softare with python
+  # bindings.
+  linkflags.append(os.path.join(py_prefix,
+                                'lib/libpython{}.dylib'.format(py_ver)))
+  # py_libs = ['python{}'.format(py_ver)]
 
 py_libav_info = Extension(
     'butterflow.media.py_libav_info',
@@ -282,7 +328,8 @@ py_libav_info = Extension(
 
 cflags = ['-g', '-Wall', '-std=c++11']
 cv_includes = pkg_config_res('--cflags', 'opencv')
-cv_libs = pkg_config_res('--libs', 'opencv')
+# cv_libs = pkg_config_res('--libs', 'opencv')
+cv_libs = ['opencv_core', 'opencv_ocl', 'opencv_imgproc']
 cl_ldflag = None
 cl_lib = None
 if sys.platform.startswith('linux'):
@@ -290,18 +337,18 @@ if sys.platform.startswith('linux'):
   cl_ldflag = os.path.dirname(get_lib_installed_path('libOpenCL'))
   cl_lib = get_lib_filename_namespec('libOpenCL')
 elif sys.platform.startswith('darwin'):
-  # Expecting python and numpy installed with homebrew
-  # Ideally, all python2.x packages with headers should be placed in
-  # /usr/include/python2.x/<package> or /usr/local/include/... but that doesn't
-  # happen when using the numpy package from homebrew
-  includes.append(os.path.join(homebrew_prefix,
-                               'lib/python2.7/site-packages/numpy/core/include'
-                               ))
-  # homebrew opencv uses a brewed numpy by default but it's possible for the
-  # user to their own or the system one
-  includes.append(os.path.join('/System/Library/Frameworks/Python.framework/'
-                               'Versions/2.7/Extras/lib/python/numpy/core/'
-                               'include'))
+  if homebrew_prefix is not None:
+    # Usually all pythonX.Y packages with headers are placed in
+    # `/usr/include/pythonX.Y/<package>` or `/usr/local/include/` but homebrew
+    # policy is to put them in `site-packages`
+    includes.append(os.path.join(homebrew_site_pkgs, 'numpy/core/include'))
+  else:
+    # Homebrew opencv uses a brewed numpy by default but it's possible for
+    # a user to their own or the system one if the `--without-brewed-numpy`
+    # option is used
+    includes.append(os.path.join('/System/Library/Frameworks/'
+                                 'Python.framework/Versions/{}/Extras/lib/'
+                                 'python/numpy/core/include'.format(py_ver)))
   linkflags.extend(['-framework', 'OpenCL'])
 
 py_motion = Extension(
@@ -327,9 +374,9 @@ py_motion = Extension(
     language='c++'
 )
 
-ret, err = check_dependencies()
+ret, error = check_dependencies()
 if not ret:
-  print(err)
+  print(error)
   exit(1)
 
 setup(
@@ -342,9 +389,10 @@ setup(
     url='https://github.com/dthpham/butterflow',
     download_url='https://github.com/dthpham/butterflow/tarball/{}'.format(
         version),
-    description='Lets you create slow motion and smooth motion videos',
+    description='Lets you make slow motion and smooth motion videos',
     long_description=get_long_description(),
-    keywords=['slowmo', 'slow motion', 'motion interpolation'],
+    keywords=['slowmo', 'slow motion', 'smooth motion',
+              'motion interpolation'],
     entry_points={
         'console_scripts': ['butterflow = butterflow.cli:main']
     },
