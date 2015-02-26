@@ -59,12 +59,12 @@ def main():
                    'TARGET is either `fps`, `duration`, `factor`. '
                    'Valid TIME syntaxes are [hr:m:s], [m:s], [s.xxx], '
                    'or `end`. You can specify multiple sub regions by '
-                   'separting them with a semi-colon `;`. A special region '
+                   'separating them with a semi-colon `;`. A special region '
                    'format that conveniently describes the entire clip is '
                    'available in the form: "full,TARGET=FLOAT".')
 
   vid.add_argument('-t', '--trim-regions', action='store_true',
-                   help='Set to trim subregions that are not explicity '
+                   help='Set to trim subregions that are not explicitly '
                         'specified')
   vid.add_argument('-vs', '--video-scale', type=float, default=1.0,
                    help='Specify the output video scale, '
@@ -72,7 +72,8 @@ def main():
   vid.add_argument('-l', '--lossless', action='store_true',
                    help='Set to use lossless encoding settings')
   vid.add_argument('--decimate', action='store_true',
-                   help='Set to decimate duplicate frames')
+                   help='Set to decimate duplicate frames from the'
+                   ' video source')
   vid.add_argument('--grayscale', action='store_true',
                    help='Set to enhance grayscale coloring')
 
