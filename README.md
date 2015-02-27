@@ -9,12 +9,20 @@ given two existing frames `A` and `B`, this program can generate frames `C.1`,
 [motion interpolation](http://en.wikipedia.org/wiki/Motion_interpolation),
 increases frame rates and can give the perception of smoother motion and more
 fluid animation, an effect most people know as the "soap opera effect".
-Butterflow takes advantage of this increase in frame rates to make high speed
-and slow motion videos with minimal judder.
+`butterflow` takes advantage of this increase in frame rates to make high speed
+and slow motion videos with minimal judder:
 
-A demo:
+![](http://srv.dthpham.me/video/blow_sm.gif)
 
-* [Slow-mo with multiple sub regions](http://srv.dthpham.me/video/jet.mp4)
+In this example, `butterflow` slowed down a `1s` video down by `10x`. An
+additional `208` frames were interpolated from `30` original source frames
+giving the video a smooth feel during playback. The same video was slowed
+down with `ffmpeg`, but because it dupes frames and can't interpolate new ones
+the video has a noticeable stutter.
+
+Visit the
+[See it in Action](https://github.com/dthpham/butterflow/wiki/See-it-in-Action)
+page for more demos.
 
 ##Installation
 
@@ -29,13 +37,15 @@ brew install --build-from-source butterflow
 
 ####Arch Linux:
 
-A package is available in the AUR under
-[`butterflow`](https://aur.archlinux.org/packages/butterflow/).
+A package is
+[available in the AUR](https://aur.archlinux.org/packages/butterflow/) under
+`butterflow`.
 
 ####Debian 8.x:
 
-A package is available. See the [Debian Install Guide](https://github.com/dthpham/butterflow/wiki/Debian-Install-Guide) for
-instructions.
+A package is available. See the
+[Debian Install Guide](https://github.com/dthpham/butterflow/wiki/Debian-Install-Guide)
+for instructions.
 
 ####From Source:
 
