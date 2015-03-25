@@ -10,9 +10,10 @@ from ctypes.util import find_library
 
 F_NULL = open(os.devnull, 'w')
 ROOT_PATH = os.path.dirname(os.path.realpath(__file__))
-B_MEDIA  = os.path.join(ROOT_PATH, 'butterflow', 'media')
-B_MOTION = os.path.join(ROOT_PATH, 'butterflow', 'motion')
+
 B_VENDOR = os.path.join(ROOT_PATH, 'butterflow', '3rdparty')
+B_MEDIA = os.path.join(ROOT_PATH, 'butterflow', 'media')
+B_MOTION = os.path.join(ROOT_PATH, 'butterflow', 'motion')
 
 
 def get_long_description():
@@ -88,12 +89,12 @@ def have_library(name):
   to find library files'''
   short_name = get_lib_short_name(name)
   res = find_library(short_name)
-  if not res:
+  if res:
+    return True
+  else:
     proc = subprocess.call(['pkg-config', '--exists', name],
                            env=get_extra_envs())
     return (proc == 0)
-  else:
-    return True
 
 
 def have_library_object_file(libname, name):
@@ -170,14 +171,10 @@ def get_lib_short_name(name):
   if name.startswith('lib'):
     name = name[3:]
 
-  def chop_at(x, y):
-    idx = x.find(y)
-    if idx != -1:
-      x = x[:idx]
-    return x
-  name = chop_at(name, '.so')
-  name = chop_at(name, '.dylib')
-  name = chop_at(name, '.a')
+  chomp_at = lambda x, y: x[:x.find(y)] if x.find(y) != -1 else x
+  name = chomp_at(name, '.so')
+  name = chomp_at(name, '.dylib')
+  name = chomp_at(name, '.a')
   return name
 
 
@@ -250,7 +247,7 @@ def check_dependencies():
     if not have_library_object_file(x, y):
       return False, '{} library is missing object file {}'.format(x, y)
 
-  # debian based distros use dist-packages
+  # Debian based distros use dist-packages
   local_site_pkgs = '/usr/local/lib/python{}/site-packages'.format(py_ver)
   local_dist_pkgs = '/usr/local/lib/python{}/dist-packages'.format(py_ver)
   systm_site_pkgs = '/usr/lib/python{}/site-packages'.format(py_ver)
@@ -262,8 +259,8 @@ def check_dependencies():
   if homebrew_site_pkgs is not None:
     # Because some formulae provide python bindings, homebrew builds bindings
     # against the first `python` (and `python-config`) in `PATH`
-    # (check `which python`). Hombrew site-packages should preceed all others
-    # on sys.path if it exists
+    # (check `which python`).
+    # Hombrew site-packages should preceed all others on sys.path if it exists:
     sys.path.insert(1, homebrew_site_pkgs)
   try:
     import cv2
@@ -288,26 +285,27 @@ if sys.platform.startswith('linux'):
   linkflags.extend(['-shared', '-Wl,--export-dynamic'])
 elif sys.platform.startswith('darwin'):
   linkflags.extend(['-arch', 'x86_64'])
+  ldflags.append(os.path.join(py_prefix, 'lib'))
   if homebrew_prefix is not None:
     # The system python may not know which compiler flags to set to build
-    # bindings for software installed in Homebrew so this is needed:
+    # bindings for software installed in Homebrew so this may be needed:
     includes.append(os.path.join(homebrew_prefix, 'include'))
     ldflags.append(os.path.join(homebrew_prefix, 'lib'))
-  # Because butterflow depends on opencv and a brewed opencv depends on the
-  # special `:python` target, both are botted against the homebrew python and
-  # require it to be installed. This can be avoided by building formulae with
-  # the `--build-from-source` flag. However, it is still possible for both
-  # to be built without using homebrew at all.
-  ldflags.append(os.path.join(py_prefix, 'lib'))
-  py_includes = os.path.join(py_prefix, 'include', 'python{}'.format(py_ver))
-  # Don't link against the system python if using a brewed python. Should link
-  # against it explicitly or else it will pick up the system python first
-  # due to the fact that the `includes` and `ldflag` variables contain search
-  # paths (`/usr/lib` and `/usr/include`) leading to the system python.
-  # Linking to the system python may lead to errors with softare with python
-  # bindings.
-  linkflags.append(os.path.join(py_prefix,
-                                'lib/libpython{}.dylib'.format(py_ver)))
+  # Don't explicity link against the system python on OSX to prevent segfaults
+  # arising from modules being built with one python (i.e. system python) and
+  # imported from a foreign python (i.e. brewed python).
+  # See: https://github.com/Homebrew/homebrew/blob/master/share/doc/homebrew/
+  # Common-Issues.md#python-segmentation-fault-11-on-import-some_python_module
+  #
+  # Building modules with `-undefined dynamic_lookup` instead of an explicit
+  # link allows symbols to be resolved at import time. `otool -L <module>.so`
+  # shouldn't mention `Python`.
+  # See: https://github.com/Homebrew/homebrew-science/pull/1886
+
+  linkflags.extend(['-Wl,-undefined,dynamic_lookup'])
+  # py_includes = os.path.join(py_prefix, 'include', 'python{}'.format(py_ver))
+  # linkflags.append(os.path.join(py_prefix,
+  #                              'lib/libpython{}.dylib'.format(py_ver)))
   # py_libs = ['python{}'.format(py_ver)]
 
 py_libav_info = Extension(
@@ -338,14 +336,15 @@ if sys.platform.startswith('linux'):
   cl_lib = get_lib_filename_namespec('libOpenCL')
 elif sys.platform.startswith('darwin'):
   if homebrew_prefix is not None:
-    # Usually all pythonX.Y packages with headers are placed in
+    # Homebrew opencv uses a brewed numpy by default but it's possible for
+    # a user to their own or the system one if the `--without-brewed-numpy`
+    # option is used.
+    #
+    # Note: usually all pythonX.Y packages with headers are placed in
     # `/usr/include/pythonX.Y/<package>` or `/usr/local/include/` but homebrew
     # policy is to put them in `site-packages`
     includes.append(os.path.join(homebrew_site_pkgs, 'numpy/core/include'))
   else:
-    # Homebrew opencv uses a brewed numpy by default but it's possible for
-    # a user to their own or the system one if the `--without-brewed-numpy`
-    # option is used
     includes.append(os.path.join('/System/Library/Frameworks/'
                                  'Python.framework/Versions/{}/Extras/lib/'
                                  'python/numpy/core/include'.format(py_ver)))
