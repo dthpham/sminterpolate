@@ -20,8 +20,7 @@ EPILOG = 'Send bugs and questions to dthpham@gmail.com.'
 
 def main():
   par = argparse.ArgumentParser(usage='%(prog)s [options] [video]',
-                                add_help=False,
-                                epilog=EPILOG)
+                                add_help=False)
   req = par.add_argument_group('Required arguments')
   gen = par.add_argument_group('General arguments')
   vid = par.add_argument_group('Video arguments')
@@ -40,10 +39,10 @@ def main():
                    help='Set to increase output verbosity')
   gen.add_argument('--no-preview', action='store_false',
                    help='Set to disable video preview')
-  gen.add_argument('--preview-flows', action='store_true',
-                   help='Set to preview optical flows')
-  gen.add_argument('--render-flows', action='store_true',
-                   help='Set to render optical flows and write them to a file')
+  # gen.add_argument('--preview-flows', action='store_true',
+  #                  help='Set to preview optical flows')
+  # gen.add_argument('--render-flows', action='store_true',
+  #                  help='Set to render optical flows and write them to a file')
   gen.add_argument('--render-info', action='store_true',
                    help='Set to add debugging info into the output video')
 
@@ -55,13 +54,14 @@ def main():
                         '(default: %(default)s)')
   vid.add_argument('-s', '--sub-regions', type=str,
                    help='Specify rendering sub regions in the form: '
-                   '"a=TIME,b=TIME,TARGET=FLOAT" where '
+                   '"a=TIME,b=TIME,TARGET=VALUE" where '
                    'TARGET is either `fps`, `duration`, `factor`. '
                    'Valid TIME syntaxes are [hr:m:s], [m:s], [s.xxx], '
-                   'or `end`. You can specify multiple sub regions by '
-                   'separating them with a semi-colon `;`. A special region '
-                   'format that conveniently describes the entire clip is '
-                   'available in the form: "full,TARGET=FLOAT".')
+                   'or `end`, which signifies to the end of the video. '
+                   'You can specify multiple sub regions by separating them '
+                   'with a semi-colon `;`. A special region format that '
+                   'conveniently describes the entire clip is available in '
+                   'the form: "full,TARGET=VALUE".')
 
   vid.add_argument('-t', '--trim-regions', action='store_true',
                    help='Set to trim subregions that are not explicitly '
@@ -102,6 +102,8 @@ def main():
 
   args = par.parse_args()
   config.update(dict(vars(args)))
+
+  config['preview_flows'] = False
 
   if args.version:
     print(__version__)
@@ -160,4 +162,4 @@ def main():
 
   project.render_video(dst_path, args.video_scale, args.decimate,
                        args.grayscale, args.lossless, args.trim_regions,
-                       args.no_preview, args.render_flows)
+                       args.no_preview, False)
