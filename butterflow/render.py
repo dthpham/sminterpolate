@@ -1,514 +1,741 @@
-from media.source import OpenCvFrameSource
-import cv2
-import subprocess
-from motion.interpolate import Interpolate
-import numpy as np
+# -*- coding: utf-8 -*-
+from __future__ import absolute_import
+
 import os
-import math
-from region import VideoRegionUtils, RenderingSubRegion
 import sys
-from __init__ import __version__ as version
-from .butterflow import config
-from motion.flow import Flow
-
-# FONT_MIN_H, FONT_MIN_V is the minimum size in which the unscaled
-# CV_FONT_HERSHEY_PLAIN font fits. The font is scaled up and down
-# based on that reference point
-FONT_MIN_H_FITS = 768
-FONT_MIN_V_FITS = 216
-
-# constants for info text overlayed over the rendered video
-TXT_T_PADDING = 20
-TXT_L_PADDING = 20
-TXT_R_PADDING = 20
-TXT_LINE_D_PADDING = 10
-
-TXT_TOP_L = """\
-butterflow {} ({})
-Res: {},{}
-Playback Rate: {} fps
-Pyr: {}, L: {}, W: {}, I: {}, PolyN: {}, PolyS: {}\n
-Frame: {}
-Work Index: {}, {}, {}
-Type Src: {}, Dup: {}
-Mem: {}"""
-
-TXT_TOP_R = """\
-Region {}/{} F: [{}, {}] T: [{:.2f}s, {:.2f}s]
-Len F: {}, T: {:.2f}s
-Target Dur: {}, Fac: {}, fps: {}
-Out Len F: {}, Dur: {:.2f}s
-Drp every {:.1f}, Dup every {:.1f}
-Gen: {}, Made: {}, Drp: {}, Dup: {}
-Write Ratio: {}/{} ({:.2f}%)"""
+import datetime
+from fractions import Fraction
+import math
+import shutil
+import subprocess
+import cv2
+import numpy as np
+from butterflow import avinfo
+from butterflow.__init__ import __version__
+from butterflow.settings import default as settings
+from butterflow.flow import bgr_from_flow
+from butterflow.framesource import FrameSource
+from butterflow.sequence import VideoSequence, RenderSubregion
 
 
 class Renderer(object):
-  '''renders an interpolated video based on information supplied in
-  project settings most important info: video info, playback
-  rate, timing regions, and flow method, interpolation method. this
-  only creates a video. audio/subs will not be muxed in here
-  '''
-  def __init__(self, src_vid_info, vid_info, playback_rate, timing_regions,
-               flow_method, interpolate_method, vf_trim=False,
-               vf_grayscale=False, vf_lossless=False, loglevel='fatal',
-               show_preview=False, render_flows=False):
-    '''should copy of the settings so that any changes to them during
-    rendering dont cause any issues
-    '''
-    self.src_vid_info = src_vid_info
-    self.vid_info = vid_info
-    self.playback_rate = playback_rate
-    self.timing_regions = timing_regions
-    self.flow_method = flow_method
-    self.interpolate_method = interpolate_method
-    self.pipe = None
-    self.ff_pipe = None
-    self.bf_pipe = None
-    self.loglevel = loglevel
-    self.show_preview = show_preview
-    self.total_frames_written = 0
-    self.num_sub_regions = 0
-    self.curr_sub_region_idx = 0
-    self.vf_trim = vf_trim
-    self.vf_grayscale = vf_grayscale
-    self.vf_lossless = vf_lossless
-    self.render_flows = render_flows
+    def __init__(self, dst_path, video_info, video_sequence, playback_rate,
+        flow_func=settings['flow_func'],
+        interpolate_func=settings['interpolate_func'],
+        scale=settings['video_scale'], decimate=False, grayscale=False,
+        lossless=False, trim=False, show_preview=True, add_info=False,
+        preview_flows=False, make_flows=False, loglevel=settings['loglevel'],
+        flow_kwargs=None):
 
-  def make_pipe(self, dst_path, rate):
-    '''create pipe to ffmpeg/libav, which will encode the video for us'''
-    pix_fmt = 'yuv420p'
-    if self.vf_grayscale:
-      pix_fmt = 'gray'
-    call = [
-        config['avutil'],
-        '-loglevel', self.loglevel,
-        '-y',
-        '-f', 'rawvideo',
-        '-pix_fmt', 'bgr24',
-        '-s', '{}x{}'.format(self.vid_info.width, self.vid_info.height),
-        '-r', str(rate),
-        '-i', '-',
-        '-pix_fmt', pix_fmt,
-        '-r', str(rate),
-        '-c:a', 'none',
-        '-c:v', 'libx264',
-        '-preset', 'fast']
-    quality = ['-crf', '18']
-    if self.vf_lossless:
-      quality = ['-qp', '0']
-    call.extend(quality)
-    call.extend([dst_path])
-    pipe = subprocess.Popen(
-        call,
-        stdin=subprocess.PIPE
-    )
-    if pipe == 1:
-      raise RuntimeError('could not create pipe')
-    return pipe
+        self.dst_path = dst_path
+        self.video_info = video_info
+        self.video_sequence = video_sequence
+        self.flow_func = flow_func
+        self.interpolate_func = interpolate_func
 
-  def close_pipes(self):
-    '''closes pipe to the encoder if it is open'''
-    for pipe in [self.pipe, self.ff_pipe, self.bf_pipe]:
-      if pipe is not None:
-        pipe.stdin.flush()
-        pipe.stdin.close()
-        pipe.wait()
-    self.pipe = None
-    self.ff_pipe = None
-    self.bf_pipe = None
+        # general options
+        self.show_preview = show_preview
+        self.add_info = add_info
+        self.loglevel = loglevel
 
-  def write_frame_to_pipe(self, pipe, frame):
-    '''writes a frame to the pipe'''
-    try:
-      pipe.stdin.write(bytes(frame.data))
-    except Exception as err:
-      print('error writing to pipe: ', err)
+        # video options
+        self.playback_rate = float(playback_rate)
+        self.scale = scale
+        self.decimate = decimate
+        self.grayscale = grayscale
+        self.lossless = lossless
+        self.trim = trim
 
-  def render_subregion(self, source, sub_region):
-    '''calculates flows, interpolates frames, and sends it to the pipe
-    to be encoded into a video
-    '''
-    src = source
-    input_vid_name = os.path.basename(self.src_vid_info.video_path)
-    vid_name = os.path.basename(self.vid_info.video_path)
-    vid_name, _ = os.path.splitext(vid_name)
+        # debugging options
+        self.preview_flows = preview_flows
+        self.make_flows = make_flows
 
-    fr_a = sub_region.frame_a
-    fr_b = sub_region.frame_b
-    frs_in_region = (fr_b - fr_a) + 1
-    dur_in_region = sub_region.time_b - sub_region.time_a
+        # normalized video information
+        self.nrm_info = None
 
-    tgt_frs = 0
-    fr_factor = 0.0
-    time_step = 0.0
+        # pipes
+        self.rendered_pipe = None
+        self.fwd_pipe = None
+        self.bwd_pipe = None
 
-    if sub_region.target_duration:
-      tgt_dur_secs = sub_region.target_duration / 1000
-      tgt_frs = int(self.playback_rate * tgt_dur_secs)
-    if sub_region.target_rate:
-      reg_dur_secs = dur_in_region / 1000
-      tgt_frs = int(sub_region.target_rate * reg_dur_secs)
-    if sub_region.target_factor:
-      reg_dur_secs = dur_in_region / 1000
-      tgt_factor = 1 / sub_region.target_factor
-      tgt_frs = int(self.playback_rate * reg_dur_secs * tgt_factor)
+        # information for the add info option
+        self.flow_kwargs = flow_kwargs
+        self.total_frs_wrt = 0
+        self.subregions_to_render = 0
+        self.curr_subregion_idx = 0
 
-    fr_factor = tgt_frs * 1.0 / frs_in_region
-    # prevent division by zero when only one frame needs to be written
-    if fr_factor == 0:
-      tgt_frs = 1
-      fr_factor = 1
-    time_step = 1 / fr_factor
+        # window names
+        vid_name = os.path.basename(self.video_info['path'])
+        self.window_title = '{} — Butterflow'.format(vid_name)
+        self.fwd_window_title = '{} — Forward'.format(vid_name)
+        self.bwd_window_title = '{} — Backward'.format(vid_name)
 
-    time_step = min(time_step, 1.0)
+    def normalize_for_interpolation(self, dst_path):
+        """transcode the video to a standard format so that interpolation yields
+        the the best results. the main goal is to retranscode to the lowest
+        possible constant rate in which all unique frames in the vid are
+        retained. this is to avoid having to dupe/drop frames during the
+        interpolation process which if done incorrectly may cause video and
+        audio sync drift. in the future, the process shouldn't be framerate
+        sensitive
+        """
+        using_avconv = settings['avutil'] == 'avconv'
+        if not self.video_info['v_stream_exists']:
+            raise RuntimeError('no video stream detected')
+        has_sub = self.video_info['s_stream_exists']
+        has_aud = self.video_info['a_stream_exists']
 
-    drop_every_n_frs = 0.0
-    dupe_every_n_frs = 0.0
+        w = -1 if using_avconv else -2
+        h = int(self.video_info['height'] * self.scale * 0.5) * 2
+        scaler = 'bilinear' if self.scale >= 1.0 else 'lanczos'
 
-    # if 1.0 % time_step is zero, one less frame will be interpolated
-    frs_inter_each_go = int(1 / time_step)
-    if abs(0 - math.fmod(1, time_step)) <= 1e-16:
-      frs_inter_each_go -= 1
+        tmp_dir = os.path.join(
+            os.path.dirname(dst_path), '~' + os.path.basename(dst_path))
 
-    pairs = frs_in_region - 1
-    frs_write_per_pair = frs_inter_each_go + 1
-    frs_will_make = frs_write_per_pair * pairs
-    frs_extra = frs_will_make - tgt_frs
-    if frs_extra > 0:
-      drop_every_n_frs = frs_will_make / math.fabs(frs_extra)
-    if frs_extra < 0:
-      dupe_every_n_frs = frs_will_make / math.fabs(frs_extra)
-    pot_drift_secs = frs_extra / self.playback_rate
+        vf = 'scale={}:{}'.format(w, h)
+        if self.decimate:
+            vf = 'fieldmatch,decimate,' + vf
+        pix_fmt = 'yuv420p'
+        if self.grayscale:
+            pix_fmt = 'gray'
 
-    if config['verbose']:
-      print('region_fr_a', fr_a)
-      print('region_fr_b', fr_b)
-      print('region_time_a', sub_region.time_a)
-      print('region_time_b', sub_region.time_b)
-      print('region_dur', dur_in_region)
-      print('region_len', frs_in_region)
-      print('region_fps', self.playback_rate)
-      print('tgt_frs', tgt_frs)
-      print('fr_factor', fr_factor)
-      print('time_step', time_step)
-      print('frs_inter_each_go', frs_inter_each_go)
-      print('frs_write_per_pair', frs_write_per_pair)
-      print('pairs', pairs)
-      print('frs_will_make', frs_will_make)
-      print('extra_frs', frs_extra)
-      print('drop_every', drop_every_n_frs)
-      print('dupe_every', dupe_every_n_frs)
-      print('potential_drift_secs', float(pot_drift_secs))
+        call = [
+            settings['avutil'],
+            '-loglevel', self.loglevel,
+            '-y',
+            '-threads', '0',
+            '-i', self.video_info['path'],
+            '-pix_fmt', pix_fmt,
+            '-filter:v', vf,
+            '-sws_flags', scaler
+        ]
+        if has_aud:
+            call.extend([
+                '-c:a', 'libvorbis',
+                '-ab', '96k'
+            ])
+        if has_sub and not using_avconv:
+            call.extend([
+                '-c:s', 'mov_text'
+            ])
+        call.extend([
+            '-c:v', settings['encoder'],
+            '-preset', 'fast',
+        ])
+        quality = ['-crf', '18']
+        if self.lossless:
+            quality = ['-qp', '0']
+        call.extend(quality)
+        if not using_avconv:
+            call.extend(['-level', '4.2'])
+        call.extend([tmp_dir])
+        nrm_proc = subprocess.call(call)
+        if nrm_proc == 1:
+            raise RuntimeError('could not normalize video')
+        shutil.move(tmp_dir, dst_path)
 
-    frs_made = 0
-    frs_dropped = 0
-    frs_duped = 0
-    frs_written = 0
-    frs_gen = 1
-    wrk_idx = 0
-    only_write_one = False
+    def extract_audio(self, dst_path):
+        if not self.video_info['a_stream_exists']:
+            raise RuntimeError('no audio stream detected')
+        proc = subprocess.call([
+            settings['avutil'],
+            '-loglevel', self.loglevel,
+            '-y',
+            '-i', self.video_info['path'],
+            '-vn',
+            '-sn',
+            dst_path
+        ])
+        if proc == 1:
+            raise RuntimeError('unable to extract audio from video')
 
-    fr_1 = None
-    fr_2 = src.frame_at_idx(fr_a)
-    if fr_a == fr_b:
-      times_to_run = 1
-      only_write_one = True
-    else:
-      src.seek_to_frame(fr_a + 1)
-      times_to_run = frs_in_region - 1
+    def extract_subtitles(self, dst_path):
+        if not self.video_info['s_stream_exists']:
+            raise RuntimeError('no subtitle streams detected')
+        if settings['avutil'] == 'avconv':
+            open(dst_path, 'a').close()
+            return
+        proc = subprocess.call([
+            settings['avutil'],
+            '-loglevel', self.loglevel,
+            '-y',
+            '-i', self.video_info['path'],
+            '-vn',
+            '-an',
+            dst_path
+        ])
+        if proc == 1:
+            raise RuntimeError('unable to extract subtitles from video')
 
-    for x in xrange(0, times_to_run):
-      ch = 0xff & cv2.waitKey(30)
-      if ch == 23:
-        break
+    def mux_video(self, vid_path, aud_path, sub_path, dst_path, cleanup=True):
+        if not os.path.exists(vid_path):
+            raise IOError('video not found: {}'.format(vid_path))
+        if aud_path is not None and not os.path.exists(aud_path):
+            raise IOError('audio not found: {}'.format(aud_path))
+        if sub_path is not None and not os.path.exists(sub_path):
+            raise IOError('subtitle not found: {}'.format(sub_path))
 
-      new_frs = []
-      fr_1 = fr_2
-      if only_write_one:
-        new_frs.append(fr_1)
-      else:
+        if aud_path is None and sub_path is None:
+            if cleanup:
+                shutil.move(vid_path, dst_path)
+            else:
+                shutil.copy(vid_path, dst_path)
+            return
+
+        call = [
+            settings['avutil'],
+            '-loglevel', self.loglevel,
+            '-y',
+        ]
+        if aud_path:
+            call.extend(['-i', aud_path])
+        call.extend(['-i', vid_path])
+        if sub_path:
+            call.extend(['-i', sub_path])
+        if aud_path:
+            call.extend(['-c:a', 'copy'])
+        call.extend(['-c:v', 'copy'])
+        if sub_path:
+            call.extend(['-c:s', 'mov_text'])
+        call.extend([dst_path])
+        proc = subprocess.call(call)
+        if proc == 1:
+            raise RuntimeError('unable to mux video')
+
+        if cleanup:
+            os.remove(vid_path)
+
+    def make_pipe(self, dst_path, rate):
+        pix_fmt = 'yuv420p'
+        w = self.nrm_info['width']
+        h = self.nrm_info['height']
+        if self.grayscale:
+            pix_fmt = 'gray'
+        call = [
+            settings['avutil'],
+            '-loglevel', self.loglevel,
+            '-y',
+            '-f', 'rawvideo',
+            '-pix_fmt', 'bgr24',
+            '-s', '{}x{}'.format(w, h),
+            '-r', str(rate),
+            '-i', '-',
+            '-pix_fmt', pix_fmt,
+            '-r', str(rate),
+            '-c:a', 'none',
+            '-c:v', settings['encoder'],
+            '-preset', 'fast']
+        quality = ['-crf', '18']
+        if self.lossless:
+            quality = ['-qp', '0']
+        call.extend(quality)
+        call.extend([dst_path])
+        pipe = subprocess.Popen(
+            call,
+            stdin=subprocess.PIPE
+        )
+        if pipe == 1:
+            raise RuntimeError('could not create pipe')
+        return pipe
+
+    def close_pipes(self):
+        for p in [self.rendered_pipe, self.fwd_pipe, self.bwd_pipe]:
+            if p is not None and not p.stdin.closed:
+                # flush does not necessarily write the file's data to disk. Use
+                # flush followed by os.fsync to ensure this behavior.
+                p.stdin.flush()
+                p.stdin.close()
+                p.wait()
+
+    def write_frame_to_pipe(self, pipe, frame):
         try:
-          fr_2 = src.read_frame()
-          frs_gen += 1
-        except Exception as ex:
-          print('couldn\'t read a frame {} breaking: {}'.format(x, ex))
-          break
+            pipe.stdin.write(bytes(frame.data))
+        except Exception as err:
+            print('write to pipe failed: ', err)
 
-        fr_1_gr = cv2.cvtColor(fr_1, cv2.COLOR_BGR2GRAY)
-        fr_2_gr = cv2.cvtColor(fr_2, cv2.COLOR_BGR2GRAY)
+    def render_subregion(self, framesrc, subregion, filters=None):
+        fa = subregion.fa
+        fb = subregion.fb
+        ta = subregion.ta
+        tb = subregion.tb
 
-        fu, fv = self.flow_method([fr_1_gr, fr_2_gr])
-        bu, bv = self.flow_method([fr_2_gr, fr_1_gr])
+        reg_len = (fb - fa) + 1  # num of frames in the region
+        reg_dur = (tb - ta) / 1000.0  # duration of subregion in seconds
 
-        if config['preview_flows'] or self.render_flows:
-          ff = Flow.merge_flow_components(fu, fv)
-          bf = Flow.merge_flow_components(bu, bv)
+        tgt_frs = 0  # num of frames we're targeting to render
 
-          ff_hsv = Flow.hsv_from_flow(Flow.merge_flow_components(fu, fv))
-          bf_hsv = Flow.hsv_from_flow(Flow.merge_flow_components(bu, bv))
+        if subregion.dur:
+            tgt_frs = int(self.playback_rate *
+                          (subregion.dur / 1000.0))
+        if subregion.fps:
+            tgt_frs = int(subregion.fps * reg_dur)
+        if subregion.spd:
+            tgt_frs = int(self.playback_rate * reg_dur *
+                          (1 / subregion.spd))
 
-          ff_bgr = cv2.cvtColor(ff_hsv, cv2.COLOR_HSV2BGR)
-          bf_bgr = cv2.cvtColor(bf_hsv, cv2.COLOR_HSV2BGR)
+        tgt_frs = max(0, tgt_frs)
 
-          if self.show_preview:
-            win_title = '{} - Butterflow'
-            cv2.imshow(win_title.format('Forward Flow'), ff_bgr)
-            cv2.imshow(win_title.format('Backward Flow'), bf_bgr)
+        # prevent division a division by zero error when only a
+        # single frame needs to be written
+        mak_fac = float(tgt_frs) / reg_len
+        if mak_fac == 0:
+            tgt_frs = 1
+            mak_fac = 1
+        time_step = min(1.0, 1 / mak_fac)
 
-          if self.render_flows:
-            self.write_frame_to_pipe(self.ff_pipe, ff_bgr)
-            self.write_frame_to_pipe(self.bf_pipe, bf_bgr)
+        # if 1.0 % time_step is zero, one less frame will be
+        # interpolated
+        iter_each_go = int(1 / time_step)
+        if abs(0 - math.fmod(1, time_step)) <= 1e-8:
+            iter_each_go -= 1
 
-        fr_1_32 = np.float32(fr_1) * 1 / 255.0
-        fr_2_32 = np.float32(fr_2) * 1 / 255.0
+        will_make = (iter_each_go + 1) * reg_len
+        extra_frs = will_make - tgt_frs
 
-        i_frs = self.interpolate_method(
-            fr_1_32, fr_2_32, fu, fv, bu, bv, time_step)
-        new_frs.append(fr_1)
-        new_frs.extend(i_frs)
+        # frames will be need to be dropped or duped based on how
+        # many interpolated frames are expected to be made
+        dup_every = 0
+        drp_every = 0
+        if extra_frs > 0:
+            drp_every = will_make / math.fabs(extra_frs)
+        if extra_frs < 0:
+            dup_every = will_make / math.fabs(extra_frs)
 
-      frs_made += len(new_frs)
+        # audio may drift because of the change in which frames
+        # are rendered in relation to the source video
+        # this is used for debugging:
+        pot_drift = extra_frs / self.playback_rate
 
-      for idx, fr in enumerate(new_frs):
-        wrk_idx += 1
-        should_dupe = False
+        if settings['verbose']:
+            print('Working on Subregion: ', self.curr_subregion_idx)
+            print('fa:', fa)
+            print('fb:', fb)
+            print('ta:', ta)
+            print('tb:', tb)
+            print('reg_dur', reg_dur * 1000.0)
+            print('reg_len', reg_len)
+            print('tgt_fps', subregion.fps)
+            print('tgt_dur', subregion.dur)
+            print('tgt_spd', subregion.spd)
+            print('tgt_frs', tgt_frs)
+            print('mak_fac', mak_fac)
+            print('ts:', time_step)
+            print('iter_each_go', iter_each_go)
+            print('wr_per_pair', iter_each_go + 1)  # +1 because of fr_1
+            print('pairs', reg_len - 1)
+            print('will_make', will_make)
+            print('extra_frs', extra_frs)
+            print('dup_every', dup_every)
+            print('drp_every', drp_every)
+            print('pot_drift', pot_drift)
 
-        if drop_every_n_frs > 0:
-          drop_rem = math.fmod(wrk_idx, drop_every_n_frs)
-          should_drop = drop_rem < 1.0
-          if should_drop:
-            frs_dropped += 1
-            continue
-        if dupe_every_n_frs > 0:
-          dupe_rem = math.fmod(wrk_idx, dupe_every_n_frs)
-          should_dupe = dupe_rem < 1.0
-          if should_dupe:
-            frs_duped += 1
+        # keep track of progress in this subregion
+        src_gen = 1  # num of source frames seen
+        frs_mak = 0  # num of frames interpolated
+        wrk_idx = 0  # idx in the subregion being worked on
+        frs_wrt = 0  # num of frames written in this subregion
+        frs_dup = 0  # num of frames duped
+        frs_drp = 0  # num of frames dropped
+        fin_run = False  # is this the final run?
+        fin_dup = 0  # num of frames duped on the final run
+        runs = 0  # num of runs through the loop
 
-        for k in range(2 if should_dupe else 1):
-          frs_written += 1
-          fr_to_write = fr
+        # frames are zero based indexed
+        fa_idx = fa - 1
 
-          if config['render_info']:
-            # the copy here has a minimal effect on performance
-            img_mat = cv2.cv.fromarray(fr.copy())
+        fr_1 = None
+        fr_2 = framesrc.frame_at_idx(fa_idx)  # first frame in the region
+        if fa == fb or tgt_frs == 1:
+            # only 1 frame expected. run through the main loop once
+            fin_run = True
+            runs = 1
+        else:
+            # a frame pair is available
+            # num of runs is equal to the the total number of frames
+            # in the region - 1. xrange will run from [0,runs)
+            framesrc.seek_to_frame(fa_idx + 1)
+            runs = reg_len
 
-            h_scale = min(self.vid_info.width / float(FONT_MIN_H_FITS), 1.0)
-            v_scale = min(self.vid_info.height / float(FONT_MIN_V_FITS), 1.0)
-            scale = min(h_scale, v_scale)
-            font = cv2.cv.InitFont(cv2.cv.CV_FONT_HERSHEY_PLAIN, scale, scale,
-                                   0.0, 1, cv2.cv.CV_AA)
-            font_color = cv2.cv.RGB(255, 255, 255)
+        if settings['verbose']:
+            print('wrt_one', fin_run)
+            print('runs', runs)
 
-            # embed text starting from the top left going down
-            y_or_n = lambda(x): 'Y' if x else 'N'
+        for x in range(0, runs):
+            # hit the `Esc` key to stop running
+            ch = 0xff & cv2.waitKey(30)
+            if ch == 23:
+                break
 
-            wrk_idx_1 = x      # idx of original frame_1
-            wrk_idx_2 = x + 1  # idx of original frame_2
-            wrk_idx_i = idx    # idx of interpolated frame
-            is_src_fr = y_or_n(idx == 0)
-            is_dup_fr = y_or_n(k > 0)
-            mem = hex(id(fr))
+            # if working on the last frame, write it out because we
+            # cant interpolate without a pair
+            if x >= runs - 1:
+                fin_run = True
 
-            t = TXT_TOP_L
-            t = t.format(version,
-                         sys.platform,
-                         self.vid_info.width,
-                         self.vid_info.height,
-                         config['playback_rate'],
-                         config['pyr_scale'],
-                         config['levels'],
-                         config['winsize'],
-                         config['iters'],
-                         config['poly_n'],
-                         config['poly_s'],
-                         self.total_frames_written,
-                         wrk_idx_1,
-                         wrk_idx_2,
-                         wrk_idx_i,
-                         is_src_fr,
-                         is_dup_fr,
-                         mem)
+            to_wrt = []  # hold frames to be written
+            fr_1 = fr_2  # reference to prev fr saves a seek & read
 
-            for y, line in enumerate(t.split('\n')):
-              line_sz, _ = cv2.cv.GetTextSize(line, font)
-              _, line_h = line_sz
-              origin = (int(TXT_L_PADDING),
-                        int(TXT_T_PADDING +
-                        (y * (line_h + TXT_LINE_D_PADDING))))
-              cv2.cv.PutText(img_mat, line, origin, font, font_color)
+            if fin_run:
+                to_wrt.append(fr_1)
+                frs_mak += 1
+            else:
+                # begin interpolating frames between pairs
+                try:
+                    fr_2 = framesrc.read()
+                except Exception as e:
+                    print(e)
+                    continue
+                src_gen += 1
 
-            # embed text from the top right going down
-            sub_time_a_sec = sub_region.time_a / 1000
-            sub_time_b_sec = sub_region.time_b / 1000
-            sub_target_dur = '_'
-            sub_target_fps = '_'
-            sub_target_fac = '_'
-            if sub_region.target_duration:
-              dur_in_secs = sub_region.target_duration / 1000
-              sub_target_dur = '{:.2f}s'.format(dur_in_secs)
-            if sub_region.target_rate:
-              sub_target_fps = '{}'.format(sub_region.target_rate)
-            if sub_region.target_factor:
-              sub_target_fac = '{:.2f}'.format(sub_region.target_factor)
-            sub_dur = dur_in_region / 1000.0
-            tgt_dur = tgt_frs / float(self.playback_rate)
-            write_ratio = frs_written * 100.0 / tgt_frs
+                # grayscaled images
+                fr_1_gr = cv2.cvtColor(fr_1, cv2.COLOR_BGR2GRAY)
+                fr_2_gr = cv2.cvtColor(fr_2, cv2.COLOR_BGR2GRAY)
+                # optical flow components
+                fu, fv = self.flow_func(fr_1_gr, fr_2_gr)
+                bu, bv = self.flow_func(fr_2_gr, fr_1_gr)
 
-            t = TXT_TOP_R
-            t = t.format(self.curr_sub_region_idx,
-                         self.num_sub_regions - 1,
-                         fr_a,
-                         fr_b,
-                         sub_time_a_sec,
-                         sub_time_b_sec,
-                         frs_in_region,
-                         sub_dur,
-                         sub_target_dur,
-                         sub_target_fac,
-                         sub_target_fps,
-                         tgt_frs, tgt_dur,
-                         drop_every_n_frs,
-                         dupe_every_n_frs,
-                         frs_gen,
-                         frs_made,
-                         frs_dropped,
-                         frs_duped,
-                         frs_written,
-                         tgt_frs,
-                         write_ratio)
+                fr_1_32 = np.float32(fr_1) * 1/255.0
+                fr_2_32 = np.float32(fr_2) * 1/255.0
 
-            for y, line in enumerate(t.split('\n')):
-              line_sz, _ = cv2.cv.GetTextSize(line, font)
-              line_w, line_h = line_sz
-              origin = (int(self.vid_info.width - TXT_R_PADDING - line_w),
-                        int(TXT_T_PADDING +
-                        (y * (line_h + TXT_LINE_D_PADDING))))
-              cv2.cv.PutText(img_mat, line, origin, font, font_color)
+                if self.preview_flows or self.make_flows:
+                    fwd, bwd = bgr_from_flow(fu, fv, bu, bv)
+                    if self.preview_flows:
+                        cv2.imshow(self.fwd_window_title, fwd)
+                        cv2.imshow(self.bwd_window_title, bwd)
+                    if self.make_flows:
+                        self.write_frame_to_pipe(self.fwd_pipe, fwd)
+                        self.write_frame_to_pipe(self.bwd_pipe, bwd)
 
-            fr_to_write = np.asarray(img_mat)
-          if self.show_preview:
-            win_title = '{} - Butterflow'.format(input_vid_name)
-            cv2.imshow(win_title, fr_to_write)
-          self.write_frame_to_pipe(self.pipe, fr_to_write)
-          self.total_frames_written += 1
+                inter_frs = self.interpolate_func(
+                    fr_1_32, fr_2_32, fu, fv, bu, bv, time_step)
+                frs_mak += len(inter_frs)
+                to_wrt.append(fr_1)
+                to_wrt.extend(inter_frs)
 
-    if config['verbose']:
-      print('frs_generated:', frs_gen)
-      print('frs_made:', frs_made)
-      print('frs_dropped:', frs_dropped)
-      print('frs_duped:', frs_duped)
+            for y, fr in enumerate(to_wrt):
+                wrk_idx += 1
+                wrts_needed = 1
+                if drp_every > 0:
+                    if math.fmod(wrk_idx, drp_every) < 1.0:
+                        frs_drp += 1
+                        continue
+                if dup_every > 0:
+                    if math.fmod(wrk_idx, dup_every) < 1.0:
+                        frs_dup += 1
+                        wrts_needed = 2
+                if fin_run:
+                    wrts_needed = (tgt_frs - frs_wrt)
+                    fin_dup = wrts_needed - 1
+                for z in range(wrts_needed):
+                    frs_wrt += 1
+                    self.total_frs_wrt += 1
 
-    fr_write_ratio = 0 if tgt_frs == 0 else frs_written * 1.0 / tgt_frs
-    est_drift_secs = float(tgt_frs - frs_written) / self.playback_rate
+                    fr_to_wrt = fr
 
-    if config['verbose']:
-      print('frs_written: {}/{} ({:.2f}%)'.format(
-          frs_written, tgt_frs, fr_write_ratio * 100))
-      print('est_drift:', est_drift_secs)
+                    # frame copy here has minimal affect on performance
+                    fr_with_info = cv2.cv.fromarray(fr.copy())
 
-  def render(self, dst_path, ff_dst_path=None, bf_dst_path=None):
-    '''separates video regions to render them individually'''
-    self.total_frames_written = 0
-    self.pipe = self.make_pipe(dst_path, self.playback_rate)
-    if self.render_flows:
-      self.ff_pipe = self.make_pipe(ff_dst_path, self.src_vid_info.rate)
-      self.bf_pipe = self.make_pipe(bf_dst_path, self.src_vid_info.rate)
-    src = OpenCvFrameSource(self.vid_info.video_path)
+                    w = self.nrm_info['width']
+                    h = self.nrm_info['height']
+                    hscale = min(w / float(settings['h_fits']), 1.0)
+                    vscale = min(h / float(settings['v_fits']), 1.0)
+                    scale = min(hscale, vscale)
 
-    if config['verbose']:
-      print('src_dur', src.duration)
-      print('src_frs', src.num_frames)
+                    font = cv2.cv.InitFont(
+                        settings['font'], scale, scale, 0.0, 1,
+                        cv2.cv.CV_AA)
 
-    new_sub_regions = []
-    regions_to_make = 1
+                    t = "butterflow {} ({})\n"\
+                        "Res: {},{}\n"\
+                        "Playback Rate: {} fps\n"
+                    t = t.format(__version__, sys.platform, w, h,
+                                 self.playback_rate)
 
-    if self.timing_regions is None:
-      # create a region spanning from 0 to vids duration
-      fa, ta = (0, 0)
-      fb, tb = (src.num_frames - 1, src.duration)
-      r = RenderingSubRegion(ta, tb)
-      r.frame_a = fa
-      r.frame_b = fb
-      r.target_rate = self.playback_rate
-      r.target_duration = tb - ta
-      r.target_factor = 1.0
-      setattr(r, 'trim', False)
+                    if self.flow_kwargs is not None:
+                        flow_format = ''
+                        i = 0
+                        for k, v in self.flow_kwargs.items():
+                            flow_format += "{}: {}".format(k, v)
+                            if i == len(self.flow_kwargs) - 1:
+                                flow_format += '\n\n'
+                            else:
+                                flow_format += ', '
+                            i += 1
+                        t += flow_format
 
-      new_sub_regions.append(r)
+                    t += "Frame: {}\n"\
+                         "Work Index: {}, {}, {}\n"\
+                         "Type Src: {}, Dup: {}\n"\
+                         "Mem: {}\n"
+                    t = t.format(
+                        self.total_frs_wrt, x, x + 1, y,
+                        'Y' if y == 0 else 'N', 'Y' if z > 0 else 'N',
+                        hex(id(fr)))
 
-    # update top region and subregions to sync with normalized video
-    # update frames using relative positions because the video duration
-    # and number of frames may have changed during normalization
-    if self.timing_regions is not None:
-      vid_dur_ms = src.duration
-      vid_frs = src.num_frames - 1
+                    for y, line in enumerate(t.split('\n')):
+                        line_sz, _ = cv2.cv.GetTextSize(line, font)
+                        _, line_h = line_sz
+                        origin = (int(settings['l_padding']),
+                                  int(settings['t_padding'] +
+                                  (y * (line_h +
+                                   settings['line_d_padding']))))
+                        cv2.cv.PutText(
+                            fr_with_info, line, origin, font,
+                            settings['font_color'])
 
-      cut_points = set([])
-      # add start and end of video cutting points:
-      # (frame_idx, duration_ms)
-      cut_points.add((0, 0))
-      cut_points.add((vid_frs, src.duration))
+                    sub_tgt_dur = '_'
+                    sub_tgt_fps = '_'
+                    sub_tgt_spd = '_'
+                    if subregion.dur:
+                        sub_tgt_dur = '{:.2f}s'.format(
+                            subregion.dur / 1000.0)
+                    if subregion.fps:
+                        sub_tgt_fps = '{}'.format(subregion.fps)
+                    if subregion.spd:
+                        sub_tgt_spd = '{:.2f}'.format(subregion.spd)
+                    tgt_dur = tgt_frs / float(self.playback_rate)
+                    write_ratio = frs_wrt * 100.0 / tgt_frs
 
-      for sr in self.timing_regions:
-        rel_a = sr.relative_pos_a
-        rel_b = sr.relative_pos_b
-        sr.resync_points(rel_a, rel_b, vid_dur_ms, vid_frs)
-        cut_points.add((sr.frame_a, sr.time_a))
-        cut_points.add((sr.frame_b, sr.time_b))
+                    t = "Region {}/{} F: [{}, {}] T: [{:.2f}s, {:.2f}s]\n"\
+                        "Len F: {}, T: {:.2f}s\n"\
+                        "Target Dur: {}, Spd: {}, Fps: {}\n"\
+                        "Out Len F: {}, Dur: {:.2f}s\n"\
+                        "Drp every {:.1f}, Dup every {:.1f}\n"\
+                        "Gen: {}, Made: {}, Drp: {}, Dup: {}\n"\
+                        "Write Ratio: {}/{} ({:.2f}%)\n"
 
-      cut_points = list(cut_points)
-      cut_points = sorted(cut_points,
-                          key=lambda(x): (x[0], x[1]),
-                          reverse=False)
-      regions_to_make = len(cut_points) - 1
-      in_bounds = lambda(x): x.time_a >= 0 and x.time_b <= src.duration
+                    t = t.format(
+                        self.curr_subregion_idx + 1,
+                        self.subregions_to_render,
+                        fa,
+                        fb,
+                        ta / 1000,
+                        tb / 1000,
+                        reg_len,
+                        reg_dur,
+                        sub_tgt_dur,
+                        sub_tgt_spd,
+                        sub_tgt_fps,
+                        tgt_frs,
+                        tgt_dur,
+                        drp_every,
+                        dup_every,
+                        src_gen,
+                        frs_mak,
+                        frs_drp,
+                        frs_dup,
+                        frs_wrt,
+                        tgt_frs,
+                        write_ratio)
 
-      for x in xrange(0, regions_to_make):
-        fa, ta = cut_points[x]
-        fb, tb = cut_points[x + 1]
+                    for y, line in enumerate(t.split('\n')):
+                        line_sz, _ = cv2.cv.GetTextSize(line, font)
+                        line_w, line_h = line_sz
+                        origin = (int(w - settings['r_padding'] - line_w),
+                                  int(settings['t_padding'] +
+                                  (y * (line_h +
+                                   settings['line_d_padding']))))
+                        cv2.cv.PutText(
+                            fr_with_info, line, origin, font,
+                            settings['font_color'])
 
-        region_for_range = None
-        for r in self.timing_regions:
-          if r.frame_a == fa and r.frame_b == fb:
-            region_for_range = r
-            setattr(r, 'trim', False)
-            break
+                    # finshed adding info. show the frame on the screen and send
+                    # it to the pipe
+                    if self.show_preview:
+                        cv2.imshow(self.window_title, np.asarray(fr_with_info))
+                    if self.add_info:
+                        fr_to_wrt = np.asarray(fr_with_info)
+                    self.write_frame_to_pipe(self.rendered_pipe, fr_to_wrt)
 
-        if region_for_range is None:
-          # create a new region that represents the original video with
-          # with the only diff being a new playback rate. this will not
-          # stretch or compress the time duration
-          r = RenderingSubRegion(ta, tb)
-          r.frame_a = fa
-          r.frame_b = fb
-          r.target_rate = self.playback_rate
-          r.target_duration = tb - ta
-          r.target_factor = 1.0
-          region_for_range = r
-          setattr(r, 'trim', self.vf_trim)
+        # finished, we're outside of the main loop
+        if settings['verbose']:
+            wrt_ratio = 0 if tgt_frs == 0 else float(frs_wrt) / tgt_frs
+            est_drift = float(tgt_frs - frs_wrt) / self.playback_rate
+            print('src_gen:', src_gen)
+            print('frs_mak:', frs_mak)
+            print('frs_drp:', frs_drp)
+            print('frs_dup:', frs_dup)
+            print('fin_dup:', fin_dup)
+            print('wrt_ratio: {}/{} ({:.2f}%)'.format(
+                frs_wrt, tgt_frs, wrt_ratio * 100))
+            print('est_drft:', pot_drift)
+            print('act_drft:', est_drift)
 
-        new_sub_regions.append(r)
+    def renderable_sequence(self):
+        dur = self.nrm_info['duration']
+        frs = self.nrm_info['frames']
 
-    VideoRegionUtils.validate_region_set(src.duration, new_sub_regions)
+        new_subregions = []
 
-    for r in new_sub_regions:
-      if config['verbose']:
-        print(r.__dict__)
-    if len(new_sub_regions) != regions_to_make:
-      raise RuntimeError('unexpected len of subregions to render')
+        if self.video_sequence.subregions is None:
+            # make a subregion from 0 to vid duration if there are no regions
+            # in the video sequence
+            fa, ta = (0, 0)
+            fb, tb = (frs, dur)
+            s = RenderSubregion(ta, tb)
+            s.fa = fa
+            s.fb = fb
+            s.fps = self.playback_rate
+            s.dur = tb - ta
+            s.spd = 1.0
+            setattr(s, 'trim', False)
+            new_subregions.append(s)
+        else:
+            # create dummy subregions that fill holes in the video sequence
+            # where subregions were not explicity specified
+            cut_points = set([])
+            # add start and end of video cutting points
+            cut_points.add((1, 0))  # (frame idx, duration in millesconds)
+            cut_points.add((frs, dur))
 
-    self.num_sub_regions = len(new_sub_regions)
-    for x, r in enumerate(new_sub_regions):
-      self.curr_sub_region_idx = x
-      if r.trim:
-        continue
-      self.render_subregion(src, r)
+            for s in self.video_sequence.subregions:
+                cut_points.add((s.fa, s.ta))
+                cut_points.add((s.fb, s.tb))
 
-    cv2.destroyAllWindows()
-    self.close_pipes()
+            cut_points = list(cut_points)
+            cut_points = sorted(cut_points,
+                                key=lambda x: (x[0], x[1]),
+                                reverse=False)
 
-  def __del__(self):
-    '''closes the pipe if it was left open'''
-    self.close_pipes()
+            to_make = len(cut_points) - 1
+
+            for x in range(0, to_make):
+                fa, ta = cut_points[x]
+                fb, tb = cut_points[x + 1]
+                sub_for_range = None
+                # look for matching subregion in the sequence
+                for s in self.video_sequence.subregions:
+                    if s.fa == fa and s.fb == fb:
+                        sub_for_range = s
+                        setattr(s, 'trim', False)
+                        break
+                # if subregion isnt found, make a dummy region
+                if sub_for_range is None:
+                    s = RenderSubregion(ta, tb)
+                    s.fa = fa
+                    s.fb = fb
+                    s.fps = self.playback_rate
+                    s.dur = tb - ta
+                    s.spd = 1.0
+                    sub_for_range = s
+                    setattr(s, 'trim', self.trim)
+                new_subregions.append(sub_for_range)
+
+        # create a new video sequence. the new subregions will automatically
+        # be validated as they are added to the sequence
+        seq = VideoSequence(dur, frs)
+        for s in new_subregions:
+            seq.add_subregion(s)
+        return seq
+
+    def render(self):
+        """normalizes, renders, muxes an interpolated video, if necessary. when
+        doing slow/fast motion, audio and subtitles will not be muxed into the
+        final video because it wouldnt be in sync. we also need to recalculate
+        relative positions after normalization because the video may have
+        changed in frame count, frame rate, and duration.
+        """
+        dst_dir = os.path.dirname(self.dst_path)
+        dst_name, _ = os.path.splitext(os.path.basename(self.dst_path))
+
+        src_path = self.video_info['path']
+
+        # use the modification time of the file to determine if renormalization
+        # is needed. if it hasn't been modified and the settings haven't changed
+        # then we can just use the old video if it exists
+        vid_mod_dt = os.path.getmtime(src_path)
+        vid_mod_utc = datetime.datetime.utcfromtimestamp(vid_mod_dt)
+        unix_time = lambda dt:\
+            (dt - datetime.datetime.utcfromtimestamp(0)).total_seconds()
+
+        tmp_name = '{}.{}.{}.{}.{}.{}'.format(
+            os.path.basename(src_path),
+            str(unix_time(vid_mod_utc)),
+            self.scale,
+            'd' if self.decimate  else 'x',
+            'g' if self.grayscale else 'x',
+            'l' if self.lossless  else 'x').lower()
+
+        tmp_dir = settings['tmp_dir']
+
+        nrm_path = os.path.join(tmp_dir, '{}.nrm.mp4'.format(tmp_name))
+        rnd_path = os.path.join(tmp_dir, '{}.rnd.mp4'.format(tmp_name))
+        rff_path = os.path.join(tmp_dir, '{}.rff.mp4'.format(tmp_name))
+        rbf_path = os.path.join(tmp_dir, '{}.rbf.mp4'.format(tmp_name))
+        aud_path = os.path.join(tmp_dir, '{}_aud.ogg'.format(tmp_name))
+        sub_path = os.path.join(tmp_dir, '{}_sub.srt'.format(tmp_name))
+
+        # destination paths for forward and backward flows
+        fwd_dst_path = os.path.join(dst_dir, '{}.fwd.mp4'.format(dst_name))
+        bwd_dst_path = os.path.join(dst_dir, '{}.bwd.mp4'.format(dst_name))
+
+        if not os.path.exists(nrm_path):
+            self.normalize_for_interpolation(nrm_path)
+        self.nrm_info = avinfo.get_info(nrm_path)
+
+        # normalization may have changed the framecnt, fps, and duration need
+        # to recalculate the videosequence subregions' time and frame positions
+        # using saved relative positions
+        self.video_sequence.recalculate_subregion_positions(
+            self.nrm_info['duration'], self.nrm_info['frames'])
+
+        frame_src = FrameSource(self.nrm_info['path'])
+
+        renderable_seq = self.renderable_sequence()
+
+        self.rendered_pipe = self.make_pipe(rnd_path, self.playback_rate)
+        if self.make_flows:
+            # use the original fps because flows are generated from src frames
+            # and aren't interpolated
+            playback_rate = Fraction(self.video_info['rate_num'],
+                                     self.video_info['rate_den'])
+            playback_rate = float(playback_rate)
+            self.fwd_pipe = self.make_pipe(rff_path, playback_rate)
+            self.bwd_pipe = self.make_pipe(rbf_path, playback_rate)
+
+        # make a window
+        cv2.namedWindow(self.window_title, cv2.WINDOW_OPENGL)
+        cv2.resizeWindow(
+            self.window_title, self.nrm_info['width'], self.nrm_info['height'])
+
+        # start rendering subregions
+        self.total_frs_wrt = 0
+        self.subregions_to_render = len(renderable_seq.subregions)
+        for x, s in enumerate(renderable_seq.subregions):
+            self.curr_subregion_idx = x
+            if s.trim:
+                # the region is being trimmed and shouldnt be rendered
+                continue
+            else:
+                self.render_subregion(frame_src, s)
+
+        if self.show_preview or self.preview_flows:
+            cv2.destroyAllWindows()
+        self.close_pipes()
+
+        # start extracting audio and subtitle streams if they exist
+        if self.video_info['a_stream_exists']:
+            self.extract_audio(aud_path)
+        else:
+            aud_path = None
+        if self.video_info['s_stream_exists']:
+            self.extract_subtitles(sub_path)
+            # its possible for a subtitle stream with no information
+            with open(sub_path, 'r') as f:
+                if f.read() == '':
+                    sub_path = None
+        else:
+            sub_path = None
+
+        # move files to their destinations
+        try:
+            self.mux_video(rnd_path, aud_path, sub_path, self.dst_path)
+        except RuntimeError:
+            shutil.move(rnd_path, self.dst_path)
+
+        if self.make_flows:
+            shutil.move(rff_path, fwd_dst_path)
+            shutil.move(rbf_path, bwd_dst_path)
+
+    def __del__(self):
+        """close any pipes that were inadvertently left open"""
+        self.close_pipes()
