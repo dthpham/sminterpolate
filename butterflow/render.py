@@ -167,7 +167,7 @@ class Renderer(object):
         if proc == 1:
             raise RuntimeError('unable to extract subtitles from video')
 
-    def mux_video(self, vid_path, aud_path, sub_path, dst_path, cleanup=True):
+    def mux_video(self, vid_path, aud_path, sub_path, dst_path, cleanup=False):
         if not os.path.exists(vid_path):
             raise IOError('video not found: {}'.format(vid_path))
         if aud_path is not None and not os.path.exists(aud_path):
@@ -275,8 +275,8 @@ class Renderer(object):
 
         tgt_frs = max(0, tgt_frs)
 
-        # prevent division a division by zero error when only a
-        # single frame needs to be written
+        # prevent division a division by zero error when only a single frame
+        # needs to be written
         mak_fac = float(tgt_frs) / reg_len
         if mak_fac == 0:
             tgt_frs = 1
@@ -292,8 +292,8 @@ class Renderer(object):
         will_make = (iter_each_go + 1) * reg_len
         extra_frs = will_make - tgt_frs
 
-        # frames will be need to be dropped or duped based on how
-        # many interpolated frames are expected to be made
+        # frames will be need to be dropped or duped based on how many
+        # interpolated frames are expected to be made
         dup_every = 0
         drp_every = 0
         if extra_frs > 0:
@@ -301,9 +301,8 @@ class Renderer(object):
         if extra_frs < 0:
             dup_every = will_make / math.fabs(extra_frs)
 
-        # audio may drift because of the change in which frames
-        # are rendered in relation to the source video
-        # this is used for debugging:
+        # audio may drift because of the change in which frames are rendered in
+        # relation to the source video this is used for debugging:
         pot_drift = extra_frs / self.playback_rate
 
         if settings['verbose']:
@@ -350,9 +349,9 @@ class Renderer(object):
             fin_run = True
             runs = 1
         else:
-            # a frame pair is available
-            # num of runs is equal to the the total number of frames
-            # in the region - 1. xrange will run from [0,runs)
+            # at least one frame pair is available. num of runs is equal to the
+            # the total number of frames in the region - 1. range will run
+            # from [0,runs)
             framesrc.seek_to_frame(fa_idx + 1)
             runs = reg_len
 
@@ -366,8 +365,8 @@ class Renderer(object):
             if ch == 23:
                 break
 
-            # if working on the last frame, write it out because we
-            # cant interpolate without a pair
+            # if working on the last frame, write it out because we cant
+            # interpolate without a pair
             if x >= runs - 1:
                 fin_run = True
 
@@ -482,9 +481,9 @@ class Renderer(object):
                             fr_with_info, line, origin, font,
                             settings['font_color'])
 
-                    sub_tgt_dur = '_'
-                    sub_tgt_fps = '_'
-                    sub_tgt_spd = '_'
+                    sub_tgt_dur = '*'
+                    sub_tgt_fps = '*'
+                    sub_tgt_spd = '*'
                     if subregion.dur:
                         sub_tgt_dur = '{:.2f}s'.format(
                             subregion.dur / 1000.0)
@@ -538,12 +537,12 @@ class Renderer(object):
                             fr_with_info, line, origin, font,
                             settings['font_color'])
 
-                    # finshed adding info. show the frame on the screen and send
-                    # it to the pipe
+                    # finshed adding info. show the frame on the screen
                     if self.show_preview:
                         cv2.imshow(self.window_title, np.asarray(fr_with_info))
                     if self.add_info:
                         fr_to_wrt = np.asarray(fr_with_info)
+                    # send the frame to the pipe
                     self.write_frame_to_pipe(self.rendered_pipe, fr_to_wrt)
 
         # finished, we're outside of the main loop
@@ -655,14 +654,15 @@ class Renderer(object):
             'g' if self.grayscale else 'x',
             'l' if self.lossless  else 'x').lower()
 
-        tmp_dir = settings['tmp_dir']
+        makepth = lambda pth: \
+            os.path.join(settings['tmp_dir'], pth.format(tmp_name))
 
-        nrm_path = os.path.join(tmp_dir, '{}.nrm.mp4'.format(tmp_name))
-        rnd_path = os.path.join(tmp_dir, '{}.rnd.mp4'.format(tmp_name))
-        rff_path = os.path.join(tmp_dir, '{}.rff.mp4'.format(tmp_name))
-        rbf_path = os.path.join(tmp_dir, '{}.rbf.mp4'.format(tmp_name))
-        aud_path = os.path.join(tmp_dir, '{}_aud.ogg'.format(tmp_name))
-        sub_path = os.path.join(tmp_dir, '{}_sub.srt'.format(tmp_name))
+        nrm_path = makepth('{}.nrm.mp4')
+        rnd_path = makepth('{}.rnd.mp4')
+        rff_path = makepth('{}.rff.mp4')
+        rbf_path = makepth('{}.rbf.mp4')
+        aud_path = makepth('{}_aud.ogg')
+        sub_path = makepth('{}_sub.srt')
 
         # destination paths for forward and backward flows
         fwd_dst_path = os.path.join(dst_dir, '{}.fwd.mp4'.format(dst_name))
@@ -686,13 +686,13 @@ class Renderer(object):
         if self.make_flows:
             # use the original fps because flows are generated from src frames
             # and aren't interpolated
-            playback_rate = Fraction(self.video_info['rate_num'],
-                                     self.video_info['rate_den'])
-            playback_rate = float(playback_rate)
-            self.fwd_pipe = self.make_pipe(rff_path, playback_rate)
-            self.bwd_pipe = self.make_pipe(rbf_path, playback_rate)
+            fps = Fraction(self.video_info['rate_num'],
+                           self.video_info['rate_den'])
+            fps = float(fps)
+            self.fwd_pipe = self.make_pipe(rff_path, fps)
+            self.bwd_pipe = self.make_pipe(rbf_path, fps)
 
-        # make a window
+        # make a resizable window
         cv2.namedWindow(self.window_title, cv2.WINDOW_OPENGL)
         cv2.resizeWindow(
             self.window_title, self.nrm_info['width'], self.nrm_info['height'])
@@ -719,7 +719,8 @@ class Renderer(object):
             aud_path = None
         if self.video_info['s_stream_exists']:
             self.extract_subtitles(sub_path)
-            # its possible for a subtitle stream with no information
+            # it's possible for a subtitle stream to exist but have no
+            # information
             with open(sub_path, 'r') as f:
                 if f.read() == '':
                     sub_path = None
@@ -728,7 +729,8 @@ class Renderer(object):
 
         # move files to their destinations
         try:
-            self.mux_video(rnd_path, aud_path, sub_path, self.dst_path)
+            self.mux_video(rnd_path, aud_path, sub_path, self.dst_path,
+                           cleanup=True)
         except RuntimeError:
             shutil.move(rnd_path, self.dst_path)
 
