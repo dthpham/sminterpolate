@@ -180,7 +180,7 @@ def main():
 
     try:
         vid_info = avinfo.get_info(args.video)
-    except Exception as e:
+    except Exception:
         print('Could not get video information')
         exit(1)
 
@@ -192,7 +192,7 @@ def main():
         vid_sequence = sequence_from_string(
             vid_info['duration'], vid_info['frames'], args.sub_regions)
     except Exception as e:
-        print('Invalid subregion string')
+        print('Invalid subregion string: {}'.format(e))
         exit(1)
 
     renderer = Renderer(
