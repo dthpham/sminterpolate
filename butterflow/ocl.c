@@ -38,8 +38,8 @@ print_ocl_devices(PyObject *self, PyObject *noargs) {
         cl_safe(clGetPlatformInfo(p, CL_PLATFORM_VENDOR,  1024, p_vend, NULL));
         cl_safe(clGetPlatformInfo(p, CL_PLATFORM_VERSION, 1024, p_vers, NULL));
         printf("\n  Platform          \t: %s"
-              "\n  Platform Vendor   \t: %s"
-              "\n  Platform Version  \t: %s", p_name, p_vend, p_vers);
+               "\n  Platform Vendor   \t: %s"
+               "\n  Platform Version  \t: %s", p_name, p_vend, p_vers);
 
         cl_safe(clGetDeviceIDs(platforms[i], CL_DEVICE_TYPE_ALL, 0, NULL, &
                                n_devices));
