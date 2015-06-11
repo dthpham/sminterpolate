@@ -47,13 +47,13 @@ def main():
     vid.add_argument('-s', '--sub-regions', type=str,
                      help='Specify rendering sub regions in the form: '
                      '"a=TIME,b=TIME,TARGET=VALUE" where '
-                     'TARGET is either `fps`, `duration`, `factor`. '
-                     'Valid TIME syntaxes are [hr:m:s], [m:s], [s.xxx], '
-                     'or `end`, which signifies to the end of the video. '
-                     'You can specify multiple sub regions by separating them '
-                     'with a semi-colon `;`. A special region format that '
-                     'conveniently describes the entire clip is available in '
-                     'the form: "full,TARGET=VALUE".')
+                     'TARGET is either `fps`, `dur`, `spd`. Valid TIME syntaxes '
+                     'are [hr:m:s], [m:s], [s.xxx], or `end`, which signifies '
+                     'to the end of the video. You can specify multiple sub '
+                     'regions by separating them with a semi-colon `;`. A '
+                     'special region format that conveniently describes the '
+                     'entire clip is available in the form: '
+                     '"full,TARGET=VALUE".')
 
     vid.add_argument('-t', '--trim-regions', action='store_true',
                      help='Set to trim subregions that are not explicitly '
