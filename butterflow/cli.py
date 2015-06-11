@@ -216,7 +216,7 @@ def main():
 
     # apply debugging options
     if settings.default['debug_opts']:
-        renderer.show_flows = args.show_flows
+        renderer.preview_flows = args.preview_flows
         renderer.make_flows = args.make_flows
 
     motion.set_num_threads(settings.default['ocv_threads'])
