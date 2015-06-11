@@ -245,7 +245,7 @@ def time_string_to_ms(time):
 
 
 def parse_tval_string(string):
-    """Extracts a target and value from a subregion string where TARGET is
+    """Extracts a target and value from a target value string where TARGET is
     either `fps`, `dur`, or `spd`"""
     tgt = string.split('=')[0]
     val = string.split('=')[1]
@@ -273,7 +273,7 @@ def subregion_from_string(string):
     val = string.split(',')
     a = val[0].split('=')[1]  # the `a=` portion
     b = val[1].split('=')[1]  # the `b=` portion
-    c = val[2]
+    c = val[2]  # the `TARGET=VALUE` portion
     sub = RenderSubregion(time_string_to_ms(a),
                           time_string_to_ms(b))
     tgt, val = parse_tval_string(c)
@@ -299,7 +299,7 @@ def subregion_from_string_full_key(string, duration):
 def subregion_from_string_end_key(string, duration):
     """Returns a subregion from a string that contains the `end` keyword. the
     `end` keyword denotes to the end of the video. valid string syntax:
-    a=<time>,b=end,TARGET=FULL"""
+    a=<time>,b=end,TARGET=VALUE"""
     val = string.split(',')
     b = val[1].split('=')[1]  # the `b=` portion
     if b == 'end':
@@ -313,8 +313,8 @@ def subregion_from_string_end_key(string, duration):
 
 def sequence_from_string(duration, frames, strings):
     """Returns a video sequence from multiple subregion strings separated by a
-    semi-colon. For example: a=<time>,b=<time>,TARGET=FULL;a=<time>,b=<time>,
-    TARGET=FULL,a=<time>,b=end,TARGET=FULL. Another example using the `full`
+    semi-colon. For example: a=<time>,b=<time>,TARGET=VALUE;a=<time>,b=<time>,
+    TARGET=VALUE,a=<time>,b=end,TARGET=VALUE. Another example using the `full`
     keyword: full,TARGET=VALUE"""
     seq = VideoSequence(duration, frames)
     if strings is None:
