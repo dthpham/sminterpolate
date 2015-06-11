@@ -34,7 +34,7 @@ def main():
                      help='Set to increase output verbosity')
     gen.add_argument('--no-preview', action='store_false',
                      help='Set to disable video preview')
-    gen.add_argument('--add-info', action='store_true',
+    gen.add_argument('-a', '--add-info', action='store_true',
                      help='Set to add debugging info into the output video')
 
     vid.add_argument('-o', '--output-path', type=str,
