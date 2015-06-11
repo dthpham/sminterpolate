@@ -21,4 +21,4 @@ down with `ffmpeg`, but because it dupes frames and can't interpolate new ones
 the video has a noticeable stutter.
 
 Features, usage, and installation instructions are
-[summarized on the homepage](http://app.dthpham.me/butterflow).
+[summarized on the homepage](http://a.dthpham.me/butterflow).
