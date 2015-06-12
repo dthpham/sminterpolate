@@ -29,11 +29,15 @@ default = {
     # -1 is max threads and it's the opencv default
     'ocv_threads':    1*-1,
     # debugging info font options
+    'text_type':      'light',
+    'light_color':    cv2.cv.RGB(255, 255, 255),
+    'dark_color':     cv2.cv.RGB(0, 0, 0),
     # h_fits and v_fits is the minimium size in which the unscaled
     # CV_FONT_HERSHEY_PLAIN font text fits in the rendered video. The font is
     # scaled up and down based on this reference point
     'font':           cv2.cv.CV_FONT_HERSHEY_PLAIN,
-    'font_color':     cv2.cv.RGB(255, 255, 255),
+    'text_thick':     1,
+    'strk_thick':     2,
     'h_fits':         768,
     'v_fits':         216,
     't_padding':      20,

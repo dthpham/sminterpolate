@@ -24,20 +24,19 @@ class Renderer(object):
         interpolate_func=settings['interpolate_func'],
         scale=settings['video_scale'], decimate=False, grayscale=False,
         lossless=False, trim=False, show_preview=True, add_info=False,
-        preview_flows=False, make_flows=False, loglevel=settings['loglevel'],
-        flow_kwargs=None):
+        text_type=settings['text_type'], preview_flows=False,
+        make_flows=False, loglevel=settings['loglevel'], flow_kwargs=None):
 
         self.dst_path = dst_path
         self.video_info = video_info
         self.video_sequence = video_sequence
         self.flow_func = flow_func
         self.interpolate_func = interpolate_func
-
         # general options
         self.show_preview = show_preview
+        self.text_type = text_type
         self.add_info = add_info
         self.loglevel = loglevel
-
         # video options
         self.playback_rate = float(playback_rate)
         self.scale = scale
@@ -45,25 +44,20 @@ class Renderer(object):
         self.grayscale = grayscale
         self.lossless = lossless
         self.trim = trim
-
         # debugging options
         self.preview_flows = preview_flows
         self.make_flows = make_flows
-
         # normalized video information
         self.nrm_info = None
-
         # pipes
         self.rendered_pipe = None
         self.fwd_pipe = None
         self.bwd_pipe = None
-
         # information for the add info option
         self.flow_kwargs = flow_kwargs
         self.total_frs_wrt = 0
         self.subregions_to_render = 0
         self.curr_subregion_idx = 0
-
         # window names
         vid_name = os.path.basename(self.video_info['path'])
         self.window_title = '{} — Butterflow'.format(vid_name)
@@ -439,9 +433,20 @@ class Renderer(object):
                     vscale = min(h / float(settings['v_fits']), 1.0)
                     scale = min(hscale, vscale)
 
+                    if self.text_type == 'light':
+                        text_color = settings['light_color']
+                    if self.text_type == 'dark':
+                        text_color = settings['dark_color']
+                    if self.text_type == 'stroke':
+                        text_color = settings['light_color']
+                        strk_color = settings['dark_color']
+
                     font = cv2.cv.InitFont(
-                        settings['font'], scale, scale, 0.0, 1,
-                        cv2.cv.CV_AA)
+                        settings['font'], scale, scale, 0.0,
+                        settings['text_thick'], cv2.cv.CV_AA)
+                    stroke = cv2.cv.InitFont(
+                        settings['font'], scale, scale, 0.0,
+                        settings['strk_thick'], cv2.cv.CV_AA)
 
                     t = "butterflow {} ({})\n"\
                         "Res: {},{}\n"\
@@ -477,9 +482,11 @@ class Renderer(object):
                                   int(settings['t_padding'] +
                                   (y * (line_h +
                                    settings['line_d_padding']))))
+                        if self.text_type == 'stroke':
+                            cv2.cv.PutText(
+                                fr_with_info, line, origin, stroke, strk_color)
                         cv2.cv.PutText(
-                            fr_with_info, line, origin, font,
-                            settings['font_color'])
+                            fr_with_info, line, origin, font, text_color)
 
                     sub_tgt_dur = '*'
                     sub_tgt_fps = '*'
@@ -533,15 +540,18 @@ class Renderer(object):
                                   int(settings['t_padding'] +
                                   (y * (line_h +
                                    settings['line_d_padding']))))
+                        if self.text_type == 'stroke':
+                            cv2.cv.PutText(
+                                fr_with_info, line, origin, stroke, strk_color)
                         cv2.cv.PutText(
-                            fr_with_info, line, origin, font,
-                            settings['font_color'])
+                            fr_with_info, line, origin, font, text_color)
 
                     # finshed adding info. show the frame on the screen
                     if self.show_preview:
                         cv2.imshow(self.window_title, np.asarray(fr_with_info))
                     if self.add_info:
                         fr_to_wrt = np.asarray(fr_with_info)
+
                     # send the frame to the pipe
                     self.write_frame_to_pipe(self.rendered_pipe, fr_to_wrt)
 
@@ -693,9 +703,11 @@ class Renderer(object):
             self.bwd_pipe = self.make_pipe(rbf_path, fps)
 
         # make a resizable window
-        cv2.namedWindow(self.window_title, cv2.WINDOW_OPENGL)
-        cv2.resizeWindow(
-            self.window_title, self.nrm_info['width'], self.nrm_info['height'])
+        if self.show_preview:
+            cv2.namedWindow(self.window_title, cv2.WINDOW_OPENGL)
+            cv2.resizeWindow(
+                self.window_title, self.nrm_info['width'],
+                self.nrm_info['height'])
 
         # start rendering subregions
         self.total_frs_wrt = 0

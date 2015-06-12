@@ -19,6 +19,7 @@ def main():
     req = par.add_argument_group('Required arguments')
     gen = par.add_argument_group('General arguments')
     vid = par.add_argument_group('Video arguments')
+    dsp = par.add_argument_group('Display arguments')
     fgr = par.add_argument_group('Advanced arguments')
 
     req.add_argument('video', type=str, nargs='?', default=None,
@@ -32,10 +33,6 @@ def main():
                      help='Show detected OpenCL devices and exit')
     gen.add_argument('-v', '--verbose', action='store_true',
                      help='Set to increase output verbosity')
-    gen.add_argument('--no-preview', action='store_false',
-                     help='Set to disable video preview')
-    gen.add_argument('-a', '--add-info', action='store_true',
-                     help='Set to add debugging info into the output video')
 
     vid.add_argument('-o', '--output-path', type=str,
                      default=settings.default['out_path'],
@@ -69,6 +66,14 @@ def main():
                      ' video source')
     vid.add_argument('--grayscale', action='store_true',
                      help='Set to enhance grayscale coloring')
+
+    dsp.add_argument('--no-preview', action='store_false',
+                     help='Set to disable video preview')
+    dsp.add_argument('-a', '--add-info', action='store_true',
+                     help='Set to add debugging info into the output video')
+    dsp.add_argument('-tt', '--text-type', choices=['light', 'dark', 'stroke'],
+                     default=settings.default['text_type'],
+                     help="Specify text type for debugging info")
 
     fgr.add_argument('--fast-pyr', action='store_true',
                      help='Set to use fast pyramids')
@@ -209,6 +214,7 @@ def main():
         args.trim_regions,
         args.no_preview,
         args.add_info,
+        args.text_type,
         False,
         False,
         settings.default['loglevel'],
