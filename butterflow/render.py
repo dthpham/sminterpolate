@@ -726,7 +726,11 @@ class Renderer(object):
 
         # make a resizable window
         if self.show_preview:
-            cv2.namedWindow(self.window_title, cv2.WINDOW_OPENGL)
+            if sys.platform.startswith('linux'):
+                flag = cv2.WINDOW_OPENGL
+            else:
+                flag = cv2.WINDOW_NORMAL  # avoid opengl dependency on osx
+            cv2.namedWindow(self.window_title, flag)
             cv2.resizeWindow(
                 self.window_title, self.nrm_info['width'],
                 self.nrm_info['height'])

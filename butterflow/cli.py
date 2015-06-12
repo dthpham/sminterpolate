@@ -18,8 +18,8 @@ def main():
                                   add_help=False)
     req = par.add_argument_group('Required arguments')
     gen = par.add_argument_group('General arguments')
-    vid = par.add_argument_group('Video arguments')
     dsp = par.add_argument_group('Display arguments')
+    vid = par.add_argument_group('Video arguments')
     fgr = par.add_argument_group('Advanced arguments')
 
     req.add_argument('video', type=str, nargs='?', default=None,
@@ -34,6 +34,15 @@ def main():
     gen.add_argument('-v', '--verbose', action='store_true',
                      help='Set to increase output verbosity')
 
+    dsp.add_argument('--no-preview', action='store_false',
+                     help='Set to disable video preview')
+    dsp.add_argument('-a', '--add-info', action='store_true',
+                     help='Set to embed debugging info into the output video')
+    dsp.add_argument('-tt', '--text-type', choices=['light', 'dark', 'stroke'],
+                     default=settings.default['text_type'],
+                     help='Specify text type for debugging info, '
+                     '(default: %(default)s)')
+
     vid.add_argument('-o', '--output-path', type=str,
                      default=settings.default['out_path'],
                      help='Specify path to the output video')
@@ -43,14 +52,13 @@ def main():
                      '(default: %(default)s)')
     vid.add_argument('-s', '--sub-regions', type=str,
                      help='Specify rendering sub regions in the form: '
-                     '"a=TIME,b=TIME,TARGET=VALUE" where '
-                     'TARGET is either `fps`, `dur`, `spd`. Valid TIME syntaxes '
-                     'are [hr:m:s], [m:s], [s.xxx], or `end`, which signifies '
-                     'to the end of the video. You can specify multiple sub '
-                     'regions by separating them with a semi-colon `;`. A '
-                     'special region format that conveniently describes the '
-                     'entire clip is available in the form: '
-                     '"full,TARGET=VALUE".')
+                     '"a=TIME,b=TIME,TARGET=VALUE" where TARGET is either '
+                     '`fps`, `dur`, `spd`. Valid TIME syntaxes are [hr:m:s], '
+                     '[m:s], [s], [s.xxx], or `end`, which signifies to the '
+                     'end the video. You can specify multiple sub regions by '
+                     'separating them with a colon `:`. A special region '
+                     'format that conveniently describes the entire clip is '
+                     'available in the form: "full,TARGET=VALUE".')
 
     vid.add_argument('-t', '--trim-regions', action='store_true',
                      help='Set to trim subregions that are not explicitly '
@@ -66,14 +74,6 @@ def main():
                      ' video source')
     vid.add_argument('--grayscale', action='store_true',
                      help='Set to enhance grayscale coloring')
-
-    dsp.add_argument('--no-preview', action='store_false',
-                     help='Set to disable video preview')
-    dsp.add_argument('-a', '--add-info', action='store_true',
-                     help='Set to add debugging info into the output video')
-    dsp.add_argument('-tt', '--text-type', choices=['light', 'dark', 'stroke'],
-                     default=settings.default['text_type'],
-                     help="Specify text type for debugging info")
 
     fgr.add_argument('--fast-pyr', action='store_true',
                      help='Set to use fast pyramids')
@@ -194,7 +194,7 @@ def main():
         exit(1)
 
     try:
-        vid_sequence = sequence_from_string(
+        vid_sequence = sequence_from_str(
             vid_info['duration'], vid_info['frames'], args.sub_regions)
     except Exception as e:
         print('Invalid subregion string: {}'.format(e))
@@ -230,8 +230,8 @@ def main():
     renderer.render()
 
 
-def time_string_to_ms(time):
-    """Converts a time string to milliseconds. valid time string syntax:
+def time_str_to_ms(time):
+    """Converts a time string to milliseconds. Syntax:
     [hrs:mins:secs.xxx] OR [mins:secs.xxx] OR [secs.xxx]"""
     value_error = ValueError('invalid time syntax: {}'.format(time))
     hr, min, sec = 0, 0, 0
@@ -251,9 +251,9 @@ def time_string_to_ms(time):
     return (hr * 3600 + min * 60 + sec) * 1000.0
 
 
-def parse_tval_string(string):
+def parse_tval_str(string):
     """Extracts a target and value from a target value string where TARGET is
-    either `fps`, `dur`, or `spd`"""
+    either `fps`, `dur`, or `spd`. Syntax: TARGET=VALUE"""
     tgt = string.split('=')[0]
     val = string.split('=')[1]
     if tgt == 'fps':
@@ -274,38 +274,38 @@ def parse_tval_string(string):
     return tgt, val
 
 
-def subregion_from_string(string):
-    """Returns a subregion from a string with no special keywords. valid string
-    syntax: a=<time>,b=<time>,TARGET=VALUE"""
+def sub_from_str(string):
+    """Returns a subregion from a string with no special keywords. Syntax:
+    a=<time>,b=<time>,TARGET=VALUE"""
     val = string.split(',')
     a = val[0].split('=')[1]  # the `a=` portion
     b = val[1].split('=')[1]  # the `b=` portion
     c = val[2]  # the `TARGET=VALUE` portion
-    sub = RenderSubregion(time_string_to_ms(a),
-                          time_string_to_ms(b))
-    tgt, val = parse_tval_string(c)
+    sub = RenderSubregion(time_str_to_ms(a),
+                          time_str_to_ms(b))
+    tgt, val = parse_tval_str(c)
     setattr(sub, tgt, val)
     return sub
 
 
-def subregion_from_string_full_key(string, duration):
+def sub_from_str_full_key(string, duration):
     """Returns a subregion from a string that contains the `full` keyword. the
-    `full` keyword denotes the entire length of the video. valid string syntax:
+    `full` keyword denotes the entire length of the video. Syntax:
     full,TARGET=VALUE"""
     val = string.split(',')
     if val[0] == 'full':
         # create a subregion from [0, duration]
         sub = RenderSubregion(0, float(duration))
-        tgt, val = parse_tval_string(val[1])
+        tgt, val = parse_tval_str(val[1])
         setattr(sub, tgt, val)
         return sub
     else:
         raise ValueError('`full` keyword not found: {}'.format(string))
 
 
-def subregion_from_string_end_key(string, duration):
+def sub_from_str_end_key(string, duration):
     """Returns a subregion from a string that contains the `end` keyword. the
-    `end` keyword denotes to the end of the video. valid string syntax:
+    `end` keyword denotes to the end of the video. Syntax:
     a=<time>,b=end,TARGET=VALUE"""
     val = string.split(',')
     b = val[1].split('=')[1]  # the `b=` portion
@@ -313,26 +313,35 @@ def subregion_from_string_end_key(string, duration):
         # replace the `end` with the duration of the video in seconds. the
         # duration will eventually be reconverted to milliseconds automatically
         string = string.replace('end', str(duration / 1000.0))
-        return subregion_from_string(string)
+        return sub_from_str(string)
     else:
         raise ValueError('`end` keyword not found: {}'.format(string))
 
 
-def sequence_from_string(duration, frames, strings):
+def sequence_from_str(duration, frames, strings):
     """Returns a video sequence from multiple subregion strings separated by a
-    semi-colon. For example: a=<time>,b=<time>,TARGET=VALUE;a=<time>,b=<time>,
-    TARGET=VALUE,a=<time>,b=end,TARGET=VALUE. Another example using the `full`
-    keyword: full,TARGET=VALUE"""
+    colon `:`"""
     seq = VideoSequence(duration, frames)
     if strings is None:
         return seq
-    for string in strings.split(';'):
+    # look for `:a` which is the start of a new subregion
+    newsubstrs = []
+    substrs = strings.split(':a')
+    if len(substrs) > 1:
+        # replace `a` character that was stripped when split
+        for substr in substrs:
+            if not substr.startswith('a'):
+                newsubstrs.append('a' + substr)
+            else:
+                newsubstrs.append(substr)
+        substrs = newsubstrs
+    for substr in substrs:
         sub = None
-        if 'full' in string:
-            sub = subregion_from_string_full_key(string, duration)
-        elif 'end' in string:
-            sub = subregion_from_string_end_key(string, duration)
+        if 'full' in substr:
+            sub = sub_from_str_full_key(substr, duration)
+        elif 'end' in substr:
+            sub = sub_from_str_end_key(substr, duration)
         else:
-            sub = subregion_from_string(string)
+            sub = sub_from_str(substr)
         seq.add_subregion(sub)
     return seq
