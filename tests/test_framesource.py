@@ -22,7 +22,7 @@ class FrameSourceTestCase(unittest.TestCase):
                 '-f', 'lavfi',
                 '-i', 'testsrc=duration=5:size=640x360:rate=30:decimals=3',
                 '-pix_fmt', 'yuv420p',
-                '-c:v', settings.default['encoder'],
+                '-c:v', 'libx264',
                 '-crf', '0',
                 self.test_vid
             ])

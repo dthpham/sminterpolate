@@ -218,6 +218,7 @@ def main():
         False,
         False,
         settings.default['loglevel'],
+        settings.default['enc_loglevel'],
         flow_kwargs)
 
     # apply debugging options

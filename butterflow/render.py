@@ -25,7 +25,8 @@ class Renderer(object):
         scale=settings['video_scale'], decimate=False, grayscale=False,
         lossless=False, trim=False, show_preview=True, add_info=False,
         text_type=settings['text_type'], preview_flows=False,
-        make_flows=False, loglevel=settings['loglevel'], flow_kwargs=None):
+        make_flows=False, loglevel=settings['loglevel'],
+        enc_loglevel=settings['enc_loglevel'], flow_kwargs=None):
 
         self.dst_path = dst_path
         self.video_info = video_info
@@ -37,6 +38,7 @@ class Renderer(object):
         self.text_type = text_type
         self.add_info = add_info
         self.loglevel = loglevel
+        self.enc_loglevel = enc_loglevel
         # video options
         self.playback_rate = float(playback_rate)
         self.scale = scale
@@ -114,14 +116,25 @@ class Renderer(object):
             ])
         call.extend([
             '-c:v', settings['encoder'],
-            '-preset', 'fast',
+            '-preset', settings['preset'],
         ])
-        quality = ['-crf', '18']
-        if self.lossless:
-            quality = ['-qp', '0']
-        call.extend(quality)
-        if not using_avconv:
-            call.extend(['-level', '4.2'])
+        if settings['encoder'] == 'libx264':
+            quality = ['-crf', str(settings['crf'])]
+            if self.lossless:
+                quality = ['-qp', '0']
+            call.extend(quality)
+            if not using_avconv:
+                call.extend(['-level', '4.2'])
+        elif settings['encoder'] == 'libx265':
+            call.extend(['-x265-params'])
+            quality = 'crf={}'.format(settings['crf'])
+            if self.lossless:
+                # ffmpeg doesn't pass -x265-params to x265 correctly, must
+                # provide keys for every single value until fixed
+                # See: https://trac.ffmpeg.org/ticket/4284
+                quality = 'lossless=1'
+            loglevel = 'log-level={}'.format(self.enc_loglevel)
+            call.extend([':'.join([quality, loglevel])])
         call.extend([tmp_dir])
         nrm_proc = subprocess.call(call)
         if nrm_proc == 1:
@@ -218,11 +231,19 @@ class Renderer(object):
             '-r', str(rate),
             '-c:a', 'none',
             '-c:v', settings['encoder'],
-            '-preset', 'fast']
-        quality = ['-crf', '18']
-        if self.lossless:
-            quality = ['-qp', '0']
-        call.extend(quality)
+            '-preset', settings['preset']]
+        if settings['encoder'] == 'libx264':
+            quality = ['-crf', str(settings['crf'])]
+            if self.lossless:
+                quality = ['-qp', '0']
+            call.extend(quality)
+        elif settings['encoder'] == 'libx265':
+            call.extend(['-x265-params'])
+            quality = 'crf={}'.format(settings['crf'])
+            if self.lossless:
+                quality = 'lossless=1'
+            loglevel = 'log-level={}'.format(self.enc_loglevel)
+            call.extend([':'.join([quality, loglevel])])
         call.extend([dst_path])
         pipe = subprocess.Popen(
             call,
@@ -656,13 +677,14 @@ class Renderer(object):
         unix_time = lambda dt:\
             (dt - datetime.datetime.utcfromtimestamp(0)).total_seconds()
 
-        tmp_name = '{}.{}.{}.{}.{}.{}'.format(
+        tmp_name = '{}.{}.{}.{}.{}.{}.{}'.format(
             os.path.basename(src_path),
             str(unix_time(vid_mod_utc)),
             self.scale,
             'd' if self.decimate  else 'x',
             'g' if self.grayscale else 'x',
-            'l' if self.lossless  else 'x').lower()
+            'l' if self.lossless  else 'x',
+            settings['encoder']).lower()
 
         makepth = lambda pth: \
             os.path.join(settings['tmp_dir'], pth.format(tmp_name))

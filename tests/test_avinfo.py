@@ -21,7 +21,7 @@ class AvInfoTestCase(unittest.TestCase):
                 '-i', 'testsrc=duration=3:size=640x360:rate=30000/1001:'
                       'decimals=3',
                 '-pix_fmt', 'yuv420p',
-                '-c:v', settings.default['encoder'],
+                '-c:v', 'libx264',
                 '-crf', '0',
                 fv
             ])

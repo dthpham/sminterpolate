@@ -12,8 +12,12 @@ default = {
     'debug_opts':     False,
     # `ffmpeg` and `avconv` options
     'avutil':         'ffmpeg',
+    # for x265 options: http://x265.readthedocs.org/en/default/cli.html
+    'encoder':        'libx265',
     'loglevel':       'info',
-    'encoder':        'libx264',
+    'enc_loglevel':   'error',
+    'preset':         'fast',
+    'crf':            18,
     # farneback optical flow options
     'playback_rate':  23.976,
     'video_scale':    1.0,
