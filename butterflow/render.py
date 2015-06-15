@@ -287,6 +287,8 @@ class Renderer(object):
         if subregion.spd:
             tgt_frs = int(self.playback_rate * reg_dur *
                           (1 / subregion.spd))
+        if subregion.btw:
+            tgt_frs = int(reg_len + ((reg_len - 1) * subregion.btw))
 
         tgt_frs = max(0, tgt_frs)
 
@@ -512,19 +514,22 @@ class Renderer(object):
                     sub_tgt_dur = '*'
                     sub_tgt_fps = '*'
                     sub_tgt_spd = '*'
-                    if subregion.dur:
+                    sub_tgt_btw = '*'
+                    if subregion.dur is not None:
                         sub_tgt_dur = '{:.2f}s'.format(
                             subregion.dur / 1000.0)
-                    if subregion.fps:
+                    if subregion.fps is not None:
                         sub_tgt_fps = '{}'.format(subregion.fps)
-                    if subregion.spd:
+                    if subregion.spd is not None:
                         sub_tgt_spd = '{:.2f}'.format(subregion.spd)
+                    if subregion.btw is not None:
+                        sub_tgt_btw = '{:.2f}'.format(subregion.btw)
                     tgt_dur = tgt_frs / float(self.playback_rate)
                     write_ratio = frs_wrt * 100.0 / tgt_frs
 
                     t = "Region {}/{} F: [{}, {}] T: [{:.2f}s, {:.2f}s]\n"\
                         "Len F: {}, T: {:.2f}s\n"\
-                        "Target Dur: {}, Spd: {}, Fps: {}\n"\
+                        "Target Dur: {} Spd: {} Fps: {} Btw: {}\n"\
                         "Out Len F: {}, Dur: {:.2f}s\n"\
                         "Drp every {:.1f}, Dup every {:.1f}\n"\
                         "Gen: {}, Made: {}, Drp: {}, Dup: {}\n"\
@@ -542,6 +547,7 @@ class Renderer(object):
                         sub_tgt_dur,
                         sub_tgt_spd,
                         sub_tgt_fps,
+                        sub_tgt_btw,
                         tgt_frs,
                         tgt_dur,
                         drp_every,
@@ -596,9 +602,10 @@ class Renderer(object):
 
         new_subregions = []
 
-        if self.video_sequence.subregions is None:
+        if self.video_sequence.subregions is None or \
+            len(self.video_sequence.subregions) == 0:
             # make a subregion from 0 to vid duration if there are no regions
-            # in the video sequence
+            # in the video sequence. only framerate is changing.
             fa, ta = (0, 0)
             fb, tb = (frs, dur)
             s = RenderSubregion(ta, tb)
@@ -607,6 +614,8 @@ class Renderer(object):
             s.fps = self.playback_rate
             s.dur = tb - ta
             s.spd = 1.0
+            tgt_frs = int(self.playback_rate * (dur / 1000.0))
+            s.btw = (tgt_frs - frs) * 1.0 / (frs - 1)
             setattr(s, 'trim', False)
             new_subregions.append(s)
         else:
@@ -646,6 +655,9 @@ class Renderer(object):
                     s.fps = self.playback_rate
                     s.dur = tb - ta
                     s.spd = 1.0
+                    reg_frs = (s.fb - s.fa) + 1
+                    tgt_frs = int(s.fps * ((s.dur + 1) / 1000.0))
+                    s.btw = (tgt_frs - reg_frs) * 1.0 / (reg_frs - 1)
                     sub_for_range = s
                     setattr(s, 'trim', self.trim)
                 new_subregions.append(sub_for_range)
