@@ -20,6 +20,8 @@ PKG_PATH = os.path.join(os.path.dirname(os.path.realpath(__file__)),
                         'butterflow')
 VND_PATH = os.path.join(PKG_PATH, '3rdparty')
 
+_build_debug = 'dev' in version
+
 
 def get_long_description():
     '''Convert README.md to .rst for PyPi, requires pandoc'''
@@ -272,13 +274,17 @@ def check_dependencies():
     return True, None
 
 
-cflags = ['-g', '-Wall']
+cflags = ['-Wall']
+if _build_debug:
+    cflags.extend(['-g'])  # turn off debugging symbols for release
+    cflags.extend(['-O0', '-fbuiltin'])  # other debug options
 cflags.extend(['-Wno-cpp', '-Wno-unused-variable',
                '-Wno-unused-function'])  # Disable annoying warnings
-cflags.extend(['-O0', '-fbuiltin'])  # With debug options
 linkflags = []
 includes = ['/usr/include', '/usr/local/include']
-ldflags = ['/usr/lib', '/usr/local/lib']
+ldflags = [
+    #'/usr/lib',
+    '/usr/local/lib']
 py_includes = None
 py_libs = None
 libav_libs = ['avcodec', 'avformat', 'avutil']
@@ -286,8 +292,8 @@ py_prefix = subprocess.Popen(['python{}-config'.format(py_ver), '--prefix'],
                              stdout=subprocess.PIPE,
                              env=get_extra_envs()).stdout.read().strip()
 if sys.platform.startswith('linux'):
-    py_includes = pkg_config_res('--cflags', 'python-{}'.format(py_ver))
-    py_libs = pkg_config_res('--libs', 'python-{}'.format(py_ver))
+    #py_includes = pkg_config_res('--cflags', 'python-{}'.format(py_ver))
+    #py_libs = pkg_config_res('--libs', 'python-{}'.format(py_ver))
     linkflags.extend(['-shared', '-Wl,--export-dynamic'])
 elif sys.platform.startswith('darwin'):
     linkflags.extend(['-arch', 'x86_64'])
@@ -336,6 +342,7 @@ if sys.platform.startswith('linux'):
     # Use install path and a filename namespec to specify the OpenCL library
     cl_ldflag = os.path.dirname(get_lib_installed_path('libOpenCL'))
     cl_lib = get_lib_filename_namespec('libOpenCL')
+    pass
 elif sys.platform.startswith('darwin'):
     if homebrew_prefix is not None:
         # Homebrew opencv uses a brewed numpy by default but it's possible for
@@ -372,7 +379,10 @@ cv_libs = ['opencv_core', 'opencv_ocl', 'opencv_imgproc']
 
 motion = Extension(
     'butterflow.motion',
-    extra_compile_args=build_lst(cxxflags, '-std=c++11'),
+    extra_compile_args=build_lst(
+        cxxflags,
+        # '-std=c++11'
+    ),
     extra_link_args=linkflags,
     include_dirs=build_lst(VND_PATH, includes, cv_includes, py_includes),
     libraries=build_lst(cv_libs, py_libs, cl_lib),
@@ -387,10 +397,11 @@ motion = Extension(
     language='c++'
 )
 
-ret, error = check_dependencies()
-if not ret:
-    print(error)
-    exit(1)
+if _build_debug:
+    ret, error = check_dependencies()
+    if not ret:
+        print(error)
+        exit(1)
 
 setup(
     name='butterflow',
