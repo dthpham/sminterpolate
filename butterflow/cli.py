@@ -17,10 +17,10 @@ def main():
     par = argparse.ArgumentParser(usage='%(prog)s [options] [video]',
                                   add_help=False)
     req = par.add_argument_group('Required arguments')
-    gen = par.add_argument_group('General arguments')
-    dsp = par.add_argument_group('Display arguments')
-    vid = par.add_argument_group('Video arguments')
-    fgr = par.add_argument_group('Advanced arguments')
+    gen = par.add_argument_group('General options')
+    dsp = par.add_argument_group('Display options')
+    vid = par.add_argument_group('Video options')
+    fgr = par.add_argument_group('Advanced options')
 
     req.add_argument('video', type=str, nargs='?', default=None,
                      help='Specify the input video')
@@ -74,7 +74,7 @@ def main():
                      help='Set to decimate duplicate frames from the'
                      ' video source')
     vid.add_argument('--grayscale', action='store_true',
-                     help='Set to enhance grayscale coloring')
+                     help='Set to enhance coloring of grayscale videos')
 
     fgr.add_argument('--fast-pyr', action='store_true',
                      help='Set to use fast pyramids')
