@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 
 import os
+import sys
 import tempfile
 from butterflow.__init__ import __version__
 from butterflow import motion
@@ -12,8 +13,7 @@ default = {
     'debug_opts':     False,
     # `ffmpeg` and `avconv` options
     'avutil':         'ffmpeg',
-    # for x265 options: http://x265.readthedocs.org/en/default/cli.html
-    'encoder':        'libx265',
+    # avutil and encoder loglevel
     'loglevel':       'info',
     'enc_loglevel':   'error',
     'preset':         'fast',
@@ -49,6 +49,12 @@ default = {
     'r_padding':      20,
     'line_d_padding': 10,
 }
+
+if sys.platform.startswith('linux'):
+    # for x265 options: http://x265.readthedocs.org/en/default/cli.html
+    default['encoder'] = 'libx265'
+else:
+    default['encoder'] = 'libx264'
 
 # define location of files and directories
 default['out_path'] = os.path.join(os.getcwd(), 'out.mp4')

@@ -62,9 +62,9 @@ class Renderer(object):
         self.curr_subregion_idx = 0
         # window names
         vid_name = os.path.basename(self.video_info['path'])
-        self.window_title = '{} — Butterflow'.format(vid_name)
-        self.fwd_window_title = '{} — Forward'.format(vid_name)
-        self.bwd_window_title = '{} — Backward'.format(vid_name)
+        self.window_title = '{} - Butterflow'.format(vid_name)
+        self.fwd_window_title = '{} - Forward'.format(vid_name)
+        self.bwd_window_title = '{} - Backward'.format(vid_name)
 
     def normalize_for_interpolation(self, dst_path):
         """transcode the video to a standard format so that interpolation yields
@@ -762,27 +762,42 @@ class Renderer(object):
             cv2.destroyAllWindows()
         self.close_pipes()
 
-        # start extracting audio and subtitle streams if they exist
-        if self.video_info['a_stream_exists']:
-            self.extract_audio(aud_path)
-        else:
-            aud_path = None
-        if self.video_info['s_stream_exists']:
-            self.extract_subtitles(sub_path)
-            # it's possible for a subtitle stream to exist but have no
-            # information
-            with open(sub_path, 'r') as f:
-                if f.read() == '':
-                    sub_path = None
-        else:
-            sub_path = None
+        speed_changed = False
+        if self.video_sequence.subregions is not None:
+            for s in self.video_sequence.subregions:
+                if s.fps != self.playback_rate:
+                    speed_changed = True
+                elif s.spd != 1.0:
+                    speed_changed = True
+                elif s.dur != (s.fb - s.fa):
+                    speed_changed = True
+                if speed_changed:
+                    break
 
-        # move files to their destinations
-        try:
-            self.mux_video(rnd_path, aud_path, sub_path, self.dst_path,
-                           cleanup=True)
-        except RuntimeError:
+        # dont mux if speed changed or video was trimmed
+        if self.trim or speed_changed:
             shutil.move(rnd_path, self.dst_path)
+        else:
+            # start extracting audio and subtitle streams if they exist
+            if self.video_info['a_stream_exists']:
+                self.extract_audio(aud_path)
+            else:
+                aud_path = None
+            if self.video_info['s_stream_exists']:
+                self.extract_subtitles(sub_path)
+                # it's possible for a subtitle stream to exist but have no
+                # information
+                with open(sub_path, 'r') as f:
+                    if f.read() == '':
+                        sub_path = None
+            else:
+                sub_path = None
+            # move files to their destinations
+            try:
+                self.mux_video(rnd_path, aud_path, sub_path, self.dst_path,
+                               cleanup=True)
+            except RuntimeError:
+                shutil.move(rnd_path, self.dst_path)
 
         if self.make_flows:
             shutil.move(rff_path, fwd_dst_path)
