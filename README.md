@@ -25,7 +25,7 @@ for more demonstrations.
 
 ##Installation
 
-###OS X:
+###OS X
 
 With [`homebrew`](http://brew.sh/):
 
@@ -36,15 +36,16 @@ brew install butterflow
 
 No setup is necessary on OS X because OpenCL support is provided by default.
 
-###Arch Linux:
+###Arch Linux
 
 A package is available in the AUR under
 [`butterflow`](https://aur.archlinux.org/packages/butterflow/).
 
-###Source:
+###Source
 
-Satisfy all the [Dependencies](https://github.com/dthpham/butterflow/wiki/
-Dependencies) and then:
+Satisfy all the
+[Dependencies](https://github.com/dthpham/butterflow/wiki/Dependencies)
+and then:
 
 ```
 git clone https://github.com/dthpham/butterflow.git
@@ -57,8 +58,7 @@ python2 setup.py install
 
 After installing the package, you still need to install at least one
 vendor-specific implementation of OpenCL that supports your hardware.  See
-[Suggested OpenCL Packages](https://github.com/dthpham/butterflow/wiki/
-Suggested-OpenCL-Packages)
+[Suggested OpenCL Packages](https://github.com/dthpham/butterflow/wiki/Suggested-OpenCL-Packages)
 for some options.
 
 When finished, you can run `butterflow -d` to print a list of all detected
@@ -66,8 +66,8 @@ devices.
 
 For additional information on how to satisfy the OpenCL requirements, please
 read [How to set up OpenCL in Linux](http://wiki.tiker.net/OpenCLHowTo). If
-you're on Arch Linux, have a look at their [GPGPU wiki page](https://wiki.
-archlinux.org/index.php/GPGPU).
+you're on Arch Linux, have a look at their
+[GPGPU wiki page](https://wiki.archlinux.org/index.php/GPGPU).
 
 ##Usage
 
