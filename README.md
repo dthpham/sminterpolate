@@ -1,7 +1,7 @@
 #Butterflow
 
 *Butterflow* is an easy to use command line tool that lets you create fluid slow
-motion and smooth motion videos.
+motion and motion interpolated videos.
 
 It works by rendering intermediate frames between existing frames. For example,
 given two existing frames `A` and `B`, this program can generate frames `C.1`,
@@ -20,5 +20,56 @@ giving the video a smooth feel during playback. The same video was slowed
 down with `ffmpeg`, but because it dupes frames and can't interpolate new ones
 the video has a noticeable stutter.
 
-Features, usage, and installation instructions are
-[summarized on the homepage](http://a.dthpham.me/butterflow).
+See the [In Action](https://github.com/dthpham/butterflow/wiki/In-Action) page
+for more demonstrations.
+
+##Installation
+
+###OS X:
+
+With [`homebrew`](http://brew.sh/):
+
+```
+brew tap homebrew/science
+brew install butterflow
+```
+
+No setup is necessary on OS X because OpenCL support is provided by default.
+
+###Arch Linux:
+
+A package is available in the AUR under
+[`butterflow`](https://aur.archlinux.org/packages/butterflow/).
+
+###Source:
+
+Satisfy all the [Dependencies](https://github.com/dthpham/butterflow/wiki/
+Dependencies) and then:
+
+```
+git clone https://github.com/dthpham/butterflow.git
+cd butterflow
+python2 setup.py test
+python2 setup.py install
+```
+
+##Setup
+
+After installing the package, you still need to install at least one
+vendor-specific implementation of OpenCL that supports your hardware.  See
+[Suggested OpenCL Packages](https://github.com/dthpham/butterflow/wiki/
+Suggested-OpenCL-Packages)
+for some options.
+
+When finished, you can run `butterflow -d` to print a list of all detected
+devices.
+
+For additional information on how to satisfy the OpenCL requirements, please
+read [How to set up OpenCL in Linux](http://wiki.tiker.net/OpenCLHowTo). If
+you're on Arch Linux, have a look at their [GPGPU wiki page](https://wiki.
+archlinux.org/index.php/GPGPU).
+
+##Usage
+
+See [Example Usage](https://github.com/dthpham/butterflow/wiki/Example-Usage)
+for typical commands.
