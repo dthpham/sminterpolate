@@ -274,12 +274,18 @@ def check_dependencies():
     return True, None
 
 
-cflags = ['-Wall']
+cflags = []
 if _build_debug:
+    cflags.extend(['-Wall'])
     cflags.extend(['-g'])  # turn off debugging symbols for release
     cflags.extend(['-O0', '-fbuiltin'])  # other debug options
-cflags.extend(['-Wno-cpp', '-Wno-unused-variable',
+cflags.extend(['-Wno-unused-variable',
                '-Wno-unused-function'])  # Disable annoying warnings
+if sys.platform.startswith('linux'):
+    cflags.extend(['-Wno-cpp'])
+elif sys.platform.startswith('darwin'):
+    cflags.extend(['-Wno-shorten-64-to-32', '-Wno-overloaded-virtual',
+                   '-Wno-#warnings'])
 linkflags = []
 includes = ['/usr/include', '/usr/local/include']
 ldflags = [
