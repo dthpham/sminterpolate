@@ -1,6 +1,6 @@
 #Butterflow
 
-*Butterflow* is an easy to use command line tool that lets you create fluid slow
+*Butterflow* is an easy to use command-line tool that lets you create fluid slow
 motion and motion interpolated videos.
 
 It works by rendering intermediate frames between existing frames. For example,
@@ -20,12 +20,20 @@ giving the video a smooth feel during playback. The same video was slowed
 down with `ffmpeg`, but because it dupes frames and can't interpolate new ones
 the video has a noticeable stutter.
 
+![](http://srv.dthpham.me/video/ink_sm.gif)
+
+Here is another example where the speed of the video remains constant but its
+frame rate has been increased from `30fps` to `60fps` with `butterflow`. The
+video has been slowed down to make the interpolated frame (marked `Src:
+N`) between original source frames more apparent. Playing it back in full speed
+would produce a "soap opera effect".
+
 See the [In Action](https://github.com/dthpham/butterflow/wiki/In-Action) page
 for more demonstrations.
 
 ##Installation
 
-###OS X
+###OS X:
 
 With [`homebrew`](http://brew.sh/):
 
@@ -34,14 +42,12 @@ brew tap homebrew/science
 brew install butterflow
 ```
 
-No setup is necessary on OS X because OpenCL support is provided by default.
-
-###Arch Linux
+###Arch Linux:
 
 A package is available in the AUR under
 [`butterflow`](https://aur.archlinux.org/packages/butterflow/).
 
-###Source
+###From Source:
 
 Satisfy all the
 [Dependencies](https://github.com/dthpham/butterflow/wiki/Dependencies)
@@ -57,7 +63,8 @@ python2 setup.py install
 ##Setup
 
 After installing the package, you still need to install at least one
-vendor-specific implementation of OpenCL that supports your hardware.  See
+vendor-specific implementation of OpenCL that supports your hardware. No setup
+is necessary on OS X because support is provided by default. See
 [Suggested OpenCL Packages](https://github.com/dthpham/butterflow/wiki/Suggested-OpenCL-Packages)
 for some options.
 
