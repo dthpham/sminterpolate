@@ -39,7 +39,8 @@ With [`homebrew`](http://brew.sh/):
 
 ```
 brew tap homebrew/science
-brew install butterflow
+export PYTHONPATH=$(brew --prefix)/lib/python2.7/site-packages:$PYTHONPATH
+brew install butterflow --build-from-source
 ```
 
 ###Arch Linux:
