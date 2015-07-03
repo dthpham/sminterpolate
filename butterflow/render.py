@@ -67,14 +67,6 @@ class Renderer(object):
         self.bwd_window_title = '{} - Backward'.format(vid_name)
 
     def normalize_for_interpolation(self, dst_path):
-        """transcode the video to a standard format so that interpolation yields
-        the the best results. the main goal is to retranscode to the lowest
-        possible constant rate in which all unique frames in the vid are
-        retained. this is to avoid having to dupe/drop frames during the
-        interpolation process which if done incorrectly may cause video and
-        audio sync drift. in the future, the process shouldn't be framerate
-        sensitive
-        """
         using_avconv = settings['avutil'] == 'avconv'
         if not self.video_info['v_stream_exists']:
             raise RuntimeError('no video stream detected')
@@ -88,12 +80,13 @@ class Renderer(object):
         tmp_dir = os.path.join(
             os.path.dirname(dst_path), '~' + os.path.basename(dst_path))
 
-        vf = 'scale={}:{}'.format(w, h)
+        vf = []
+        vf.append('scale={}:{}'.format(w, h))
         if self.decimate:
-            vf = 'fieldmatch,decimate,' + vf
-        pix_fmt = 'yuv420p'
+            vf.extend(['fieldmatch', 'decimate'])
         if self.grayscale:
-            pix_fmt = 'gray'
+            vf.append('format=gray')
+        vf.append('format=yuv420p')
 
         call = [
             settings['avutil'],
@@ -101,8 +94,7 @@ class Renderer(object):
             '-y',
             '-threads', '0',
             '-i', self.video_info['path'],
-            '-pix_fmt', pix_fmt,
-            '-filter:v', vf,
+            '-vf', ','.join(vf),
             '-sws_flags', scaler
         ]
         if has_aud:
@@ -213,11 +205,12 @@ class Renderer(object):
             os.remove(vid_path)
 
     def make_pipe(self, dst_path, rate):
-        pix_fmt = 'yuv420p'
+        vf = []
+        if self.grayscale:
+            vf.append('format=gray')
+        vf.append('format=yuv420p')
         w = self.nrm_info['width']
         h = self.nrm_info['height']
-        if self.grayscale:
-            pix_fmt = 'gray'
         call = [
             settings['avutil'],
             '-loglevel', self.loglevel,
@@ -227,7 +220,7 @@ class Renderer(object):
             '-s', '{}x{}'.format(w, h),
             '-r', str(rate),
             '-i', '-',
-            '-pix_fmt', pix_fmt,
+            '-vf', ','.join(vf),
             '-r', str(rate),
             '-c:a', 'none',
             '-c:v', settings['encoder'],
