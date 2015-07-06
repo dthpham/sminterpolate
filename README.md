@@ -22,11 +22,10 @@ the video has a noticeable stutter.
 
 ![](http://srv.dthpham.me/video/ink_sm.gif)
 
-Here is another example where the speed of the video remains constant but its
-frame rate has been increased from `30fps` to `60fps` with `butterflow`. The
-video has been slowed down to make the interpolated frame (marked `Src:
-N`) between original source frames more apparent. Playing it back in full speed
-would produce a "soap opera effect".
+Here is another example where the frame rate has been increased from `30fps` to
+`60fps` with `butterflow`. The video has been slowed down to make the
+interpolated frame (marked `Src: N`) between original source frames more
+apparent. Playing it back in full speed would produce a "soap opera effect".
 
 See the [In Action](https://github.com/dthpham/butterflow/wiki/In-Action) page
 for more demonstrations.
@@ -49,16 +48,8 @@ A package is available in the AUR under
 
 ###From Source:
 
-Satisfy all the
-[Dependencies](https://github.com/dthpham/butterflow/wiki/Dependencies)
-and then:
-
-```
-git clone https://github.com/dthpham/butterflow.git
-cd butterflow
-python2 setup.py test
-python2 setup.py install
-```
+Refer to the [Install From Source Guide](https://github.com/dthpham/butterflow/wiki/Install-From-Source-Guide)
+on the wiki.
 
 ##Setup
 
