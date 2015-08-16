@@ -4,7 +4,7 @@ import subprocess
 import cv2
 import numpy as np
 from butterflow import avinfo, settings
-from butterflow.framesource import FrameSource
+from butterflow.source import FrameSource
 
 SDIR = os.path.join(os.path.dirname(os.path.realpath(__file__)),
                     'samples')

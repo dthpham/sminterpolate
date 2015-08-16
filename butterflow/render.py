@@ -14,7 +14,7 @@ from butterflow import avinfo
 from butterflow.__init__ import __version__
 from butterflow.settings import default as settings
 from butterflow.flow import bgr_from_flow
-from butterflow.framesource import FrameSource
+from butterflow.source import FrameSource
 from butterflow.sequence import VideoSequence, RenderSubregion
 
 
