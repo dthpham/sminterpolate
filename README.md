@@ -37,8 +37,7 @@ for more demonstrations.
 With [`homebrew`](http://brew.sh/):
 
 ```
-brew tap homebrew/science
-brew install butterflow
+brew install homebrew/science/butterflow
 ```
 
 ###Arch Linux:
@@ -68,6 +67,8 @@ you're on Arch Linux, have a look at their
 [GPGPU wiki page](https://wiki.archlinux.org/index.php/GPGPU).
 
 ##Usage
+
+Run `butterflow -h` for a full list of options and their default values.
 
 See [Example Usage](https://github.com/dthpham/butterflow/wiki/Example-Usage)
 for typical commands.
