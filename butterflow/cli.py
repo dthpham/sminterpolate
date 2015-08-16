@@ -110,11 +110,6 @@ def main():
 
     if settings.default['debug_opts']:
         dbg = par.add_argument_group('Debugging arguments')
-        dbg.add_argument('--preview-flows', action='store_true',
-                         help='Set to preview optical flows')
-        dbg.add_argument('--make-flows', action='store_true',
-                         help='Set to render optical flows and write them to '
-                         'disk')
 
     args = par.parse_args()
 
@@ -216,16 +211,13 @@ def main():
         args.no_preview,
         args.add_info,
         args.text_type,
-        False,
-        False,
         settings.default['loglevel'],
         settings.default['enc_loglevel'],
         flow_kwargs)
 
     # apply debugging options
     if settings.default['debug_opts']:
-        renderer.preview_flows = args.preview_flows
-        renderer.make_flows = args.make_flows
+        pass
 
     motion.set_num_threads(settings.default['ocv_threads'])
     renderer.render()

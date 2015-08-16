@@ -4,7 +4,6 @@ from __future__ import absolute_import
 import os
 import sys
 import datetime
-from fractions import Fraction
 import math
 import shutil
 import subprocess
@@ -13,58 +12,49 @@ import numpy as np
 from butterflow import avinfo
 from butterflow.__init__ import __version__
 from butterflow.settings import default as settings
-from butterflow.flow import bgr_from_flow
 from butterflow.source import FrameSource
 from butterflow.sequence import VideoSequence, RenderSubregion
 
 
 class Renderer(object):
     def __init__(self, dst_path, video_info, video_sequence, playback_rate,
-        flow_func=settings['flow_func'],
-        interpolate_func=settings['interpolate_func'],
-        scale=settings['video_scale'], decimate=False, grayscale=False,
-        lossless=False, trim=False, show_preview=True, add_info=False,
-        text_type=settings['text_type'], preview_flows=False,
-        make_flows=False, loglevel=settings['loglevel'],
-        enc_loglevel=settings['enc_loglevel'], flow_kwargs=None):
-
+                 flow_func=settings['flow_func'],
+                 interpolate_func=settings['interpolate_func'],
+                 scale=settings['video_scale'],
+                 decimate=False,
+                 grayscale=False,
+                 lossless=False,
+                 trim=False,
+                 show_preview=True,
+                 add_info=False,
+                 text_type=settings['text_type'],
+                 loglevel=settings['loglevel'],
+                 enc_loglevel=settings['enc_loglevel'],
+                 flow_kwargs=None):
         self.dst_path = dst_path
         self.video_info = video_info
         self.video_sequence = video_sequence
         self.flow_func = flow_func
         self.interpolate_func = interpolate_func
-        # general options
         self.show_preview = show_preview
         self.text_type = text_type
         self.add_info = add_info
         self.loglevel = loglevel
         self.enc_loglevel = enc_loglevel
-        # video options
         self.playback_rate = float(playback_rate)
         self.scale = scale
         self.decimate = decimate
         self.grayscale = grayscale
         self.lossless = lossless
         self.trim = trim
-        # debugging options
-        self.preview_flows = preview_flows
-        self.make_flows = make_flows
-        # normalized video information
         self.nrm_info = None
-        # pipes
-        self.rendered_pipe = None
-        self.fwd_pipe = None
-        self.bwd_pipe = None
-        # information for the add info option
+        self.render_pipe = None
         self.flow_kwargs = flow_kwargs
         self.total_frs_wrt = 0
         self.subregions_to_render = 0
         self.curr_subregion_idx = 0
-        # window names
-        vid_name = os.path.basename(self.video_info['path'])
-        self.window_title = '{} - Butterflow'.format(vid_name)
-        self.fwd_window_title = '{} - Forward'.format(vid_name)
-        self.bwd_window_title = '{} - Backward'.format(vid_name)
+        self.window_title = '{} - Butterflow'.format(os.path.basename(
+            self.video_info['path']))
 
     def normalize_for_interpolation(self, dst_path):
         using_avconv = settings['avutil'] == 'avconv'
@@ -246,14 +236,14 @@ class Renderer(object):
             raise RuntimeError('could not create pipe')
         return pipe
 
-    def close_pipes(self):
-        for p in [self.rendered_pipe, self.fwd_pipe, self.bwd_pipe]:
-            if p is not None and not p.stdin.closed:
-                # flush does not necessarily write the file's data to disk. Use
-                # flush followed by os.fsync to ensure this behavior.
-                p.stdin.flush()
-                p.stdin.close()
-                p.wait()
+    def close_pipe(self):
+        p = self.render_pipe
+        if p is not None and not p.stdin.closed:
+            # flush does not necessarily write the file's data to disk. Use
+            # flush followed by os.fsync to ensure this behavior.
+            p.stdin.flush()
+            p.stdin.close()
+            p.wait()
 
     def write_frame_to_pipe(self, pipe, frame):
         try:
@@ -404,15 +394,6 @@ class Renderer(object):
 
                 fr_1_32 = np.float32(fr_1) * 1/255.0
                 fr_2_32 = np.float32(fr_2) * 1/255.0
-
-                if self.preview_flows or self.make_flows:
-                    fwd, bwd = bgr_from_flow(fu, fv, bu, bv)
-                    if self.preview_flows:
-                        cv2.imshow(self.fwd_window_title, fwd)
-                        cv2.imshow(self.bwd_window_title, bwd)
-                    if self.make_flows:
-                        self.write_frame_to_pipe(self.fwd_pipe, fwd)
-                        self.write_frame_to_pipe(self.bwd_pipe, bwd)
 
                 inter_frs = self.interpolate_func(
                     fr_1_32, fr_2_32, fu, fv, bu, bv, time_step)
@@ -573,7 +554,7 @@ class Renderer(object):
                         fr_to_wrt = np.asarray(fr_with_info)
 
                     # send the frame to the pipe
-                    self.write_frame_to_pipe(self.rendered_pipe, fr_to_wrt)
+                    self.write_frame_to_pipe(self.render_pipe, fr_to_wrt)
 
         # finished, we're outside of the main loop
         if settings['verbose']:
@@ -596,7 +577,7 @@ class Renderer(object):
         new_subregions = []
 
         if self.video_sequence.subregions is None or \
-            len(self.video_sequence.subregions) == 0:
+                len(self.video_sequence.subregions) == 0:
             # make a subregion from 0 to vid duration if there are no regions
             # in the video sequence. only framerate is changing.
             fa, ta = (0, 0)
@@ -669,7 +650,6 @@ class Renderer(object):
         relative positions after normalization because the video may have
         changed in frame count, frame rate, and duration.
         """
-        dst_dir = os.path.dirname(self.dst_path)
         dst_name, _ = os.path.splitext(os.path.basename(self.dst_path))
 
         src_path = self.video_info['path']
@@ -696,14 +676,8 @@ class Renderer(object):
 
         nrm_path = makepth('{}.nrm.mp4')
         rnd_path = makepth('{}.rnd.mp4')
-        rff_path = makepth('{}.rff.mp4')
-        rbf_path = makepth('{}.rbf.mp4')
         aud_path = makepth('{}_aud.ogg')
         sub_path = makepth('{}_sub.srt')
-
-        # destination paths for forward and backward flows
-        fwd_dst_path = os.path.join(dst_dir, '{}.fwd.mp4'.format(dst_name))
-        bwd_dst_path = os.path.join(dst_dir, '{}.bwd.mp4'.format(dst_name))
 
         if not os.path.exists(nrm_path):
             self.normalize_for_interpolation(nrm_path)
@@ -719,15 +693,7 @@ class Renderer(object):
 
         renderable_seq = self.renderable_sequence()
 
-        self.rendered_pipe = self.make_pipe(rnd_path, self.playback_rate)
-        if self.make_flows:
-            # use the original fps because flows are generated from src frames
-            # and aren't interpolated
-            fps = Fraction(self.video_info['rate_num'],
-                           self.video_info['rate_den'])
-            fps = float(fps)
-            self.fwd_pipe = self.make_pipe(rff_path, fps)
-            self.bwd_pipe = self.make_pipe(rbf_path, fps)
+        self.render_pipe = self.make_pipe(rnd_path, self.playback_rate)
 
         # make a resizable window
         if self.show_preview:
@@ -751,9 +717,9 @@ class Renderer(object):
             else:
                 self.render_subregion(frame_src, s)
 
-        if self.show_preview or self.preview_flows:
+        if self.show_preview:
             cv2.destroyAllWindows()
-        self.close_pipes()
+        self.close_pipe()
 
         speed_changed = False
         if self.video_sequence.subregions is not None:
@@ -792,10 +758,6 @@ class Renderer(object):
             except RuntimeError:
                 shutil.move(rnd_path, self.dst_path)
 
-        if self.make_flows:
-            shutil.move(rff_path, fwd_dst_path)
-            shutil.move(rbf_path, bwd_dst_path)
-
     def __del__(self):
-        """close any pipes that were inadvertently left open"""
-        self.close_pipes()
+        """close the pipe if it was inadvertently left open"""
+        self.close_pipe()

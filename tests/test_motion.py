@@ -6,7 +6,6 @@ from cv2 import calcOpticalFlowFarneback as sw_farneback_optical_flow
 import numpy as np
 from butterflow.motion import ocl_farneback_optical_flow, \
     ocl_interpolate_flow, set_cache_path
-from butterflow.flow import split_flow_components
 from butterflow import settings
 
 clb_dir = settings.default['clb_dir']
@@ -31,7 +30,9 @@ class OpticalFlowTestCase(unittest.TestCase):
         sw_flow = \
             sw_farneback_optical_flow(
                 self.fr_1_gr,self.fr_2_gr,0.5,3,15,3,7,1.5,False,0)
-        self.sw_u, self.sw_v = split_flow_components(sw_flow)
+        # split flow into horizontal and vertical components
+        self.sw_u = sw_flow[:,:,0]
+        self.sw_v = sw_flow[:,:,1]
 
     def _test_optical_flow_form(self, u, v):
         '''test if returns a flow field in the right form, doesnt
