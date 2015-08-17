@@ -378,11 +378,13 @@ class Renderer(object):
                 frs_mak += 1
             else:
                 # begin interpolating frames between pairs
+                # the frame being read should always be valid otherwise break
                 try:
                     fr_2 = framesrc.read()
                 except Exception as e:
-                    print(e)
-                    continue
+                    break
+                if fr_2 is None:
+                    break
                 src_gen += 1
 
                 # grayscaled images
@@ -697,10 +699,10 @@ class Renderer(object):
 
         # make a resizable window
         if self.show_preview:
-            if sys.platform.startswith('linux'):
-                flag = cv2.WINDOW_OPENGL
-            else:
+            if sys.platform.startswith('darwin'):
                 flag = cv2.WINDOW_NORMAL  # avoid opengl dependency on osx
+            else:
+                flag = cv2.WINDOW_OPENGL
             cv2.namedWindow(self.window_title, flag)
             cv2.resizeWindow(
                 self.window_title, self.nrm_info['width'],

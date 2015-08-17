@@ -1,8 +1,10 @@
 # compiled files
 *.pyc
+*.pyd
 *.o
 *.so
 *.clb
+*.def
 
 # misc
 *~
@@ -13,6 +15,11 @@
 bin
 lib
 include
+Scripts
+env
+
+#pip
+pip-selfcheck.json
 
 #setuptools
 build
@@ -23,6 +30,11 @@ __pycache__
 
 #nosetests
 .coverage
+
+#visualstudio
+.vs
+*.pyproj*
+*.sln
 
 #development
 tags

@@ -14,7 +14,8 @@ default = {
     # `ffmpeg` and `avconv` options
     'avutil':         'ffmpeg',
     # avutil and encoder loglevel
-    'loglevel':       'info',
+    # `info` is default, set to `fatal` for quiet
+    'loglevel':       'fatal',
     'enc_loglevel':   'error',
     'preset':         'fast',
     'crf':            18,

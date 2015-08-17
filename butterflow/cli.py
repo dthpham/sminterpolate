@@ -14,7 +14,7 @@ NO_OCL_WARNING = 'No compatible OCL devices detected. Check your OpenCL '\
 
 
 def main():
-    par = argparse.ArgumentParser(usage='%(prog)s [options] [video]',
+    par = argparse.ArgumentParser(usage='butterflow [options] [video]',
                                   add_help=False)
     req = par.add_argument_group('Required arguments')
     gen = par.add_argument_group('General options')

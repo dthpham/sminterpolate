@@ -16,9 +16,9 @@ with open('butterflow/__init__.py', 'rb') as f:
     version = str(ast.literal_eval(version_re.search(
         f.read().decode('utf-8')).group(1)))
 
-PKG_PATH = os.path.join(os.path.dirname(os.path.realpath(__file__)),
+pkgdir = os.path.join(os.path.dirname(os.path.realpath(__file__)),
                         'butterflow')
-VND_PATH = os.path.join(PKG_PATH, '3rdparty')
+vendordir = os.path.join(pkgdir, 'vendor')
 
 _build_debug = 'dev' in version
 
@@ -210,8 +210,6 @@ def brew_pkg_installed(pkg):
 py_ver_X = sys.version_info.major
 py_ver_Y = sys.version_info.minor
 py_ver = '{}.{}'.format(py_ver_X, py_ver_Y)
-py_local_lib = '/usr/local/lib/python{}'.format(py_ver)
-py_systm_lib = '/usr/lib/python{}'.format(py_ver)
 
 homebrew_prefix = None
 homebrew_site_pkgs = None
@@ -255,6 +253,9 @@ def check_dependencies():
         if not have_library_object_file(x, y):
             return False, '{} library is missing object file {}'.format(x, y)
 
+    py_local_lib = '/usr/local/lib/python{}'.format(py_ver)
+    py_systm_lib = '/usr/lib/python{}'.format(py_ver)
+
     # Debian based distros use dist-packages
     sys.path.insert(1, os.path.join(py_local_lib, 'site-packages'))
     sys.path.insert(2, os.path.join(py_local_lib, 'dist-packages'))
@@ -273,35 +274,46 @@ def check_dependencies():
         return False, 'opencv built with BUILD_opencv_python=ON required'
     return True, None
 
+cflags      = []    # compilation flags
+includes    = []    # search paths for header files
+ldflags     = []    # library search paths
+linkflags   = []    # linker flags
+py_includes = None  # python header files
+py_libs     = None  # python library search paths
+libav_libs  = ['avcodec', 'avformat', 'avutil']
 
-cflags = []
+# global cflags
 if _build_debug:
-    cflags.extend(['-Wall'])
-    cflags.extend(['-g'])  # turn off debugging symbols for release
+    cflags.append('-Wall')
+    cflags.append('-g')  # turn off debugging symbols for release
     cflags.extend(['-O0', '-fbuiltin'])  # other debug options
 cflags.extend(['-Wno-unused-variable',
                '-Wno-unused-function'])  # Disable annoying warnings
+
 if sys.platform.startswith('linux'):
-    cflags.extend(['-Wno-cpp'])
+    cflags.append('-Wno-cpp')
 elif sys.platform.startswith('darwin'):
     cflags.extend(['-Wno-shorten-64-to-32', '-Wno-overloaded-virtual',
                    '-Wno-#warnings'])
-linkflags = []
-includes = ['/usr/include', '/usr/local/include']
-ldflags = [
-    #'/usr/lib',
-    '/usr/local/lib']
-py_includes = None
-py_libs = None
-libav_libs = ['avcodec', 'avformat', 'avutil']
-py_prefix = subprocess.Popen(['python{}-config'.format(py_ver), '--prefix'],
-                             stdout=subprocess.PIPE,
-                             env=get_extra_envs()).stdout.read().strip()
+else:
+    cflags.append('-DMS_WIN64')  # code specific to the MS Win64 API
+
+if sys.platform.startswith('win'):
+    libav = os.path.join(vendordir, 'ffmpeg', 'dev')
+    includes.extend([os.path.join(libav, 'include')])
+    ldflags.extend( [os.path.join(libav, 'lib')])
+else:
+    includes = ['/usr/include', '/usr/local/include']
+    ldflags  = ['/usr/local/lib']
+
 if sys.platform.startswith('linux'):
     #py_includes = pkg_config_res('--cflags', 'python-{}'.format(py_ver))
     #py_libs = pkg_config_res('--libs', 'python-{}'.format(py_ver))
     linkflags.extend(['-shared', '-Wl,--export-dynamic'])
 elif sys.platform.startswith('darwin'):
+    py_prefix = subprocess.Popen(['python{}-config'.format(py_ver), '--prefix'],
+                             stdout=subprocess.PIPE,
+                             env=get_extra_envs()).stdout.read().strip()
     linkflags.extend(['-arch', 'x86_64'])
     ldflags.append(os.path.join(py_prefix, 'lib'))
     if homebrew_prefix is not None:
@@ -321,8 +333,7 @@ elif sys.platform.startswith('darwin'):
         # explict link allows symbols to be resolved at import time. `otool -L
         # <module>.so` shouldn't mention `Python`.
         # See: https://github.com/Homebrew/homebrew-science/pull/1886
-
-    linkflags.extend(['-Wl,-undefined,dynamic_lookup'])
+    linkflags.append('-Wl,-undefined,dynamic_lookup')
     # py_includes = os.path.join(py_prefix, 'include',
     #                            'python{}'.format(py_ver))
     # linkflags.append(os.path.join(py_prefix,
@@ -337,33 +348,24 @@ avinfo = Extension(
     libraries=build_lst(libav_libs, py_libs),
     library_dirs=ldflags,
     sources=[
-        os.path.join(PKG_PATH, 'avinfo.c'),
+        os.path.join(pkgdir, 'avinfo.c'),
     ],
     language='c'
 )
 
-cl_ldflag = None
-cl_lib = None
+cl_ldflag = None  # opencl library search path
+cl_lib    = None  # name of the opencl library
+
 if sys.platform.startswith('linux'):
     # Use install path and a filename namespec to specify the OpenCL library
     cl_ldflag = os.path.dirname(get_lib_installed_path('libOpenCL'))
     cl_lib = get_lib_filename_namespec('libOpenCL')
-    pass
 elif sys.platform.startswith('darwin'):
-    if homebrew_prefix is not None:
-        # Homebrew opencv uses a brewed numpy by default but it's possible for
-        # a user to their own or the system one if the `--without-brewed-numpy`
-        # option is used.
-        #
-        # Note: usually all pythonX.Y packages with headers are placed in
-        # `/usr/include/pythonX.Y/<package>` or `/usr/local/include/` but
-        # homebrew policy is to put them in `site-packages`
-        includes.append(os.path.join(homebrew_site_pkgs, 'numpy/core/include'))
-    else:
-        includes.append(os.path.join('/System/Library/Frameworks/'
-                                     'Python.framework/Versions/{}/Extras/lib/'
-                                     'python/numpy/core/include'.format(py_ver)))
     linkflags.extend(['-framework', 'OpenCL'])
+else:
+    includes.append(os.path.join(vendordir, 'opencl-headers', 'include'))
+    cl_ldflag = os.path.join(vendordir, 'khronos-ocl-icd', 'lib')
+    cl_lib = 'OpenCL'
 
 ocl = Extension(
     'butterflow.ocl',
@@ -372,38 +374,57 @@ ocl = Extension(
     include_dirs=build_lst(includes, py_includes),
     libraries=build_lst(py_libs, cl_lib),
     library_dirs=build_lst(ldflags, cl_ldflag),
-    sources=[
-        os.path.join(PKG_PATH, 'ocl.c'),
-    ],
+    sources=[os.path.join(pkgdir, 'ocl.c')],
     language='c'
 )
 
 cxxflags = cflags
-cv_includes = pkg_config_res('--cflags', 'opencv')
-# cv_libs = pkg_config_res('--libs', 'opencv')
-cv_libs = ['opencv_core', 'opencv_ocl', 'opencv_imgproc']
+cv_includes = None
+cv_libs  = ['opencv_core', 'opencv_ocl', 'opencv_imgproc']
+if sys.platform.startswith('win'):
+    # path to numpy headers
+    import site
+    includes.extend([os.path.join(s, 'numpy', 'core', 'include') for s in
+                   site.getsitepackages()])
+    # path to cv headers and libraries
+    cv_dir = os.path.join(vendordir, 'opencv')
+    cv_includes = os.path.join(cv_dir, 'include')
+    ldflags.append(os.path.join(cv_dir, 'lib'))
+    # add version number to lib names
+    cv_libs = ['{}2411'.format(x) for x in cv_libs]
+else:
+    cv_includes = pkg_config_res('--cflags', 'opencv')
+    if sys.platform.startswith('darwin'):
+        if homebrew_prefix is not None:
+            # Homebrew opencv uses a brewed numpy by default but it's possible
+            # for a user to their own or the system one if the
+            # `--without-brewed-numpy` option is used.
+            #
+            # Note: usually all pythonX.Y packages with headers are placed in
+            # `/usr/include/pythonX.Y/<package>` or `/usr/local/include/` but
+            # homebrew policy is to put them in `site-packages`
+            includes.append(os.path.join(homebrew_site_pkgs,
+                                         'numpy/core/include'))
+        else:
+            includes.append(os.path.join('/System/Library/Frameworks/'
+                                         'Python.framework/Versions/{}/Extras/'
+                                         'lib/python/numpy/core/include'\
+                                         .format(py_ver)))
 
 motion = Extension(
     'butterflow.motion',
-    extra_compile_args=build_lst(
-        cxxflags,
-        # '-std=c++11'
-    ),
+    extra_compile_args=cxxflags,
     extra_link_args=linkflags,
-    include_dirs=build_lst(VND_PATH, includes, cv_includes, py_includes),
+    include_dirs=build_lst(vendordir, includes, cv_includes, py_includes),
     libraries=build_lst(cv_libs, py_libs, cl_lib),
     library_dirs=build_lst(ldflags, cl_ldflag),
-    sources=[
-        os.path.join(VND_PATH, 'opencv-ndarray-conversion/conversion.cpp'),
-        os.path.join(PKG_PATH, 'motion.cpp'),
-    ],
-    depends=[
-        os.path.join(VND_PATH, 'opencv-ndarray-conversion/conversion.h'),
-    ],
+    sources=[os.path.join(vendordir, 'opencv-ndarray-conversion/conversion.cpp'),
+             os.path.join(pkgdir, 'motion.cpp')],
+    depends=[os.path.join(vendordir, 'opencv-ndarray-conversion/conversion.h')],
     language='c++'
 )
 
-if _build_debug:
+if not sys.platform.startswith('win') and _build_debug:
     ret, error = check_dependencies()
     if not ret:
         print(error)
@@ -419,7 +440,7 @@ setup(
     url='https://github.com/dthpham/butterflow',
     download_url='http://srv.dthpham.me/butterflow-{}.tar.gz'.format(
         version),
-    description='Makes slow motion and smooth motion videos',
+    description='Makes slow motion and motion interpolated videos',
     long_description=get_long_description(),
     keywords=['slowmo', 'slow motion', 'smooth motion',
               'motion interpolation'],

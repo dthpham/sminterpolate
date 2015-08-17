@@ -174,7 +174,7 @@ ocl_interpolate_flow(PyObject *self, PyObject *args) {
 
         Py_DECREF(py_new_fr);
 
-        assert(py_fr->ob_refcnt == 1);
+        assert(py_new_fr->ob_refcnt == 1);
     }
 
     return py_frs;
