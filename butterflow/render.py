@@ -84,6 +84,8 @@ class Renderer(object):
             '-y',
             '-threads', '0',
             '-i', self.video_info['path'],
+            '-map_metadata', '-1',
+            '-map_chapters', '-1',
             '-vf', ','.join(vf),
             '-sws_flags', scaler
         ]
