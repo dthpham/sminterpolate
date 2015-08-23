@@ -115,7 +115,7 @@ def main():
 
     if args.version:
         print(__version__)
-        exit(0)
+        return 0
 
     have_ocl = ocl.ocl_device_available()
     if args.devices:
@@ -123,7 +123,7 @@ def main():
             ocl.print_ocl_devices()
         else:
             print(NO_OCL_WARNING)
-        exit(0)
+        return 0
 
     if have_ocl:
         cache_dir = settings.default['clb_dir']
@@ -132,20 +132,20 @@ def main():
         motion.set_cache_path(cache_dir + os.sep)
     else:
         print(NO_OCL_WARNING)
-        exit(1)
+        return 1
 
     src_path = args.video
     if src_path is None:
         print('No input video specified')
-        exit(0)
+        return 0
 
     if not os.path.exists(args.video):
         print('Video does not exist at path')
-        exit(1)
+        return 1
 
     if settings.default['avutil'] == 'none':
         print('You need `ffmpeg` or `avconv` to use this app')
-        exit(1)
+        return 1
 
     settings.default['verbose'] = args.verbose
 
@@ -183,18 +183,18 @@ def main():
         vid_info = avinfo.get_info(args.video)
     except Exception:
         print('Could not get video information')
-        exit(1)
+        return 1
 
     if not vid_info['v_stream_exists']:
         print('No video stream detected')
-        exit(1)
+        return 1
 
     try:
         vid_sequence = sequence_from_str(
             vid_info['duration'], vid_info['frames'], args.sub_regions)
     except Exception as e:
         print('Invalid subregion string: {}'.format(e))
-        exit(1)
+        return 1
 
     renderer = Renderer(
         args.output_path,

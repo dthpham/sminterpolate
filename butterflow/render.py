@@ -681,7 +681,7 @@ class Renderer(object):
         nrm_path = makepth('{}.nrm.mp4')
         rnd_path = makepth('{}.rnd.mp4')
         aud_path = makepth('{}_aud.ogg')
-        sub_path = makepth('{}_sub.srt')
+        sub_path = makepth('{}_sub.srt')        
 
         if not os.path.exists(nrm_path):
             self.normalize_for_interpolation(nrm_path)

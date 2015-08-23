@@ -1,130 +1,143 @@
 #!/usr/bin/env python2
+# -*- coding: utf-8 -*-
+"""
+This setup script will build the application for Linux, OS X, and Windows.
 
+A frozen distribution of the application (with the python interpreter and third
+party libraries embedded) can be built for Windows if cx_Freeze is installed.
+
+"""
 import os
-import re
-import ast
-from ctypes.util import find_library
-from setuptools import setup, find_packages, Extension
-import subprocess
 import sys
+import ast
+import re
+import subprocess
+from ctypes.util import find_library
+from setuptools import find_packages, Extension
 
 
-# don't want to import __init__
+# get version number (avoid importing from package)
 version_re = re.compile(r'__version__\s+=\s+(.*)')
-
 with open('butterflow/__init__.py', 'rb') as f:
     version = str(ast.literal_eval(version_re.search(
         f.read().decode('utf-8')).group(1)))
 
-pkgdir = os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                        'butterflow')
-vendordir = os.path.join(pkgdir, 'vendor')
+# directories
+rootdir   = os.path.abspath(os.sep)
+topdir    = os.path.join(os.path.dirname(os.path.realpath(__file__)))
+pkgdir    = os.path.join(topdir, 'butterflow')
+vendordir = os.path.join(topdir, 'vendor')
 
-_build_debug = 'dev' in version
-
-
-def get_long_description():
-    '''Convert README.md to .rst for PyPi, requires pandoc'''
-    long_description = ''
-    try:
-        import pandoc
-        proc = subprocess.Popen(
-            ['which pandoc'],
-            shell=True,
-            stdout=subprocess.PIPE,
-            universal_newlines=True
-        )
-        pandoc_path = proc.communicate()[0]
-        pandoc_path = pandoc_path.strip()
-        pandoc.core.PANDOC_PATH = pandoc_path
-
-        doc = pandoc.Document()
-        doc.markdown = open('README.md', 'r').read()
-        long_description = doc.rst
-
-        # fix interpreted text links when converting to rst
-        new_description = []
-        re_interpreted_txt_link = r'(```.*``\s<.*>`__)'
-        matcher = re.compile(r'^```(.*)``\s<(.*)>`__$')
-        for x in re.split(re_interpreted_txt_link, long_description):
-            matches = matcher.match(x)
-            if matches:
-                txt, link = matches.groups()
-                new_txt = '``{}``'.format(txt)
-                x = new_txt
-            new_description.append(x)
-
-        long_description = ''.join(new_description)
-    except ImportError:
-        pass
-    return long_description
+# are we building a development version?
+building = True
+for x in sys.argv:
+    if x.startswith('build'):
+        building = False
+is_devbuild = 'dev' in version and not building
 
 
-def get_extra_envs():
-    '''returns a modified environment. needed when running as root as it
-    automatically clears some for safety which may cause certain calls, to
-    pkg-config for example, to fail. installs may fail without passing this env
-    to a subprocess'''
-    env = os.environ.copy()
-    local_pkg_config_paths = \
-        '/usr/local/lib/pkgconfig:'\
-        '/usr/local/pkgconfig:'\
-        '/usr/share/pkgconfig'
-    if 'PKG_CONFIG_PATH' in env:
-        pkg_config_path = env['PKG_CONFIG_PATH']
-        pkg_config_path = pkg_config_path + ':' + local_pkg_config_paths
-        env['PKG_CONFIG_PATH'] = pkg_config_path
-    else:
-        env['PKG_CONFIG_PATH'] = local_pkg_config_paths
-    return env
-
-
-def have_command(name):
-    '''checks if a command is callable on the system'''
-    proc = subprocess.call(['which', name], stdout=open(os.devnull, 'w'),
+def have_cmd(c):
+    """Checks if a command is callable on the system.
+    """
+    proc = subprocess.call(['which', c], stdout=open(os.devnull, 'w'),
                            stderr=subprocess.STDOUT)
     return (proc == 0)
 
 
-def have_library(name):
-    '''check if a library is installed on the system using
-    ctypes.util.find_library, fallback to pkg-config if not found. find_library
-    will run external programs (ldconfig, gcc, and objdump) to find library
-    files'''
-    short_name = get_lib_short_name(name)
+def have_library(l):
+    """Checks if a library is installed on the system using `ctypes.util.
+    find_library`. `find_library` will run external programs such as
+    `ldconfig`, `gcc`, and `objdump` to find library files. This will fall back
+    to using `pkg-config` if it is not found.
+    """
+    short_name = get_lib_short_name(l)
     res = find_library(short_name)
     if res:
         return True
     else:
-        proc = subprocess.call(['pkg-config', '--exists', name],
+        proc = subprocess.call(['pkg-config', '--exists', l],
                                env=get_extra_envs())
         return (proc == 0)
 
 
-def have_library_object_file(libname, name):
-    '''check if library has specific object file'''
-    if have_library(libname):
-        call = ['pkg-config', '--libs', libname]
-        res = subprocess.Popen(
-            call,
-            stdout=subprocess.PIPE,
-            env=get_extra_envs()).stdout.read()
+def have_library_object_file(lib, objfilename):
+    """Check if a library object file exists.
+    """
+    if have_library(lib):
+        call = ['pkg-config', '--libs', lib]
+        res = subprocess.Popen(call, stdout=subprocess.PIPE,
+                               env=get_extra_envs()).stdout.read()
         res = res.strip()
         res = res.split(' ')
         res = map(get_lib_short_name, res)
-        return get_lib_short_name(name) in res
+        return (get_lib_short_name(objfilename) in res)
     else:
         return False
 
 
-def pkg_config_res(*opts):
-    '''takes opts for a pkg-config command and returns a list of strings that
-    are compatible with setuptools
-    '''
+def get_lib_installed_path(l):
+    """Use `ldconfig` to find the full installation path of a library
+    """
+    call = ['ldconfig', '-p']
+    res = subprocess.Popen(call, stdout=subprocess.PIPE,
+                           universal_newlines=True).stdout.read()
+    if l not in res:
+        return None
+    res = res.split('\n\t')
+    for x in res:
+        if x.startswith(l):
+            y = x.split('=>')
+            return y[1].strip()
+    return None
+
+
+def get_lib_short_name(l):
+    """"Returns a `setuptools` compatible library name - without prefixes and
+    suffixes such as `.so`, `.dylib` or version number.
+    """
+    l = l.strip()
+    l = os.path.basename(l)
+    if l.startswith('-l'):
+        l = l[2:]
+    elif l.startswith('lib'):
+        l = l[3:]
+    cut_at_str = lambda x, y: x[:x.find(y)] if x.find(y) != -1 else x
+    l = cut_at_str(l, '.so')
+    l = cut_at_str(l, '.dylib')
+    l = cut_at_str(l, '.a')
+    return l
+
+
+def get_lib_filename_namespec(l):
+    """Returns a library's namespec in the form `:<filename>`.
+
+    `ld` will search the library path for a file called `<filename>`, otherwise
+    it will search the library path for a file called `libnamespec.a`.
+    """
+    return ':' + os.path.basename(get_lib_installed_path(l))
+
+
+def mklist(*items):
+    """Collects string and lists and returns a single list with all duplicate
+    items removed.
+    """
+    s = set([])
+    for x in items:
+        if isinstance(x, str):
+            s.add(x)
+        elif isinstance(x, list):
+            for y in x:
+                s.add(y)
+    return list(s)
+
+
+def pkg_config_res_to_setuptools(*opts):
+    """Takes options from `pkg-config` and returns a list of strings that are
+    compatible with `setuptools`.
+    """
     call = ['pkg-config']
     call.extend(opts)
-    res = subprocess.Popen(call,
-                           stdout=subprocess.PIPE,
+    res = subprocess.Popen(call, stdout=subprocess.PIPE,
                            env=get_extra_envs()).stdout.read()
     res = res.strip()
     res = res.split(' ')
@@ -140,71 +153,6 @@ def pkg_config_res(*opts):
         else:
             lst.append(get_lib_short_name(x))
     return lst
-
-
-def get_lib_installed_path(libname):
-    '''use ldconfig to find the full installation path of a library'''
-    call = ['ldconfig', '-p']
-    res = subprocess.Popen(call,
-                           stdout=subprocess.PIPE,
-                           universal_newlines=True).stdout.read()
-    if libname not in res:
-        return None
-    res = res.split('\n\t')
-    for x in res:
-        if x.startswith(libname):
-            y = x.split('=>')
-            return y[1].strip()
-    return None
-
-
-def get_lib_filename_namespec(libname):
-    '''returns library's namespec in the form :filename. ld will search the
-    library path for a file called filename, otherwise it will search the
-    library path for a file called libnamespec.a.'''
-    return ':' + os.path.basename(get_lib_installed_path(libname))
-
-
-def get_lib_short_name(name):
-    '''returns a setuptools compatible lib name, without lib prefixes and
-    suffixes such as .so, .dylib or version number'''
-    name = name.strip()
-    name = os.path.basename(name)
-    if name.startswith('-l'):
-        name = name[2:]
-    if name.startswith('lib'):
-        name = name[3:]
-
-    chomp_at_string = lambda x, y: \
-        x[:x.find(y)] if x.find(y) != -1 else x
-    name = chomp_at_string(name, '.so')
-    name = chomp_at_string(name, '.dylib')
-    name = chomp_at_string(name, '.a')
-    return name
-
-
-def build_lst(*items):
-    '''collects multiple string and lists items into a single list with all
-    duplicates removed'''
-    item_set = set([])
-    for x in items:
-        if isinstance(x, str):
-            item_set.add(x)
-        if isinstance(x, list):
-            for y in x:
-                item_set.add(y)
-    return list(item_set)
-
-
-def brew_pkg_installed(pkg):
-    """Returns True if a brewed package is installed"""
-    if have_command('brew'):
-        brew_ls = subprocess.Popen(['brew', 'ls', '--versions', pkg],
-                                   stdout=subprocess.PIPE,
-                                   env=get_extra_envs()).stdout.read().strip()
-        return (brew_ls != '')
-    else:
-        return False
 
 
 py_ver_X = sys.version_info.major
@@ -225,227 +173,217 @@ except Exception:
 if homebrew_prefix is not None:
     homebrew_site_pkgs = os.path.join(homebrew_prefix, 'lib/python{}/'
                                       'site-packages/'.format(py_ver))
+    # Because some formulae provide python bindings, homebrew builds
+    # bindings against the first `python` (and `python-config`) in `PATH`
+    # (check `which python`).
+    #
+    # Hombrew site-packages should preceed all others on sys.path if it
+    # exists:
+    sys.path.insert(1, homebrew_site_pkgs)
 
+cflags       = []      # compilation flags
+includes     = []      # search paths for header files
+ldflags      = []      # library search paths
+linkflags    = []      # linker flags
+py_includes  = None    # python header files
+py_libs      = None    # python library search paths
+libav_libs   = ['avcodec', 'avformat', 'avutil']
+cl_ldflag    = None    # opencl library search path
+cl_lib       = None    # name of the opencl library
+cl_includes  = None    # opencl header search paths
+cl_linkflags = None
+cxxflags     = cflags
+np_includes  = None    # numpy header search paths
+cv_includes  = None    # search path for opencv header files
+cv_ldflags   = None    # opencv library search paths
+cv_libs      = ['opencv_core', 'opencv_ocl', 'opencv_imgproc']
+cv_ver       = 2411    # cv library version
 
-def check_dependencies():
-    '''verifies if all dependencies have been met'''
-    if py_ver_X != 2:
-        return False, 'Python {} is not version 2.x'.format(py_ver)
-    tools = ['pkg-config']
-    # ldconfig is not guaranteed on OS X
-    if sys.platform.startswith('linux'):
-        tools.append('ldconfig')
-    tools.append('python{}-config'.format(py_ver))
-    for x in tools:
-        if not have_command(x):
-            return False, '{} is needed to complete the build process'.format(x)
-    for x in ['opencv',
-              'avformat',
-              'avcodec',
-              'avutil',
-              'OpenCL']:
-        if not have_library(x):
-            return False, '{} library is needed to complete the build process'.\
-                format(x)
-    for x, y in [('opencv', 'libopencv_ocl.so'),
-                 ('opencv', 'libopencv_core.so'),
-                 ('opencv', 'libopencv_imgproc.so')]:
-        if not have_library_object_file(x, y):
-            return False, '{} library is missing object file {}'.format(x, y)
+is_win = sys.platform.startswith('win')
+is_osx = sys.platform.startswith('darwin')
+is_nix = sys.platform.startswith('linux')
 
-    py_local_lib = '/usr/local/lib/python{}'.format(py_ver)
-    py_systm_lib = '/usr/lib/python{}'.format(py_ver)
-
-    # Debian based distros use dist-packages
-    sys.path.insert(1, os.path.join(py_local_lib, 'site-packages'))
-    sys.path.insert(2, os.path.join(py_local_lib, 'dist-packages'))
-    sys.path.insert(3, os.path.join(py_systm_lib, 'site-packages'))
-    sys.path.insert(4, os.path.join(py_systm_lib, 'dist-packages'))
-    if homebrew_site_pkgs is not None:
-        # Because some formulae provide python bindings, homebrew builds
-        # bindings against the first `python` (and `python-config`) in `PATH`
-        # (check `which python`).
-        # Hombrew site-packages should preceed all others on sys.path if it
-        # exists:
-        sys.path.insert(1, homebrew_site_pkgs)
-    try:
-        import cv2
-    except ImportError:
-        return False, 'opencv built with BUILD_opencv_python=ON required'
-    return True, None
-
-cflags      = []    # compilation flags
-includes    = []    # search paths for header files
-ldflags     = []    # library search paths
-linkflags   = []    # linker flags
-py_includes = None  # python header files
-py_libs     = None  # python library search paths
-libav_libs  = ['avcodec', 'avformat', 'avutil']
+# windows vendor dirs
+if is_win:
+    various_dir = os.path.join(vendordir, 'various', 'bin')
+    cl_dir = os.path.join(vendordir, 'opencl')
+    cv_dir = os.path.join(vendordir, 'opencv')
 
 # global cflags
-if _build_debug:
+if is_devbuild:
     cflags.append('-Wall')
     cflags.append('-g')  # turn off debugging symbols for release
-    cflags.extend(['-O0', '-fbuiltin'])  # other debug options
-cflags.extend(['-Wno-unused-variable',
-               '-Wno-unused-function'])  # Disable annoying warnings
+    cflags.extend(['-O0', '-fbuiltin'])
 
-if sys.platform.startswith('linux'):
+# building with msvc?
+if is_win:
+    # http://bugs.python.org/issue11722
+    # cflags.append('-DMS_WIN64')  # code specific to the MS Win64 API
+    # cflags.append('-DWIN32')     # and to the MS Win32 API
+    pass
+
+# disable warnings that are safe to ignore
+cflags.extend(['-Wno-unused-variable', '-Wno-unused-function'])
+if is_nix or is_win:
     cflags.append('-Wno-cpp')
-elif sys.platform.startswith('darwin'):
+elif is_osx:
     cflags.extend(['-Wno-shorten-64-to-32', '-Wno-overloaded-virtual',
                    '-Wno-#warnings'])
-else:
-    cflags.append('-DMS_WIN64')  # code specific to the MS Win64 API
 
-if sys.platform.startswith('win'):
-    libav = os.path.join(vendordir, 'ffmpeg', 'dev')
-    includes.extend([os.path.join(libav, 'include')])
-    ldflags.extend( [os.path.join(libav, 'lib')])
-else:
-    includes = ['/usr/include', '/usr/local/include']
-    ldflags  = ['/usr/local/lib']
-
-if sys.platform.startswith('linux'):
-    #py_includes = pkg_config_res('--cflags', 'python-{}'.format(py_ver))
-    #py_libs = pkg_config_res('--libs', 'python-{}'.format(py_ver))
+# global link flags
+if is_nix:
     linkflags.extend(['-shared', '-Wl,--export-dynamic'])
-elif sys.platform.startswith('darwin'):
-    py_prefix = subprocess.Popen(['python{}-config'.format(py_ver), '--prefix'],
-                             stdout=subprocess.PIPE,
-                             env=get_extra_envs()).stdout.read().strip()
-    linkflags.extend(['-arch', 'x86_64'])
-    ldflags.append(os.path.join(py_prefix, 'lib'))
-    if homebrew_prefix is not None:
-        # The system python may not know which compiler flags to set to build
-        # bindings for software installed in Homebrew so this may be needed:
-        includes.append(os.path.join(homebrew_prefix, 'include'))
-        ldflags.append(os.path.join(homebrew_prefix, 'lib'))
-        # Don't explicity link against the system python on OSX to prevent
-        # segfaults arising from modules being built with one python (i.e.
-        # system python) and imported from a foreign python (i.e. brewed
-        # python).
-        # See: https://github.com/Homebrew/homebrew/blob/master/share/doc/
-        # homebrew/Common-Issues.md#python-segmentation-fault-11-on-import-
-        # some_python_module
-        #
-        # Building modules with `-undefined dynamic_lookup` instead of an
-        # explict link allows symbols to be resolved at import time. `otool -L
-        # <module>.so` shouldn't mention `Python`.
-        # See: https://github.com/Homebrew/homebrew-science/pull/1886
+elif is_osx:
+    # Don't explicity link against the system python on OSX to prevent
+    # segfaults arising from modules being built with one python (i.e.
+    # system python) and imported from a foreign python (i.e. brewed
+    # python).
+    #
+    # See: https://github.com/Homebrew/homebrew/blob/master/share/doc/
+    # homebrew/Common-Issues.md#python-segmentation-fault-11-on-import-
+    # some_python_module
+    #
+    # Building modules with `-undefined dynamic_lookup` instead of an
+    # explict link allows symbols to be resolved at import time. `otool -L
+    # <module>.so` shouldn't mention `Python`.
+    # See: https://github.com/Homebrew/homebrew-science/pull/1886
     linkflags.append('-Wl,-undefined,dynamic_lookup')
-    # py_includes = os.path.join(py_prefix, 'include',
-    #                            'python{}'.format(py_ver))
-    # linkflags.append(os.path.join(py_prefix,
-    #                              'lib/libpython{}.dylib'.format(py_ver)))
-    # py_libs = ['python{}'.format(py_ver)]
+    linkflags.extend(['-arch', 'x86_64'])
 
-avinfo = Extension(
-    'butterflow.avinfo',
-    extra_compile_args=cflags,
-    extra_link_args=linkflags,
-    include_dirs=build_lst(includes, py_includes),
-    libraries=build_lst(libav_libs, py_libs),
-    library_dirs=ldflags,
-    sources=[
-        os.path.join(pkgdir, 'avinfo.c'),
-    ],
-    language='c'
-)
-
-cl_ldflag = None  # opencl library search path
-cl_lib    = None  # name of the opencl library
-
-if sys.platform.startswith('linux'):
+avinfo_ext = Extension('butterflow.avinfo',
+                       extra_compile_args=cflags,
+                       extra_link_args=linkflags,
+                       libraries=libav_libs,
+                       sources=[os.path.join(pkgdir, 'avinfo.c')],
+                       language='c')
+# opencl flags
+if is_nix:
     # Use install path and a filename namespec to specify the OpenCL library
     cl_ldflag = os.path.dirname(get_lib_installed_path('libOpenCL'))
     cl_lib = get_lib_filename_namespec('libOpenCL')
-elif sys.platform.startswith('darwin'):
-    linkflags.extend(['-framework', 'OpenCL'])
-else:
-    includes.append(os.path.join(vendordir, 'opencl-headers', 'include'))
-    cl_ldflag = os.path.join(vendordir, 'khronos-ocl-icd', 'lib')
+elif is_osx:
+    cl_linkflags = ['-framework', 'OpenCL']
+elif is_win:
+    cl_includes = os.path.join(cl_dir, 'include')
+    cl_ldflag = os.path.join(cl_dir, 'lib')
     cl_lib = 'OpenCL'
 
-ocl = Extension(
-    'butterflow.ocl',
-    extra_compile_args=cflags,
-    extra_link_args=linkflags,
-    include_dirs=build_lst(includes, py_includes),
-    libraries=build_lst(py_libs, cl_lib),
-    library_dirs=build_lst(ldflags, cl_ldflag),
-    sources=[os.path.join(pkgdir, 'ocl.c')],
-    language='c'
-)
+ocl_ext = Extension('butterflow.ocl',
+                    extra_compile_args=cflags,
+                    extra_link_args=mklist(linkflags, cl_linkflags),
+                    include_dirs=mklist(cl_includes),
+                    libraries=mklist(cl_lib),
+                    library_dirs=mklist(cl_ldflag),
+                    sources=[os.path.join(pkgdir, 'ocl.c')],
+                    language='c')
 
-cxxflags = cflags
-cv_includes = None
-cv_libs  = ['opencv_core', 'opencv_ocl', 'opencv_imgproc']
-if sys.platform.startswith('win'):
-    # path to numpy headers
+# numpy flags
+if is_osx:
+    if homebrew_prefix is not None:
+        # Homebrew opencv uses a brewed numpy by default but it's possible for
+        # a user to their own or the system one if the `--without-brewed-numpy`
+        # option is used.
+        #
+        # Note: usually all pythonX.Y packages with headers are placed in
+        # `/usr/include/pythonX.Y/<package>` or `/usr/local/include/` but
+        # homebrew policy is to put them in `site-packages`
+        np_includes = os.path.join(homebrew_site_pkgs, 'numpy/core/include')
+    else:
+        np_includes = '/System/Library/Frameworks/Python.framework/Versions/'\
+                      '{}/Extras/lib/python/numpy/core/include'.format(py_ver)
+elif is_win:
     import site
-    includes.extend([os.path.join(s, 'numpy', 'core', 'include') for s in
-                   site.getsitepackages()])
+    np_includes = [os.path.join(dir, 'numpy', 'core', 'include') for dir in
+                   site.getsitepackages()]
+
+# opencv flags
+if is_nix or is_osx:
+    cv_includes = pkg_config_res_to_setuptools('--cflags', 'opencv')
+elif is_win:
     # path to cv headers and libraries
-    cv_dir = os.path.join(vendordir, 'opencv')
     cv_includes = os.path.join(cv_dir, 'include')
-    ldflags.append(os.path.join(cv_dir, 'lib'))
-    # add version number to lib names
-    cv_libs = ['{}2411'.format(x) for x in cv_libs]
+    cv_ldflags = os.path.join(cv_dir, 'lib')
+    # append version number to library names
+    cv_libs = ['{}{}'.format(lib, cv_ver) for lib in cv_libs]
+
+# opencv ndarray conversion flags
+ndconv_dir = os.path.join(vendordir, 'opencv-ndarray-conversion')
+ndconv_includes = os.path.join(ndconv_dir, 'include')
+
+motion_ext = Extension('butterflow.motion',
+                       extra_compile_args=cxxflags,
+                       extra_link_args=linkflags,
+                       include_dirs=mklist(cv_includes, ndconv_includes),
+                       libraries=mklist(cv_libs, cl_lib),
+                       library_dirs=mklist(cv_ldflags, cl_ldflag),
+                       sources=[os.path.join(pkgdir, 'motion.cpp'),
+                                os.path.join(ndconv_dir, 'src',
+                                             'conversion.cpp')],
+                       language='c++')
+
+use_cx_freeze = False
+if 'build_exe' in sys.argv:
+    try:
+        # cx_Freeze extends setuptools and should be imported after it
+        from cx_Freeze import setup, Executable
+        use_cx_freeze = True
+    except ImportError:
+        # just use setuptools if cxfreeze doesn't exist
+        from setuptools import setup
 else:
-    cv_includes = pkg_config_res('--cflags', 'opencv')
-    if sys.platform.startswith('darwin'):
-        if homebrew_prefix is not None:
-            # Homebrew opencv uses a brewed numpy by default but it's possible
-            # for a user to their own or the system one if the
-            # `--without-brewed-numpy` option is used.
-            #
-            # Note: usually all pythonX.Y packages with headers are placed in
-            # `/usr/include/pythonX.Y/<package>` or `/usr/local/include/` but
-            # homebrew policy is to put them in `site-packages`
-            includes.append(os.path.join(homebrew_site_pkgs,
-                                         'numpy/core/include'))
-        else:
-            includes.append(os.path.join('/System/Library/Frameworks/'
-                                         'Python.framework/Versions/{}/Extras/'
-                                         'lib/python/numpy/core/include'\
-                                         .format(py_ver)))
+    from setuptools import setup
 
-motion = Extension(
-    'butterflow.motion',
-    extra_compile_args=cxxflags,
-    extra_link_args=linkflags,
-    include_dirs=build_lst(vendordir, includes, cv_includes, py_includes),
-    libraries=build_lst(cv_libs, py_libs, cl_lib),
-    library_dirs=build_lst(ldflags, cl_ldflag),
-    sources=[os.path.join(vendordir, 'opencv-ndarray-conversion/conversion.cpp'),
-             os.path.join(pkgdir, 'motion.cpp')],
-    depends=[os.path.join(vendordir, 'opencv-ndarray-conversion/conversion.h')],
-    language='c++'
-)
-
-if not sys.platform.startswith('win') and _build_debug:
-    ret, error = check_dependencies()
-    if not ret:
-        print(error)
-        exit(1)
-
-setup(
-    name='butterflow',
-    packages=find_packages(),
-    ext_modules=[avinfo, ocl, motion],
-    version=version,
-    author='Duong Pham',
-    author_email='dthpham@gmail.com',
-    url='https://github.com/dthpham/butterflow',
-    download_url='http://srv.dthpham.me/butterflow-{}.tar.gz'.format(
-        version),
-    description='Makes slow motion and motion interpolated videos',
-    long_description=get_long_description(),
-    keywords=['slowmo', 'slow motion', 'smooth motion',
-              'motion interpolation'],
-    entry_points={
+# shared arguments
+setup_kwargs = {
+    'name': 'butterflow',
+    'packages': find_packages(),
+    'ext_modules': [avinfo_ext, ocl_ext, motion_ext],
+    'version': version,
+    'author': 'Duong Pham',
+    'author_email': 'dthpham@gmail.com',
+    'url': 'https://github.com/dthpham/butterflow',
+    'download_url': 'http://srv.dthpham.me/butterflow-{}.tar.gz'.
+                    format(version),
+    'description': 'Makes slow motion and motion interpolated videos',
+    'keywords': ['slowmo', 'slow motion', 'smooth motion',
+                 'motion interpolation'],
+    'entry_points': {
         'console_scripts': ['butterflow = butterflow.cli:main']
     },
-    test_suite='tests'
-)
+    'test_suite': 'tests'
+}
+
+import functools
+setup_function = functools.partial(setup, **setup_kwargs)
+
+if use_cx_freeze:
+    # collect ffmpeg executable and all other dependent DLLs
+    # these files should have been copied to the vendor dir before conducting
+    # the build process but were not
+    include_files = []
+    for fname in os.listdir(various_dir):
+        include_files.append((os.path.join(various_dir, fname), fname))
+    # manually add DLL for opencv that wasn't picked up by cxfreeze
+    cv_ffmpeg_dll = 'opencv_ffmpeg{}_64.dll'.format(cv_ver)
+    include_files.append(
+        (os.path.join(vendordir, 'opencv', 'bin', cv_ffmpeg_dll),
+         cv_ffmpeg_dll)
+    )
+    build_exe_options = {
+        'packages': ['butterflow'],
+        'include_msvcr': True,
+        'excludes': ['Tkinter'],
+        'include_files': include_files
+    }
+    executables = [
+        Executable(script='butterflow/__main__.py',
+                   targetName='butterflow.exe',
+                   icon='share/butterflow.ico',
+                   base=None)
+    ]
+    setup_function(
+        options={'build_exe': build_exe_options},
+        executables=executables
+    )
+else:
+    setup_function()

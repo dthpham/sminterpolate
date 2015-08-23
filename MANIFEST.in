@@ -1,7 +1,6 @@
-recursive-include butterflow *.c*
-recursive-include butterflow *.h*
+recursive-exclude share *
 recursive-exclude tests *
-include README.md
+exclude .git*
 include LICENSE
-exclude .gitignore
-exclude .gitmodules
+include README.md
+exclude setup.cfg
