@@ -472,7 +472,7 @@ class Renderer(object):
                          "Type Src: {}, Dup: {}\n"\
                          "Mem: {}\n"
                     t = t.format(
-                        self.total_frs_wrt, x, x + 1, y,
+                        self.total_frs_wrt, fa_idx + x, fa_idx + x + 1, y,
                         'Y' if y == 0 else 'N', 'Y' if z > 0 else 'N',
                         hex(id(fr)))
 
@@ -681,7 +681,7 @@ class Renderer(object):
         nrm_path = makepth('{}.nrm.mp4')
         rnd_path = makepth('{}.rnd.mp4')
         aud_path = makepth('{}_aud.ogg')
-        sub_path = makepth('{}_sub.srt')        
+        sub_path = makepth('{}_sub.srt')
 
         if not os.path.exists(nrm_path):
             self.normalize_for_interpolation(nrm_path)
