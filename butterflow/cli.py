@@ -33,7 +33,7 @@ def main():
                      help='Show detected OpenCL devices and exit')
     gen.add_argument('-v', '--verbose', action='store_true',
                      help='Set to increase output verbosity')
-    gen.add_argument('--no-preview', action='store_false',
+    gen.add_argument('-np', '--no-preview', action='store_false',
                      help='Set to disable video preview')
 
     dsp.add_argument('-a', '--add-info', action='store_true',
