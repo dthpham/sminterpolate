@@ -71,6 +71,7 @@ def main():
                      '(default: %(default)s)')
     vid.add_argument('-l', '--lossless', action='store_true',
                      help='Set to use lossless encoding settings')
+    # vid.add_argument()
     vid.add_argument('-dt', '--detelecine', action='store_true',
                      help='Set to do a basic inverse telecine on the input '
                      'video')
@@ -211,7 +212,7 @@ def main():
         flow_func,
         motion.ocl_interpolate_flow,
         args.video_scale,
-        args.decimate,
+        args.detelecine,
         args.grayscale,
         args.lossless,
         args.trim_regions,

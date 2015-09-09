@@ -21,7 +21,7 @@ class Renderer(object):
                  flow_func=settings['flow_func'],
                  interpolate_func=settings['interpolate_func'],
                  scale=settings['video_scale'],
-                 decimate=False,
+                 detelecine=False,
                  grayscale=False,
                  lossless=False,
                  trim=False,
@@ -45,7 +45,7 @@ class Renderer(object):
         self.enc_loglevel = enc_loglevel
         self.playback_rate = float(playback_rate)
         self.scale = scale
-        self.decimate = decimate
+        self.detelecine = detelecine
         self.grayscale = grayscale
         self.lossless = lossless
         self.trim = trim
@@ -74,7 +74,7 @@ class Renderer(object):
 
         vf = []
         vf.append('scale={}:{}'.format(w, h))
-        if self.decimate:
+        if self.detelecine:
             vf.extend(['fieldmatch', 'decimate'])
         if self.grayscale:
             vf.append('format=gray')
@@ -672,9 +672,9 @@ class Renderer(object):
             os.path.basename(src_path),
             str(unix_time(vid_mod_utc)),
             self.scale,
-            'd' if self.decimate  else 'x',
-            'g' if self.grayscale else 'x',
-            'l' if self.lossless  else 'x',
+            'd' if self.detelecine else 'x',
+            'g' if self.grayscale  else 'x',
+            'l' if self.lossless   else 'x',
             settings['encoder']).lower()
 
         makepth = lambda pth: \
