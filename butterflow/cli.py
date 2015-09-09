@@ -70,9 +70,9 @@ def main():
                      '(default: %(default)s)')
     vid.add_argument('-l', '--lossless', action='store_true',
                      help='Set to use lossless encoding settings')
-    vid.add_argument('--decimate', action='store_true',
-                     help='Set to decimate duplicate frames from the'
-                     ' video source')
+    vid.add_argument('-dt', '--detelecine', action='store_true',
+                     help='Set to do a basic inverse telecine on the input '
+                     'video')
     vid.add_argument('--grayscale', action='store_true',
                      help='Set to enhance coloring of grayscale videos')
 
