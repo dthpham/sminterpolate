@@ -28,6 +28,7 @@ class Renderer(object):
                  show_preview=True,
                  add_info=False,
                  text_type=settings['text_type'],
+                 mux=False,
                  loglevel=settings['loglevel'],
                  enc_loglevel=settings['enc_loglevel'],
                  flow_kwargs=None):
@@ -39,6 +40,7 @@ class Renderer(object):
         self.show_preview = show_preview
         self.text_type = text_type
         self.add_info = add_info
+        self.mux = mux
         self.loglevel = loglevel
         self.enc_loglevel = enc_loglevel
         self.playback_rate = float(playback_rate)
@@ -740,7 +742,7 @@ class Renderer(object):
         # dont mux if speed changed or video was trimmed
         if self.trim or speed_changed:
             shutil.move(rnd_path, self.dst_path)
-        else:
+        elif self.mux:
             # start extracting audio and subtitle streams if they exist
             if self.video_info['a_stream_exists']:
                 self.extract_audio(aud_path)

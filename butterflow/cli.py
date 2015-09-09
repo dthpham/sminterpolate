@@ -20,6 +20,7 @@ def main():
     gen = par.add_argument_group('General options')
     dsp = par.add_argument_group('Display options')
     vid = par.add_argument_group('Video options')
+    mux = par.add_argument_group('Muxing options')
     fgr = par.add_argument_group('Advanced options')
 
     req.add_argument('video', type=str, nargs='?', default=None,
@@ -75,6 +76,12 @@ def main():
                      'video')
     vid.add_argument('--grayscale', action='store_true',
                      help='Set to enhance coloring of grayscale videos')
+
+    mux.add_argument('-m', '--mux', action='store_true',
+                     help='Set to mux source audio and subtitles with the '
+                     'output video. Audio and subtitles may be truncated or '
+                     'may not be in sync with the video because of potential '
+                     'differences in duration.')
 
     fgr.add_argument('--fast-pyr', action='store_true',
                      help='Set to use fast pyramids')
@@ -211,6 +218,7 @@ def main():
         args.no_preview,
         args.add_info,
         args.text_type,
+        args.mux,
         settings.default['loglevel'],
         settings.default['enc_loglevel'],
         flow_kwargs)
