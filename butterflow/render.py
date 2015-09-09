@@ -21,14 +21,14 @@ log = logging.getLogger('butterflow')
 
 class Renderer(object):
     def __init__(
-            self, dst_path, video_info, video_sequence, playback_rate,
-            flow_func=settings['flow_func'],
-            interpolate_func=settings['interpolate_func'],
-            scale=settings['video_scale'], detelecine=False, grayscale=False,
-            lossless=False, trim=False, show_preview=True, add_info=False,
-            text_type=settings['text_type'], mux=False,
-            av_loglevel=settings['av_loglevel'],
-            enc_loglevel=settings['enc_loglevel'], flow_kwargs=None):
+        self, dst_path, video_info, video_sequence, playback_rate,
+        flow_func=settings['flow_func'],
+        interpolate_func=settings['interpolate_func'],
+        scale=settings['video_scale'], detelecine=False, grayscale=False,
+        lossless=False, trim=False, show_preview=True, add_info=False,
+        text_type=settings['text_type'], mux=False, pad_with_dupes=True,
+        av_loglevel=settings['av_loglevel'],
+        enc_loglevel=settings['enc_loglevel'], flow_kwargs=None):
         self.dst_path = dst_path
         self.video_info = video_info
         self.video_sequence = video_sequence
@@ -38,7 +38,7 @@ class Renderer(object):
         self.text_type = text_type
         self.add_info = add_info
         self.mux = mux
-        self.av_loglevel = av_loglevel
+        self.pad_with_dupes = pad_with_dupes
         self.enc_loglevel = enc_loglevel
         self.playback_rate = float(playback_rate)
         self.scale = scale
@@ -417,6 +417,8 @@ class Renderer(object):
                 if fin_run:
                     wrts_needed = (tgt_frs - frs_wrt)
                     fin_dup = wrts_needed - 1
+                    if not self.pad_with_dupes:
+                        wrts_needed = 0
                 for z in range(wrts_needed):
                     frs_wrt += 1
                     self.total_frs_wrt += 1

@@ -75,6 +75,10 @@ def main():
                      '(default: %(default)s)')
     vid.add_argument('-l', '--lossless', action='store_true',
                      help='Set to use lossless encoding settings')
+    vid.add_argument('-npad', '--no-padding', action='store_false',
+                     help='Set to discard duplicate frames that are padded to '
+                     'the end of subregions. This will alter the expected '
+                     'duration of the output video.')
     vid.add_argument('-dt', '--detelecine', action='store_true',
                      help='Set to do a basic inverse telecine on the input '
                      'video')
@@ -225,6 +229,7 @@ def main():
         args.add_info,
         args.text_type,
         args.mux,
+        args.no_padding,
         settings.default['av_loglevel'],
         settings.default['enc_loglevel'],
         flow_kwargs)
