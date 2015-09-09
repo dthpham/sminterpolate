@@ -418,7 +418,8 @@ class Renderer(object):
                     wrts_needed = (tgt_frs - frs_wrt)
                     fin_dup = wrts_needed - 1
                     if not self.pad_with_dupes:
-                        wrts_needed = 0
+                        if fin_dup > 0:
+                            wrts_needed = 1
                 for z in range(wrts_needed):
                     frs_wrt += 1
                     self.total_frs_wrt += 1
