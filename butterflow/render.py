@@ -742,26 +742,29 @@ class Renderer(object):
         # dont mux if speed changed or video was trimmed
         if self.trim or speed_changed:
             shutil.move(rnd_path, self.dst_path)
-        elif self.mux:
-            # start extracting audio and subtitle streams if they exist
-            if self.video_info['a_stream_exists']:
-                self.extract_audio(aud_path)
+        else:
+            if self.mux:
+                # start extracting audio and subtitle streams if they exist
+                if self.video_info['a_stream_exists']:
+                    self.extract_audio(aud_path)
+                else:
+                    aud_path = None
+                if self.video_info['s_stream_exists']:
+                    self.extract_subtitles(sub_path)
+                    # it's possible for a subtitle stream to exist but have no
+                    # information
+                    with open(sub_path, 'r') as f:
+                        if f.read() == '':
+                            sub_path = None
+                else:
+                    sub_path = None
+                # move files to their destinations
+                try:
+                    self.mux_video(rnd_path, aud_path, sub_path, self.dst_path,
+                                   cleanup=True)
+                except RuntimeError:
+                    shutil.move(rnd_path, self.dst_path)
             else:
-                aud_path = None
-            if self.video_info['s_stream_exists']:
-                self.extract_subtitles(sub_path)
-                # it's possible for a subtitle stream to exist but have no
-                # information
-                with open(sub_path, 'r') as f:
-                    if f.read() == '':
-                        sub_path = None
-            else:
-                sub_path = None
-            # move files to their destinations
-            try:
-                self.mux_video(rnd_path, aud_path, sub_path, self.dst_path,
-                               cleanup=True)
-            except RuntimeError:
                 shutil.move(rnd_path, self.dst_path)
 
     def __del__(self):
