@@ -5,8 +5,7 @@ class FrameSource(object):
     def __init__(self, video_path):
         self.capture = VideoCapture(video_path)
         if self.capture is None or not self.capture.isOpened():
-            raise RuntimeError(
-                'unable to open video source: {}'.format(video_path))
+            raise RuntimeError('unable to open video')
         self.frames = int(self.capture.get(cv.CV_CAP_PROP_FRAME_COUNT))
         self.duration = float(self.frames) / \
             self.capture.get(cv.CV_CAP_PROP_FPS) * 1000.0
@@ -46,7 +45,7 @@ class FrameSource(object):
         rc, frame = self.capture.read()
         if rc is False:
             raise RuntimeError(
-                'unable to read a frame at idx: {}'.format(self.index))
+                'unable to read a frame at idx {}'.format(self.index))
         else:
             self.update_position()
             return frame

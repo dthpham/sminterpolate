@@ -75,7 +75,6 @@ def main():
                      '(default: %(default)s)')
     vid.add_argument('-l', '--lossless', action='store_true',
                      help='Set to use lossless encoding settings')
-    # vid.add_argument()
     vid.add_argument('-dt', '--detelecine', action='store_true',
                      help='Set to do a basic inverse telecine on the input '
                      'video')
@@ -184,7 +183,7 @@ def main():
         ('PolyN', args.poly_n),
         ('PolyS', args.poly_s)])
 
-    # allow fractional rates and fractions with non-rational numerators and
+    # handle fractional rates and fractions with non-rational numerators and
     # denominators
     rate = args.playback_rate
     if '/' in rate and '.' in rate:
@@ -206,8 +205,8 @@ def main():
     try:
         vid_sequence = sequence_from_str(
             vid_info['duration'], vid_info['frames'], args.sub_regions)
-    except Exception:
-        log.error('Invalid subregion string:', exc_info=True)
+    except Exception as e:
+        log.error('Bad subregion string: %s' % e)
         return 1
 
     renderer = Renderer(
@@ -239,24 +238,26 @@ def main():
 
 
 def time_str_to_ms(time):
-    """Converts a time string to milliseconds. Syntax:
-    [hrs:mins:secs.xxx] OR [mins:secs.xxx] OR [secs.xxx]"""
-    value_error = ValueError('invalid time syntax: {}'.format(time))
-    hr, min, sec = 0, 0, 0
+    """Converts a time string to milliseconds. Syntax: [hrs:mins:secs.xxx] OR
+    [mins:secs.xxx] OR [secs.xxx]"""
+    hr = 0
+    minute = 0
+    sec = 0
     valid_char_set = '0123456789:.'
+    syntax_error = ValueError('invalid time syntax')
     if time == '' or time.count(':') > 2:
-        raise value_error
+        raise syntax_error
     for char in time:
         if char not in valid_char_set:
-            raise value_error
+            raise syntax_error
     val = time.split(':')
     if len(val) >= 1 and val[-1] != '':
         sec = float(val[-1])
     if len(val) >= 2 and val[-2] != '':
-        min = float(val[-2])
+        minute = float(val[-2])
     if len(val) == 3 and val[-3] != '':
         hr = float(val[-3])
-    return (hr * 3600 + min * 60 + sec) * 1000.0
+    return (hr * 3600 + minute * 60 + sec) * 1000.0
 
 
 def parse_tval_str(string):
@@ -275,12 +276,10 @@ def parse_tval_str(string):
     elif tgt == 'dur':
         # duration in milliseconds
         val = float(val) * 1000.0
-    elif tgt == 'spd':
-        val = float(val)
-    elif tgt == 'btw':
+    elif tgt == 'spd' or tgt == 'btw':
         val = float(val)
     else:
-        raise ValueError('invalid target: {}'.format(tgt))
+        raise ValueError('invalid target')
     return tgt, val
 
 
@@ -310,7 +309,7 @@ def sub_from_str_full_key(string, duration):
         setattr(sub, tgt, val)
         return sub
     else:
-        raise ValueError('`full` keyword not found: {}'.format(string))
+        raise ValueError('full key not found')
 
 
 def sub_from_str_end_key(string, duration):
@@ -325,7 +324,7 @@ def sub_from_str_end_key(string, duration):
         string = string.replace('end', str(duration / 1000.0))
         return sub_from_str(string)
     else:
-        raise ValueError('`end` keyword not found: {}'.format(string))
+        raise ValueError('end key not found')
 
 
 def sequence_from_str(duration, frames, strings):

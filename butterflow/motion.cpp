@@ -54,7 +54,7 @@ ocl_farneback_optical_flow(PyObject *self, PyObject *args) {
     ocl_fr_2.upload(fr_2);
 
     cv::ocl::FarnebackOpticalFlow calc_flow;
-  	calc_flow.pyrScale  = scale;
+    calc_flow.pyrScale  = scale;
     calc_flow.numLevels = levels;
     calc_flow.winSize   = winsize;
     calc_flow.numIters  = iters;

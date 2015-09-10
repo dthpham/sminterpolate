@@ -51,7 +51,7 @@ class FrameSourceTestCase(unittest.TestCase):
         ])
         if get_fr_proc == 1:
             raise RuntimeError(
-                'failed to extract frame at idx: {}'.format(idx))
+                'failed to extract frame at idx {}'.format(idx))
         return cv2.imread(self.test_img)
 
     def av_frame_at_time(self, time):
@@ -68,7 +68,7 @@ class FrameSourceTestCase(unittest.TestCase):
         ])
         if get_fr_proc == 1:
             raise RuntimeError(
-                'failed to extract frame at time: {}s'.format(secs))
+                'failed to extract frame at time {}s'.format(secs))
         return cv2.imread(self.test_img)
 
     def test_seek_to_frame(self):

@@ -20,21 +20,15 @@ log = logging.getLogger('butterflow')
 
 
 class Renderer(object):
-    def __init__(self, dst_path, video_info, video_sequence, playback_rate,
-                 flow_func=settings['flow_func'],
-                 interpolate_func=settings['interpolate_func'],
-                 scale=settings['video_scale'],
-                 detelecine=False,
-                 grayscale=False,
-                 lossless=False,
-                 trim=False,
-                 show_preview=True,
-                 add_info=False,
-                 text_type=settings['text_type'],
-                 mux=False,
-                 av_loglevel=settings['av_loglevel'],
-                 enc_loglevel=settings['enc_loglevel'],
-                 flow_kwargs=None):
+    def __init__(
+            self, dst_path, video_info, video_sequence, playback_rate,
+            flow_func=settings['flow_func'],
+            interpolate_func=settings['interpolate_func'],
+            scale=settings['video_scale'], detelecine=False, grayscale=False,
+            lossless=False, trim=False, show_preview=True, add_info=False,
+            text_type=settings['text_type'], mux=False,
+            av_loglevel=settings['av_loglevel'],
+            enc_loglevel=settings['enc_loglevel'], flow_kwargs=None):
         self.dst_path = dst_path
         self.video_info = video_info
         self.video_sequence = video_sequence
@@ -147,7 +141,7 @@ class Renderer(object):
 
     def extract_subtitles(self, dst_path):
         if not self.video_info['s_stream_exists']:
-            raise RuntimeError('no subtitle streams detected')
+            raise RuntimeError('no subtitle stream detected')
         if settings['avutil'] == 'avconv':
             open(dst_path, 'a').close()
             return
@@ -161,15 +155,15 @@ class Renderer(object):
             dst_path
         ])
         if proc == 1:
-            raise RuntimeError('unable to extract subtitles from video')
+            raise RuntimeError('unable to extract subtitle from video')
 
     def mux_video(self, vid_path, aud_path, sub_path, dst_path, cleanup=False):
         if not os.path.exists(vid_path):
-            raise IOError('video not found: {}'.format(vid_path))
+            raise IOError('video file not found')
         if aud_path is not None and not os.path.exists(aud_path):
-            raise IOError('audio not found: {}'.format(aud_path))
+            raise IOError('audio file not found')
         if sub_path is not None and not os.path.exists(sub_path):
-            raise IOError('subtitle not found: {}'.format(sub_path))
+            raise IOError('subtitle file not found')
 
         if aud_path is None and sub_path is None:
             if cleanup:

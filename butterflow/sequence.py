@@ -63,7 +63,7 @@ class Subregion(object):
         if ta < 0:
             raise ValueError('ta={} < 0'.format(ta))
         if ta > tb:
-            raise ValueError('ta={} must be < tb={}'.format(ta, tb))
+            raise ValueError('ta={} >= tb={}'.format(ta, tb))
         self.ta = ta
         self.tb = tb
         self.fa = 0.0
