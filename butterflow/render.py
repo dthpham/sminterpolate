@@ -15,6 +15,9 @@ from butterflow.settings import default as settings
 from butterflow.source import FrameSource
 from butterflow.sequence import VideoSequence, RenderSubregion
 
+import logging
+log = logging.getLogger('butterflow')
+
 
 class Renderer(object):
     def __init__(self, dst_path, video_info, video_sequence, playback_rate,
@@ -29,7 +32,7 @@ class Renderer(object):
                  add_info=False,
                  text_type=settings['text_type'],
                  mux=False,
-                 loglevel=settings['loglevel'],
+                 av_loglevel=settings['av_loglevel'],
                  enc_loglevel=settings['enc_loglevel'],
                  flow_kwargs=None):
         self.dst_path = dst_path
@@ -41,7 +44,7 @@ class Renderer(object):
         self.text_type = text_type
         self.add_info = add_info
         self.mux = mux
-        self.loglevel = loglevel
+        self.av_loglevel = av_loglevel
         self.enc_loglevel = enc_loglevel
         self.playback_rate = float(playback_rate)
         self.scale = scale
@@ -82,7 +85,7 @@ class Renderer(object):
 
         call = [
             settings['avutil'],
-            '-loglevel', self.loglevel,
+            '-loglevel', self.av_loglevel,
             '-y',
             '-threads', '0',
             '-i', self.video_info['path'],
@@ -132,7 +135,7 @@ class Renderer(object):
             raise RuntimeError('no audio stream detected')
         proc = subprocess.call([
             settings['avutil'],
-            '-loglevel', self.loglevel,
+            '-loglevel', self.av_loglevel,
             '-y',
             '-i', self.video_info['path'],
             '-vn',
@@ -150,7 +153,7 @@ class Renderer(object):
             return
         proc = subprocess.call([
             settings['avutil'],
-            '-loglevel', self.loglevel,
+            '-loglevel', self.av_loglevel,
             '-y',
             '-i', self.video_info['path'],
             '-vn',
@@ -177,7 +180,7 @@ class Renderer(object):
 
         call = [
             settings['avutil'],
-            '-loglevel', self.loglevel,
+            '-loglevel', self.av_loglevel,
             '-y',
         ]
         if aud_path:
@@ -207,7 +210,7 @@ class Renderer(object):
         h = self.nrm_info['height']
         call = [
             settings['avutil'],
-            '-loglevel', self.loglevel,
+            '-loglevel', self.av_loglevel,
             '-y',
             '-f', 'rawvideo',
             '-pix_fmt', 'bgr24',
@@ -252,8 +255,8 @@ class Renderer(object):
     def write_frame_to_pipe(self, pipe, frame):
         try:
             pipe.stdin.write(bytes(frame.data))
-        except Exception as err:
-            print('write to pipe failed: ', err)
+        except Exception:
+            log.error('Writing frame to pipe failed:', exc_info=True)
 
     def render_subregion(self, framesrc, subregion, filters=None):
         fa = subregion.fa
@@ -307,34 +310,34 @@ class Renderer(object):
 
         # audio may drift because of the change in which frames are rendered in
         # relation to the source video this is used for debugging:
-        pot_drift = extra_frs / self.playback_rate
+        pot_aud_drift = extra_frs / self.playback_rate
 
-        if settings['verbose']:
-            print('Working on Subregion: ', self.curr_subregion_idx)
-            print('fa:', fa)
-            print('fb:', fb)
-            print('ta:', ta)
-            print('tb:', tb)
-            print('reg_dur', reg_dur * 1000.0)
-            print('reg_len', reg_len)
-            print('tgt_fps', subregion.fps)
-            print('tgt_dur', subregion.dur)
-            print('tgt_spd', subregion.spd)
-            print('tgt_frs', tgt_frs)
-            print('mak_fac', mak_fac)
-            print('ts:', time_step)
-            print('iter_each_go', iter_each_go)
-            print('wr_per_pair', iter_each_go + 1)  # +1 because of fr_1
-            print('pairs', reg_len - 1)
-            print('will_make', will_make)
-            print('extra_frs', extra_frs)
-            print('dup_every', dup_every)
-            print('drp_every', drp_every)
-            print('pot_drift', pot_drift)
+        log.debug('sub_idx: %s', self.curr_subregion_idx)
+        log.debug('fa: %s', fa)
+        log.debug('fb: %s', fb)
+        log.debug('ta: %s', ta)
+        log.debug('tb: %s', tb)
+        log.debug('reg_dur: %s', reg_dur * 1000.0)
+        log.debug('reg_len: %s', reg_len)
+        log.debug('tgt_fps: %s', subregion.fps)
+        log.debug('tgt_dur: %s', subregion.dur)
+        log.debug('tgt_spd: %s', subregion.spd)
+        log.debug('tgt_btw: %s', subregion.btw)
+        log.debug('tgt_frs: %s', tgt_frs)
+        log.debug('mak_fac: %s', mak_fac)
+        log.debug('ts: %s', time_step)
+        log.debug('iter_each_go: %s', iter_each_go)
+        log.debug('wr_per_pair: %s', iter_each_go + 1)  # +1 because of fr_1
+        log.debug('pairs: %s', reg_len - 1)
+        log.debug('will_make: %s', will_make)
+        log.debug('extra_frs: %s', extra_frs)
+        log.debug('dup_every: %s', dup_every)
+        log.debug('drp_every: %s', drp_every)
+        log.debug('pot_aud_drift: %s', pot_aud_drift)
 
         # keep track of progress in this subregion
         src_gen = 1  # num of source frames seen
-        frs_mak = 0  # num of frames interpolated
+        frs_itr = 0  # num of frames interpolated
         wrk_idx = 0  # idx in the subregion being worked on
         frs_wrt = 0  # num of frames written in this subregion
         frs_dup = 0  # num of frames duped
@@ -359,9 +362,8 @@ class Renderer(object):
             framesrc.seek_to_frame(fa_idx + 1)
             runs = reg_len
 
-        if settings['verbose']:
-            print('wrt_one', fin_run)
-            print('runs', runs)
+        log.debug('wrt_one: %s', fin_run)
+        log.debug('runs: %s', runs)
 
         for x in range(0, runs):
             # hit the `Esc` key to stop running
@@ -379,7 +381,7 @@ class Renderer(object):
 
             if fin_run:
                 to_wrt.append(fr_1)
-                frs_mak += 1
+                frs_itr += 1
             else:
                 # begin interpolating frames between pairs
                 # the frame being read should always be valid otherwise break
@@ -403,7 +405,7 @@ class Renderer(object):
 
                 inter_frs = self.interpolate_func(
                     fr_1_32, fr_2_32, fu, fv, bu, bv, time_step)
-                frs_mak += len(inter_frs)
+                frs_itr += len(inter_frs)
                 to_wrt.append(fr_1)
                 to_wrt.extend(inter_frs)
 
@@ -533,7 +535,7 @@ class Renderer(object):
                         drp_every,
                         dup_every,
                         src_gen,
-                        frs_mak,
+                        frs_itr,
                         frs_drp,
                         frs_dup,
                         frs_wrt,
@@ -563,18 +565,21 @@ class Renderer(object):
                     self.write_frame_to_pipe(self.render_pipe, fr_to_wrt)
 
         # finished, we're outside of the main loop
-        if settings['verbose']:
-            wrt_ratio = 0 if tgt_frs == 0 else float(frs_wrt) / tgt_frs
-            est_drift = float(tgt_frs - frs_wrt) / self.playback_rate
-            print('src_gen:', src_gen)
-            print('frs_mak:', frs_mak)
-            print('frs_drp:', frs_drp)
-            print('frs_dup:', frs_dup)
-            print('fin_dup:', fin_dup)
-            print('wrt_ratio: {}/{} ({:.2f}%)'.format(
-                frs_wrt, tgt_frs, wrt_ratio * 100))
-            print('est_drft:', pot_drift)
-            print('act_drft:', est_drift)
+        act_aud_drift = float(tgt_frs - frs_wrt) / self.playback_rate
+        log.debug('act_aud_drift: %s', act_aud_drift)
+
+        log.debug('src_gen: %s', src_gen)
+        log.debug('frs_itr: %s', frs_itr)
+        log.debug('frs_drp: %s', frs_drp)
+        log.debug('frs_dup: %s', frs_dup)
+        log.debug('fin_dup: %s', fin_dup)
+
+        if tgt_frs == 0:
+            wrt_ratio = 0
+        else:
+            wrt_ratio = float(frs_wrt) / tgt_frs
+        log.debug('wrt_ratio: {}/{}, {:.2f}%'.format(
+            frs_wrt, tgt_frs, wrt_ratio * 100))
 
     def renderable_sequence(self):
         dur = self.nrm_info['duration']

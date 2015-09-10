@@ -6,16 +6,22 @@ import tempfile
 from butterflow.__init__ import __version__
 from butterflow import motion
 import cv2
+import logging
 
 
 default = {
-    'verbose':        False,
     'debug_opts':     False,
+    # default logging level
+    # levels in order of urgency: critical, error, warning, info, debug
+    'loglevel_a':     logging.INFO,
+    # loglevel will be set to `DEBUG` if verbose is True
+    'loglevel_b':     logging.DEBUG,
+    'verbose':        False,
     # `ffmpeg` and `avconv` options
     'avutil':         'ffmpeg',
     # avutil and encoder loglevel
     # `info` is default, set to `fatal` for quiet
-    'loglevel':       'fatal',
+    'av_loglevel':    'fatal',
     'enc_loglevel':   'error',
     'preset':         'fast',
     'crf':            18,

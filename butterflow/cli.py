@@ -14,6 +14,10 @@ NO_OCL_WARNING = 'No compatible OCL devices detected. Check your OpenCL '\
 
 
 def main():
+    import logging
+    logging.basicConfig(level=settings.default['loglevel_a'],
+                        format='%(message)s')
+
     par = argparse.ArgumentParser(usage='butterflow [options] [video]',
                                   add_help=False)
     req = par.add_argument_group('Required arguments')
@@ -121,6 +125,10 @@ def main():
 
     args = par.parse_args()
 
+    log = logging.getLogger('butterflow')
+    if args.verbose:
+        log.setLevel(settings.default['loglevel_b'])
+
     if args.version:
         print(__version__)
         return 0
@@ -130,7 +138,7 @@ def main():
         if have_ocl:
             ocl.print_ocl_devices()
         else:
-            print(NO_OCL_WARNING)
+            log.warning(NO_OCL_WARNING)
         return 0
 
     if have_ocl:
@@ -139,23 +147,21 @@ def main():
             os.makedirs(cache_dir)
         motion.set_cache_path(cache_dir + os.sep)
     else:
-        print(NO_OCL_WARNING)
+        log.warning(NO_OCL_WARNING)
         return 1
 
     src_path = args.video
     if src_path is None:
-        print('No input video specified')
-        return 0
+        log.error('No input video specified')
+        return 1
 
     if not os.path.exists(args.video):
-        print('Video does not exist at path')
+        log.error('Video does not exist at path')
         return 1
 
     if settings.default['avutil'] == 'none':
-        print('You need `ffmpeg` or `avconv` to use this app')
+        log.warning('You need `ffmpeg` or `avconv` to use this app')
         return 1
-
-    settings.default['verbose'] = args.verbose
 
     # setup functions that will be used to generate flows and interpolate frames
     farneback_method = motion.ocl_farneback_optical_flow if have_ocl \
@@ -190,18 +196,18 @@ def main():
     try:
         vid_info = avinfo.get_info(args.video)
     except Exception:
-        print('Could not get video information')
+        log.error('Could not get video information:', exc_info=True)
         return 1
 
     if not vid_info['v_stream_exists']:
-        print('No video stream detected')
+        log.error('No video stream detected')
         return 1
 
     try:
         vid_sequence = sequence_from_str(
             vid_info['duration'], vid_info['frames'], args.sub_regions)
-    except Exception as e:
-        print('Invalid subregion string: {}'.format(e))
+    except Exception:
+        log.error('Invalid subregion string:', exc_info=True)
         return 1
 
     renderer = Renderer(
@@ -220,7 +226,7 @@ def main():
         args.add_info,
         args.text_type,
         args.mux,
-        settings.default['loglevel'],
+        settings.default['av_loglevel'],
         settings.default['enc_loglevel'],
         flow_kwargs)
 

@@ -20,7 +20,8 @@ class RenderTestCase(unittest.TestCase):
         self.out_a   = os.path.join(TDIR, 'aud.ogg')
         self.out_s   = os.path.join(TDIR, 'sub.srt')
         self.make_renderer = lambda x: \
-            Renderer(self.out_v, avinfo.get_info(x), None, 24, loglevel='fatal')
+            Renderer(self.out_v, avinfo.get_info(x), None, 24,
+                     av_loglevel='fatal')
 
     def tearDown(self):
         self.remove_temp_files()
