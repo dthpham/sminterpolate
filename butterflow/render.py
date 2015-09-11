@@ -39,6 +39,7 @@ class Renderer(object):
         self.add_info = add_info
         self.mux = mux
         self.pad_with_dupes = pad_with_dupes
+        self.av_loglevel = av_loglevel
         self.enc_loglevel = enc_loglevel
         self.playback_rate = float(playback_rate)
         self.scale = scale
@@ -282,6 +283,8 @@ class Renderer(object):
         if mak_fac == 0:
             tgt_frs = 1
             mak_fac = 1
+        import pdb; pdb.set_trace()
+
         time_step = min(1.0, 1 / mak_fac)
 
         # if 1.0 % time_step is zero, one less frame will be
