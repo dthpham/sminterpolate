@@ -36,6 +36,10 @@ def main():
                      help='Show program\'s version number and exit')
     gen.add_argument('-d', '--devices', action='store_true',
                      help='Show detected OpenCL devices and exit')
+    gen.add_argument('-c', '--cache', action='store_true',
+                     help='Show cache information and exit')
+    gen.add_argument('--rm-cache', action='store_true',
+                     help='Set to clear the cache and exit')
     gen.add_argument('-v', '--verbose', action='store_true',
                      help='Set to increase output verbosity')
     gen.add_argument('-np', '--no-preview', action='store_false',
@@ -134,6 +138,31 @@ def main():
 
     if args.version:
         print(__version__)
+        return 0
+
+    # clb_dir exists inside the tmp_dir
+    cache_dir = settings.default['tmp_dir']
+
+    if args.cache:
+        num_files = 0
+        sz = 0
+        for dirpath, dirnames, filenames in os.walk(cache_dir):
+            # ignore the clb_dir
+            if dirpath == settings.default['clb_dir']:
+                continue
+            for f in filenames:
+                num_files += 1
+                fp = os.path.join(dirpath, f)
+                sz += os.path.getsize(fp)
+        sz_mb = float(sz) / (1 << 20)  # size in megabytes
+        print('{} files, {:.2g}MB'.format(num_files, sz_mb))
+        return 0
+
+    if args.rm_cache:
+        if os.path.exists(cache_dir):
+            import shutil
+            shutil.rmtree(cache_dir)
+        log.info('cache cleared')
         return 0
 
     have_ocl = ocl.ocl_device_available()
