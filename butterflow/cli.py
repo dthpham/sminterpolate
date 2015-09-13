@@ -42,9 +42,9 @@ def main():
                      help='Set to clear the cache and exit')
     gen.add_argument('-v', '--verbose', action='store_true',
                      help='Set to increase output verbosity')
-    gen.add_argument('-np', '--no-preview', action='store_false',
-                     help='Set to disable video preview')
 
+    dsp.add_argument('-np', '--no-preview', action='store_false',
+                     help='Set to disable video preview')
     dsp.add_argument('-a', '--add-info', action='store_true',
                      help='Set to embed debugging info into the output video')
     dsp.add_argument('-tt', '--text-type', choices=['light', 'dark', 'stroke'],
