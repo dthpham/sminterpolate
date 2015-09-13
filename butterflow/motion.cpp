@@ -6,7 +6,7 @@
 #include "opencv-ndarray-conversion/conversion.h"
 
 #define ocl_inter_frames(A, B, C) cv::ocl::interpolateFrames((A), (B), ocl_fu, \
-ocl_fv, ocl_bu, ocl_bv, x, (C), ocl_buf)
+ocl_fv, ocl_bu, ocl_bv, ts, (C), ocl_buf)
 
 using namespace std;
 using namespace cv;
@@ -104,18 +104,18 @@ ocl_interpolate_flow(PyObject *self, PyObject *args) {
     PyObject *py_bu;
     PyObject *py_bv;
 
-    PyObject *py_time_step;
+    PyObject *py_inter_each_go;
 
     if (!PyArg_UnpackTuple(args, "", 7, 7, &py_fr_1, &py_fr_2, &py_fu, &py_fv,
-                           &py_bu, &py_bv, &py_time_step)) {
+                           &py_bu, &py_bv, &py_inter_each_go)) {
         PyErr_SetString(PyExc_TypeError, "could not unpack tuple");
         return (PyObject*)NULL;
     }
 
-    float time_step = PyFloat_AsDouble(py_time_step);
+    int inter_each_go = PyInt_AsLong(py_inter_each_go);
 
-    if (time_step == 0) {
-        return PyList_New(0);
+    if (inter_each_go == 0) {
+      return PyList_New(0);
     }
 
     NDArrayConverter converter;
@@ -157,7 +157,12 @@ ocl_interpolate_flow(PyObject *self, PyObject *args) {
 
     PyObject *py_frs = PyList_New(0);
 
-    for (float x = time_step; x < 1.0; x += time_step) {
+    int subdivisions = inter_each_go + 1;
+
+    for (int i = 0; i < inter_each_go; i++) {
+        float ts = max(0.0, min(1.0,
+                       (1.0 / subdivisions) * (i + 1)));
+
         ocl_inter_frames(fr_1_b, fr_2_b, ocl_new_b);
         ocl_inter_frames(fr_1_g, fr_2_g, ocl_new_g);
         ocl_inter_frames(fr_1_r, fr_2_r, ocl_new_r);

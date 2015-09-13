@@ -29,6 +29,7 @@ class Renderer(object):
         text_type=settings['text_type'], mux=False, pad_with_dupes=True,
         av_loglevel=settings['av_loglevel'],
         enc_loglevel=settings['enc_loglevel'], flow_kwargs=None):
+
         self.dst_path = dst_path
         self.video_info = video_info
         self.video_sequence = video_sequence
@@ -253,7 +254,9 @@ class Renderer(object):
         except Exception:
             log.error('Writing frame to pipe failed:', exc_info=True)
 
-    def render_subregion(self, framesrc, subregion, filters=None):
+    def render_subregion(self, framesrc, subregion):
+        log.debug('Working on subregion: %s', self.curr_subregion_idx + 1)
+
         fa = subregion.fa
         fb = subregion.fb
         ta = subregion.ta
@@ -264,52 +267,51 @@ class Renderer(object):
 
         tgt_frs = 0  # num of frames we're targeting to render
 
+        # only one of these needs to be set to calculate tgt_frames
         if subregion.dur:
             tgt_frs = int(self.playback_rate *
                           (subregion.dur / 1000.0))
-        if subregion.fps:
+        elif subregion.fps:
             tgt_frs = int(subregion.fps * reg_dur)
-        if subregion.spd:
+        elif subregion.spd:
             tgt_frs = int(self.playback_rate * reg_dur *
                           (1 / subregion.spd))
-        if subregion.btw:
+        elif subregion.btw:
             tgt_frs = int(reg_len + ((reg_len - 1) * subregion.btw))
 
         tgt_frs = max(0, tgt_frs)
+        # the make factor or inverse time step
+        int_each_go = float(tgt_frs) / max(1, (reg_len - 1))
 
-        # prevent division a division by zero error when only a single frame
-        # needs to be written
-        mak_fac = float(tgt_frs) / reg_len
-        if mak_fac == 0:
+        # stop a division by zero error when only a single frame needs to be
+        # written
+        if int_each_go == 0:
             tgt_frs = 1
-            mak_fac = 1
-        import pdb; pdb.set_trace()
 
-        time_step = min(1.0, 1 / mak_fac)
+        # TODO: overcompensate for frames?
+        # int_each_go = math.ceil(int_each_go)
 
-        # if 1.0 % time_step is zero, one less frame will be
-        # interpolated
-        iter_each_go = int(1 / time_step)
-        if abs(0 - math.fmod(1, time_step)) <= 1e-8:
-            iter_each_go -= 1
+        int_each_go = int(int_each_go)
 
-        will_make = (iter_each_go + 1) * reg_len
+        pairs = reg_len - 1
+        if pairs >= 1:
+            will_make = (int_each_go * pairs) + pairs
+        else:
+            # no pairs available. will only add src frame to to_wrt
+            will_make = 1
         extra_frs = will_make - tgt_frs
 
-        # frames will be need to be dropped or duped based on how many
-        # interpolated frames are expected to be made
-        dup_every = 0
+        # frames will need to be dropped or duped based on how many
+        # frames are expected to be generated. this includes source and
+        # interpolated frames
         drp_every = 0
         if extra_frs > 0:
             drp_every = will_make / math.fabs(extra_frs)
+
+        dup_every = 0
         if extra_frs < 0:
             dup_every = will_make / math.fabs(extra_frs)
 
-        # audio may drift because of the change in which frames are rendered in
-        # relation to the source video this is used for debugging:
-        pot_aud_drift = extra_frs / self.playback_rate
-
-        log.debug('sub_idx: %s', self.curr_subregion_idx)
         log.debug('fa: %s', fa)
         log.debug('fb: %s', fb)
         log.debug('ta: %s', ta)
@@ -318,36 +320,53 @@ class Renderer(object):
         log.debug('reg_len: %s', reg_len)
         log.debug('tgt_fps: %s', subregion.fps)
         log.debug('tgt_dur: %s', subregion.dur)
-        log.debug('tgt_spd: %s', subregion.spd)
+        log.debug('tgt_spd: %s %.2gx', subregion.spd, 1 / subregion.spd)
         log.debug('tgt_btw: %s', subregion.btw)
         log.debug('tgt_frs: %s', tgt_frs)
-        log.debug('mak_fac: %s', mak_fac)
-        log.debug('ts: %s', time_step)
-        log.debug('iter_each_go: %s', iter_each_go)
-        log.debug('wr_per_pair: %s', iter_each_go + 1)  # +1 because of fr_1
-        log.debug('pairs: %s', reg_len - 1)
+
+        sub_div = int_each_go + 1
+        ts = []
+        for x in range(int_each_go):
+            y = max(0.0, min(1.0, (1.0 / sub_div) * (x + 1)))
+            y = '{:.2f}'.format(y)
+            ts.append(y)
+        if len(ts) > 0:
+            log.debug('ts: %s..%s', ts[0], ts[-1])
+
+        log.debug('int_each_go: %s', int_each_go)
+        log.debug('wr_per_pair: %s', int_each_go + 1)  # +1 because of fr_1
+        log.debug('pairs: %s', pairs)
         log.debug('will_make: %s', will_make)
         log.debug('extra_frs: %s', extra_frs)
         log.debug('dup_every: %s', dup_every)
         log.debug('drp_every: %s', drp_every)
+
+        est_dur = tgt_frs / self.playback_rate
+        log.debug('est_dur: %s', est_dur)
+
+        # audio may drift because of the change in which frames are rendered in
+        # relation to the source video this is used for debugging:
+        pot_aud_drift = extra_frs / self.playback_rate
         log.debug('pot_aud_drift: %s', pot_aud_drift)
 
         # keep track of progress in this subregion
-        src_gen = 1  # num of source frames seen
-        frs_itr = 0  # num of frames interpolated
+        src_gen = 0  # num of source frames seen
+        frs_int = 0  # num of frames interpolated
         wrk_idx = 0  # idx in the subregion being worked on
         frs_wrt = 0  # num of frames written in this subregion
         frs_dup = 0  # num of frames duped
         frs_drp = 0  # num of frames dropped
         fin_run = False  # is this the final run?
-        fin_dup = 0  # num of frames duped on the final run
+        frs_fin_dup = 0  # num of frames duped on the final run
         runs = 0  # num of runs through the loop
 
         # frames are zero based indexed
-        fa_idx = fa - 1
+        fa_idx = fa - 1   # seek pos of the frame in the video
 
         fr_1 = None
         fr_2 = framesrc.frame_at_idx(fa_idx)  # first frame in the region
+        # log.debug('read: %s', int(framesrc.index))
+        src_gen += 1
         if fa == fb or tgt_frs == 1:
             # only 1 frame expected. run through the main loop once
             fin_run = True
@@ -356,80 +375,100 @@ class Renderer(object):
             # at least one frame pair is available. num of runs is equal to the
             # the total number of frames in the region - 1. range will run
             # from [0,runs)
-            framesrc.seek_to_frame(fa_idx + 1)
+            framesrc.seek_to_frame(fa_idx + 1)  # seek to the next frame
+            # log.debug('read: %s', int(framesrc.index))
             runs = reg_len
 
-        log.debug('wrt_one: %s', fin_run)
+        log.debug('wrt_one: %s', fin_run)  # only write 1 frame
         log.debug('runs: %s', runs)
 
-        for x in range(0, runs):
-            # hit the `Esc` key to stop running
-            ch = 0xff & cv2.waitKey(30)
-            if ch == 23:
-                break
-
+        for run_idx in range(0, runs):
             # if working on the last frame, write it out because we cant
-            # interpolate without a pair
-            if x >= runs - 1:
+            # interpolate without a pair.
+            if run_idx >= runs - 1:
                 fin_run = True
 
-            to_wrt = []  # hold frames to be written
+            frs_to_wrt = []  # hold frames to be written
             fr_1 = fr_2  # reference to prev fr saves a seek & read
 
             if fin_run:
-                to_wrt.append(fr_1)
-                frs_itr += 1
+                frs_to_wrt.append((fr_1, 'source'))
             else:
                 # begin interpolating frames between pairs
                 # the frame being read should always be valid otherwise break
                 try:
                     fr_2 = framesrc.read()
-                except Exception as e:
+                    # log.debug('read: %s', int(framesrc.index))
+                    src_gen += 1
+                except Exception:
+                    log.error('Could not read frame:', exc_info=True)
                     break
                 if fr_2 is None:
                     break
-                src_gen += 1
 
-                # grayscaled images
                 fr_1_gr = cv2.cvtColor(fr_1, cv2.COLOR_BGR2GRAY)
                 fr_2_gr = cv2.cvtColor(fr_2, cv2.COLOR_BGR2GRAY)
-                # optical flow components
+
                 fu, fv = self.flow_func(fr_1_gr, fr_2_gr)
                 bu, bv = self.flow_func(fr_2_gr, fr_1_gr)
 
                 fr_1_32 = np.float32(fr_1) * 1/255.0
                 fr_2_32 = np.float32(fr_2) * 1/255.0
 
-                inter_frs = self.interpolate_func(
-                    fr_1_32, fr_2_32, fu, fv, bu, bv, time_step)
-                frs_itr += len(inter_frs)
-                to_wrt.append(fr_1)
-                to_wrt.extend(inter_frs)
+                int_frs = self.interpolate_func(
+                    fr_1_32, fr_2_32, fu, fv, bu, bv, int_each_go)
 
-            for y, fr in enumerate(to_wrt):
+                if len(int_frs) != int_each_go:
+                    log.warning('unexpected frs interpolated: act=%s est=%s',
+                                len(int_frs), int_each_go)
+
+                frs_int += len(int_frs)
+                frs_to_wrt.append((fr_1, 'source'))
+                frs_to_wrt.extend(
+                    [(fr, 'interpolated') for fr in int_frs])
+
+            for btw_idx, (fr, fr_type) in enumerate(frs_to_wrt):
                 wrk_idx += 1
                 wrts_needed = 1
+                pair_a = fa_idx + run_idx + 1
+                pair_b = pair_a + 1 if run_idx + 1 < runs else pair_a
+                pair_btw = btw_idx + 1
+
                 if drp_every > 0:
                     if math.fmod(wrk_idx, drp_every) < 1.0:
                         frs_drp += 1
+                        log.debug('drp: %s,%s,%s',
+                                  pair_a,
+                                  pair_b,
+                                  pair_btw)
                         continue
                 if dup_every > 0:
                     if math.fmod(wrk_idx, dup_every) < 1.0:
                         frs_dup += 1
                         wrts_needed = 2
+                        log.debug('dup: %s,%s,%s 2x',
+                                  pair_a,
+                                  pair_b,
+                                  pair_btw)
                 if fin_run:
                     wrts_needed = (tgt_frs - frs_wrt)
-                    fin_dup = wrts_needed - 1
+                    frs_fin_dup = wrts_needed - 1
                     if not self.pad_with_dupes:
-                        if fin_dup > 0:
+                        # write out frame at least once
+                        if frs_fin_dup > 0:
                             wrts_needed = 1
-                for z in range(wrts_needed):
+                    log.debug('fin_dup: %s,%s,%s %sx',
+                              pair_a,
+                              pair_b,
+                              pair_btw,
+                              wrts_needed)
+
+                for wrt_idx in range(wrts_needed):
                     frs_wrt += 1
                     self.total_frs_wrt += 1
 
+                    # frame copy has a minimal effect on performance
                     fr_to_wrt = fr
-
-                    # frame copy here has minimal affect on performance
                     fr_with_info = cv2.cv.fromarray(fr.copy())
 
                     w = self.nrm_info['width']
@@ -440,9 +479,9 @@ class Renderer(object):
 
                     if self.text_type == 'light':
                         text_color = settings['light_color']
-                    if self.text_type == 'dark':
+                    elif self.text_type == 'dark':
                         text_color = settings['dark_color']
-                    if self.text_type == 'stroke':
+                    elif self.text_type == 'stroke':
                         text_color = settings['light_color']
                         strk_color = settings['dark_color']
 
@@ -453,11 +492,11 @@ class Renderer(object):
                         settings['font'], scale, scale, 0.0,
                         settings['strk_thick'], cv2.cv.CV_AA)
 
-                    t = "butterflow {} ({})\n"\
-                        "Res: {},{}\n"\
-                        "Playback Rate: {} fps\n"
-                    t = t.format(__version__, sys.platform, w, h,
-                                 self.playback_rate)
+                    txt = "butterflow {} ({})\n"\
+                          "Res: {},{}\n"\
+                          "Playback Rate: {} fps\n"
+                    txt = txt.format(__version__, sys.platform, w, h,
+                                     self.playback_rate)
 
                     if self.flow_kwargs is not None:
                         flow_format = ''
@@ -469,23 +508,28 @@ class Renderer(object):
                             else:
                                 flow_format += ', '
                             i += 1
-                        t += flow_format
+                        txt += flow_format
 
-                    t += "Frame: {}\n"\
-                         "Work Index: {}, {}, {}\n"\
-                         "Type Src: {}, Dup: {}\n"\
-                         "Mem: {}\n"
-                    t = t.format(
-                        self.total_frs_wrt, fa_idx + x, fa_idx + x + 1, y,
-                        'Y' if y == 0 else 'N', 'Y' if z > 0 else 'N',
-                        hex(id(fr)))
+                    txt += "Frame: {}\n"\
+                           "Pair Index: {}, {}, {}\n"\
+                           "Type Src: {}, Int: {}, Dup: {}\n"\
+                           "Mem: {}\n"
+                    txt = txt.format(
+                        self.total_frs_wrt,
+                        pair_a,
+                        pair_b,
+                        pair_btw,
+                        'Y' if fr_type == 'source' else 'N',
+                        'Y' if fr_type == 'interpolated' else 'N',
+                        'Y' if wrt_idx > 0 else 'N',
+                        hex(id(fr_to_wrt)))
 
-                    for y, line in enumerate(t.split('\n')):
+                    for line_idx, line in enumerate(txt.split('\n')):
                         line_sz, _ = cv2.cv.GetTextSize(line, font)
                         _, line_h = line_sz
                         origin = (int(settings['l_padding']),
                                   int(settings['t_padding'] +
-                                  (y * (line_h +
+                                  (line_idx * (line_h +
                                    settings['line_d_padding']))))
                         if self.text_type == 'stroke':
                             cv2.cv.PutText(
@@ -493,31 +537,27 @@ class Renderer(object):
                         cv2.cv.PutText(
                             fr_with_info, line, origin, font, text_color)
 
-                    sub_tgt_dur = '*'
-                    sub_tgt_fps = '*'
-                    sub_tgt_spd = '*'
-                    sub_tgt_btw = '*'
-                    if subregion.dur is not None:
-                        sub_tgt_dur = '{:.2f}s'.format(
-                            subregion.dur / 1000.0)
-                    if subregion.fps is not None:
-                        sub_tgt_fps = '{}'.format(subregion.fps)
-                    if subregion.spd is not None:
-                        sub_tgt_spd = '{:.2f}'.format(subregion.spd)
-                    if subregion.btw is not None:
-                        sub_tgt_btw = '{:.2f}'.format(subregion.btw)
+                    sub_tgt_dur = '{:.2f}s'.format(
+                        subregion.dur / 1000.0) if subregion.dur else '_'
+                    sub_tgt_fps = '{}'.format(
+                        subregion.fps) if subregion.fps else '_'
+                    sub_tgt_spd = '{:.2f}'.format(
+                        subregion.spd) if subregion.spd else '_'
+                    sub_tgt_btw = '{:.2f}'.format(
+                        subregion.btw) if subregion.btw else '_'
+
                     tgt_dur = tgt_frs / float(self.playback_rate)
                     write_ratio = frs_wrt * 100.0 / tgt_frs
 
-                    t = "Region {}/{} F: [{}, {}] T: [{:.2f}s, {:.2f}s]\n"\
-                        "Len F: {}, T: {:.2f}s\n"\
-                        "Target Dur: {} Spd: {} Fps: {} Btw: {}\n"\
-                        "Out Len F: {}, Dur: {:.2f}s\n"\
-                        "Drp every {:.1f}, Dup every {:.1f}\n"\
-                        "Gen: {}, Made: {}, Drp: {}, Dup: {}\n"\
-                        "Write Ratio: {}/{} ({:.2f}%)\n"
+                    txt = "Region {}/{} F: [{}, {}] T: [{:.2f}s, {:.2f}s]\n"\
+                          "Len F: {}, T: {:.2f}s\n"\
+                          "Target Spd: {} Dur: {} Fps: {} Btw: {}\n"\
+                          "Out Len F: {}, Dur: {:.2f}s\n"\
+                          "Drp every {:.1f}, Dup every {:.1f}\n"\
+                          "Src seen: {}, Int: {}, Drp: {}, Dup: {}\n"\
+                          "Write Ratio: {}/{} ({:.2f}%)\n"
 
-                    t = t.format(
+                    txt = txt.format(
                         self.curr_subregion_idx + 1,
                         self.subregions_to_render,
                         fa,
@@ -526,8 +566,8 @@ class Renderer(object):
                         tb / 1000,
                         reg_len,
                         reg_dur,
-                        sub_tgt_dur,
                         sub_tgt_spd,
+                        sub_tgt_dur,
                         sub_tgt_fps,
                         sub_tgt_btw,
                         tgt_frs,
@@ -535,19 +575,19 @@ class Renderer(object):
                         drp_every,
                         dup_every,
                         src_gen,
-                        frs_itr,
+                        frs_int,
                         frs_drp,
                         frs_dup,
                         frs_wrt,
                         tgt_frs,
                         write_ratio)
 
-                    for y, line in enumerate(t.split('\n')):
+                    for line_idx, line in enumerate(txt.split('\n')):
                         line_sz, _ = cv2.cv.GetTextSize(line, font)
                         line_w, line_h = line_sz
                         origin = (int(w - settings['r_padding'] - line_w),
                                   int(settings['t_padding'] +
-                                  (y * (line_h +
+                                  (line_idx * (line_h +
                                    settings['line_d_padding']))))
                         if self.text_type == 'stroke':
                             cv2.cv.PutText(
@@ -555,24 +595,37 @@ class Renderer(object):
                         cv2.cv.PutText(
                             fr_with_info, line, origin, font, text_color)
 
-                    # finshed adding info. show the frame on the screen
+                    # show the frame on the screen
                     if self.show_preview:
                         cv2.imshow(self.window_title, np.asarray(fr_with_info))
+                        # every imshow call should be followed by waitKey to
+                        # display the image for x milliseconds, otherwise it
+                        # won't display the image
+                        cv2.waitKey(settings['imshow_ms'])
+
+                    # add debugging information
                     if self.add_info:
                         fr_to_wrt = np.asarray(fr_with_info)
 
                     # send the frame to the pipe
                     self.write_frame_to_pipe(self.render_pipe, fr_to_wrt)
 
-        # finished, we're outside of the main loop
+        # finished encoding
         act_aud_drift = float(tgt_frs - frs_wrt) / self.playback_rate
         log.debug('act_aud_drift: %s', act_aud_drift)
 
         log.debug('src_gen: %s', src_gen)
-        log.debug('frs_itr: %s', frs_itr)
+        log.debug('frs_int: %s', frs_int)
         log.debug('frs_drp: %s', frs_drp)
         log.debug('frs_dup: %s', frs_dup)
-        log.debug('fin_dup: %s', fin_dup)
+        log.debug('frs_fin_dup: %s', frs_fin_dup)
+
+        act_dur = frs_wrt / self.playback_rate
+        log.debug('act_dur: %s', act_dur)
+
+        if not np.isclose(act_dur, est_dur, rtol=1e-03):
+            log.warning('unexpected dur: est_dur=%s act_dur=%s',
+                        est_dur, act_dur)
 
         if tgt_frs == 0:
             wrt_ratio = 0
@@ -600,7 +653,8 @@ class Renderer(object):
             s.dur = tb - ta
             s.spd = 1.0
             tgt_frs = int(self.playback_rate * (dur / 1000.0))
-            s.btw = (tgt_frs - frs) * 1.0 / (frs - 1)
+            # use max to avoid division by zero error
+            s.btw = (tgt_frs - frs) * 1.0 / max(1, frs - 1)
             setattr(s, 'trim', False)
             new_subregions.append(s)
         else:
@@ -647,20 +701,28 @@ class Renderer(object):
                     setattr(s, 'trim', self.trim)
                 new_subregions.append(sub_for_range)
 
-        # create a new video sequence. the new subregions will automatically
-        # be validated as they are added to the sequence
+        # create a new video sequence. the new subregions will
+        # be auto validated and sorted as they are added to the sequence
         seq = VideoSequence(dur, frs)
         for s in new_subregions:
             seq.add_subregion(s)
+
+        log.debug('Rendering sequence:')
+        for s in new_subregions:
+            log.debug(
+                'subregion: {},{},{} {:.3g},{:.3g},{:.3g} {:.3g},{:.3g},{:.3g}'.
+                format(s.fa,
+                       s.fb,
+                       (s.fb - s.fa + 1),
+                       s.ta / 1000,
+                       s.tb / 1000,
+                       (s.tb - s.ta) / 1000,
+                       s.ra,
+                       s.rb,
+                       s.rb - s.ra))
         return seq
 
     def render(self):
-        """normalizes, renders, muxes an interpolated video, if necessary. when
-        doing slow/fast motion, audio and subtitles will not be muxed into the
-        final video because it wouldnt be in sync. we also need to recalculate
-        relative positions after normalization because the video may have
-        changed in frame count, frame rate, and duration.
-        """
         dst_name, _ = os.path.splitext(os.path.basename(self.dst_path))
 
         src_path = self.video_info['path']

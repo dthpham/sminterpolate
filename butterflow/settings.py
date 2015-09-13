@@ -39,6 +39,8 @@ default = {
     'flow_filter':    'box',
     # -1 is max threads and it's the opencv default
     'ocv_threads':    1*-1,
+    # milliseconds to display image in preview window
+    'imshow_ms':      1,
     # debugging info font options
     'text_type':      'light',
     'light_color':    cv2.cv.RGB(255, 255, 255),
