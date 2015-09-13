@@ -239,7 +239,11 @@ def main():
         pass
 
     motion.set_num_threads(settings.default['ocv_threads'])
-    renderer.render()
+
+    try:
+        renderer.render()
+    except (KeyboardInterrupt, SystemExit):
+        return 1
 
 
 def time_str_to_ms(time):
