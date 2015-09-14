@@ -266,7 +266,7 @@ elif is_win:
 
 ocl_ext = Extension('butterflow.ocl',
                     extra_compile_args=cflags,
-                    extra_link_args=mklist(linkflags, cl_linkflags),
+                    extra_link_args=linkflags + cl_linkflags,
                     include_dirs=mklist(cl_includes),
                     libraries=mklist(cl_lib),
                     library_dirs=mklist(cl_ldflag),
