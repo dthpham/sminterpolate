@@ -55,8 +55,7 @@ def have_library(l):
     if res:
         return True
     else:
-        proc = subprocess.call(['pkg-config', '--exists', l],
-                               env=get_extra_envs())
+        proc = subprocess.call(['pkg-config', '--exists', l])
         return (proc == 0)
 
 
@@ -65,8 +64,7 @@ def have_library_object_file(lib, objfilename):
     """
     if have_library(lib):
         call = ['pkg-config', '--libs', lib]
-        res = subprocess.Popen(call, stdout=subprocess.PIPE,
-                               env=get_extra_envs()).stdout.read()
+        res = subprocess.Popen(call, stdout=subprocess.PIPE).stdout.read()
         res = res.strip()
         res = res.split(' ')
         res = map(get_lib_short_name, res)
@@ -137,8 +135,7 @@ def pkg_config_res_to_setuptools(*opts):
     """
     call = ['pkg-config']
     call.extend(opts)
-    res = subprocess.Popen(call, stdout=subprocess.PIPE,
-                           env=get_extra_envs()).stdout.read()
+    res = subprocess.Popen(call, stdout=subprocess.PIPE).stdout.read()
     res = res.strip()
     res = res.split(' ')
     lst = []
@@ -163,8 +160,7 @@ homebrew_prefix = None
 homebrew_site_pkgs = None
 try:
     homebrew_prefix = subprocess.Popen(['brew', '--prefix'],
-                                       stdout=subprocess.PIPE,
-                                       env=get_extra_envs())
+                                       stdout=subprocess.PIPE)
     homebrew_prefix = homebrew_prefix.stdout.read().strip()
 except Exception:
     # fall back to environment variable if brew command is not found
