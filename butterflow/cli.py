@@ -79,7 +79,7 @@ def main():
                      '(default: %(default)s)')
     vid.add_argument('-l', '--lossless', action='store_true',
                      help='Set to use lossless encoding settings')
-    vid.add_argument('-npad', '--no-padding', action='store_false',
+    vid.add_argument('-npad', '--no-pad', action='store_false',
                      help='Set to discard duplicate frames that are padded to '
                      'the end of subregions. This will alter the expected '
                      'duration of the output video.')
@@ -87,13 +87,19 @@ def main():
                      help='Set to do a basic inverse telecine on the input '
                      'video')
     vid.add_argument('--grayscale', action='store_true',
-                     help='Set to enhance coloring of grayscale videos')
+                     help='Set to enhance the coloring of grayscale videos')
 
     mux.add_argument('-m', '--mux', action='store_true',
                      help='Set to mux source audio and subtitles with the '
                      'output video. Audio and subtitles may be truncated or '
-                     'may not be in sync with the video because of potential '
-                     'differences in duration.')
+                     'may not be in sync with the final video if the duration '
+                     'has been altered during the rendering process.')
+
+    fgr.description = 'The Farneback algorithm is used to compute dense ' \
+                      'optical flows for frame interpolation. Use these ' \
+                      'options to pass in different values to the function to ' \
+                      'fine-tune the quality (robustness of image) of the ' \
+                      'resulting videos.'
 
     fgr.add_argument('--fast-pyr', action='store_true',
                      help='Set to use fast pyramids')
