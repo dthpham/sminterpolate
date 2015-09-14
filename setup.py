@@ -264,9 +264,13 @@ elif is_win:
     cl_ldflag = os.path.join(cl_dir, 'lib')
     cl_lib = 'OpenCL'
 
+ocl_extra_link_args = linkflags
+if is_osx:
+    ocl_extra_link_args.extend(cl_linkflags)
+
 ocl_ext = Extension('butterflow.ocl',
                     extra_compile_args=cflags,
-                    extra_link_args=linkflags + cl_linkflags,
+                    extra_link_args=ocl_extra_link_args,
                     include_dirs=mklist(cl_includes),
                     libraries=mklist(cl_lib),
                     library_dirs=mklist(cl_ldflag),
