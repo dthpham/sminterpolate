@@ -264,7 +264,7 @@ def main():
         args.add_info,
         args.text_type,
         args.mux,
-        args.no_padding,
+        args.no_pad,
         settings.default['av_loglevel'],
         settings.default['enc_loglevel'],
         flow_kwargs)
