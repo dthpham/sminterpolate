@@ -130,7 +130,7 @@ class InterpolateFlowTestCase(unittest.TestCase):
         fr_1_32 = np.float32(fr_1)*1/255.0
         fr_2_32 = np.float32(fr_2)*1/255.0
         self.assertIsNotNone(
-            ocl_interpolate_flow(fr_1_32,fr_2_32,fu,fv,bu,bv,0.500))
+            ocl_interpolate_flow(fr_1_32,fr_2_32,fu,fv,bu,bv,1)[0])
 
     def test_ocl_interpolate_flow_refcnt(self):
         # sys.getrefcnt is generally one higher than expected
