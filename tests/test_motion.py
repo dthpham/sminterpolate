@@ -101,7 +101,7 @@ class InterpolateFlowTestCase(unittest.TestCase):
                 self.fr_1_32,self.fr_2_32,self.fu,self.fv,self.bu,self.bv,t)
 
     def test_ocl_interpolate_flow_form(self):
-        fr = self.ocl_inter_method(0.5)[0]
+        fr = self.ocl_inter_method(1)[0]
         self.assertIsInstance(fr, np.ndarray)
         self.assertEqual(fr.dtype, np.uint8)
         self.assertEqual(len(fr.shape),3)
@@ -111,16 +111,11 @@ class InterpolateFlowTestCase(unittest.TestCase):
         self.assertEqual(ch, 3)
 
     def test_ocl_interpolate_flow_count(self):
-        self.assertEqual(len(self.ocl_inter_method(0.500)),1)
-        self.assertEqual(len(self.ocl_inter_method(0.250)),4-1)
-        self.assertEqual(len(self.ocl_inter_method(0.125)),8-1)
-        self.assertEqual(len(self.ocl_inter_method(0.0625)),16-1)
-        self.assertEqual(len(self.ocl_inter_method(0.333)),3)
-        self.assertEqual(len(self.ocl_inter_method(0.334)),2)
-        self.assertEqual(len(self.ocl_inter_method(1)),0)
+        self.assertEqual(len(self.ocl_inter_method(1)),1)
+        self.assertEqual(len(self.ocl_inter_method(2)),2)
+        self.assertEqual(len(self.ocl_inter_method(3)),3)
 
     def test_ocl_interpolate_flow_return_zero(self):
-        self.assertEqual(len(self.ocl_inter_method(1)),0)
         self.assertEqual(len(self.ocl_inter_method(0)),0)
 
     def test_ocl_interpolate_flow_hires(self):
@@ -139,10 +134,10 @@ class InterpolateFlowTestCase(unittest.TestCase):
 
     def test_ocl_interpolate_flow_refcnt(self):
         # sys.getrefcnt is generally one higher than expected
-        frs = self.ocl_inter_method(0.500)
+        frs = self.ocl_inter_method(1)
         self.assertEqual(sys.getrefcount(frs),1+1)
         self.assertEqual(sys.getrefcount(frs[0]),1+1)
-        frs = self.ocl_inter_method(0.334)
+        frs = self.ocl_inter_method(2)
         self.assertEqual(sys.getrefcount(frs),1+1)
         self.assertEqual(sys.getrefcount(frs[0]),1+1)
         self.assertEqual(sys.getrefcount(frs[1]),1+1)
