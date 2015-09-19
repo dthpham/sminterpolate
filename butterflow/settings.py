@@ -17,7 +17,7 @@ default = {
     # loglevel will be set to `DEBUG` if verbose is True
     'loglevel_b':     logging.DEBUG,
     'verbose':        False,
-    # `ffmpeg` and `avconv` options
+    # only support `ffmpeg` for now
     'avutil':         'ffmpeg',
     # avutil and encoder loglevel
     # `info` is default, set to `fatal` for quiet

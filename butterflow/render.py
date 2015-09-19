@@ -58,13 +58,12 @@ class Renderer(object):
             self.video_info['path']))
 
     def normalize_for_interpolation(self, dst_path):
-        using_avconv = settings['avutil'] == 'avconv'
         if not self.video_info['v_stream_exists']:
             raise RuntimeError('no video stream detected')
         has_sub = self.video_info['s_stream_exists']
         has_aud = self.video_info['a_stream_exists']
 
-        w = -1 if using_avconv else -2
+        w = -2
         h = int(self.video_info['height'] * self.scale * 0.5) * 2
         scaler = 'bilinear' if self.scale >= 1.0 else 'lanczos'
 
@@ -95,7 +94,7 @@ class Renderer(object):
                 '-c:a', 'libvorbis',
                 '-ab', '96k'
             ])
-        if has_sub and not using_avconv:
+        if has_sub:
             call.extend([
                 '-c:s', 'mov_text'
             ])
@@ -108,8 +107,7 @@ class Renderer(object):
             if self.lossless:
                 quality = ['-qp', '0']
             call.extend(quality)
-            if not using_avconv:
-                call.extend(['-level', '4.2'])
+            call.extend(['-level', '4.2'])
         elif settings['encoder'] == 'libx265':
             call.extend(['-x265-params'])
             quality = 'crf={}'.format(settings['crf'])
@@ -144,9 +142,6 @@ class Renderer(object):
     def extract_subtitles(self, dst_path):
         if not self.video_info['s_stream_exists']:
             raise RuntimeError('no subtitle stream detected')
-        if settings['avutil'] == 'avconv':
-            open(dst_path, 'a').close()
-            return
         proc = subprocess.call([
             settings['avutil'],
             '-loglevel', self.av_loglevel,

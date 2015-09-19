@@ -198,7 +198,7 @@ def main():
         return 1
 
     if settings.default['avutil'] == 'none':
-        log.warning('You need `ffmpeg` or `avconv` to use this app')
+        log.warning('You need `ffmpeg` to use this app')
         return 1
 
     # setup functions that will be used to generate flows and interpolate frames
