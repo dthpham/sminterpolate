@@ -13,7 +13,7 @@ default = {
     'debug_opts':     False,
     # default logging level
     # levels in order of urgency: critical, error, warning, info, debug
-    'loglevel_a':     logging.INFO,
+    'loglevel_a':     logging.ERROR,
     # loglevel will be set to `DEBUG` if verbose is True
     'loglevel_b':     logging.DEBUG,
     'verbose':        False,

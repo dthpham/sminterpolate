@@ -56,6 +56,7 @@ class Renderer(object):
         self.render_pipe = None
         self.flow_kwargs = flow_kwargs
         self.total_frs_wrt = 0
+        self.total_frs_inter = 0
         self.subregions_to_render = 0
         self.curr_subregion_idx = 0
         self.window_title = '{} - Butterflow'.format(os.path.basename(
@@ -291,6 +292,7 @@ class Renderer(object):
         # keep track of progress in this subregion
         src_gen = 0  # num of source frames seen
         frs_int = 0  # num of frames interpolated
+        frs_int_drp = 0  # num of interpolated frames dropped
         wrk_idx = 0  # idx in the subregion being worked on
         frs_wrt = 0  # num of frames written in this subregion
         frs_dup = 0  # num of frames duped
@@ -382,6 +384,8 @@ class Renderer(object):
                         log_msg = log.debug
                         if fr_type == 'source':
                             log_msg = log.warning
+                        else:
+                            frs_int_drp += 1
                         log_msg('drp: %s,%s,%s',
                                 pair_a,
                                 pair_b,
@@ -556,6 +560,8 @@ class Renderer(object):
                     self.write_frame_to_pipe(self.render_pipe, fr_to_wrt)
 
         # finished encoding
+        self.total_frs_inter += (frs_int - frs_int_drp)
+
         act_aud_drift = float(tgt_frs - frs_wrt) / self.playback_rate
         log.debug('act_aud_drift: %s', act_aud_drift)
 

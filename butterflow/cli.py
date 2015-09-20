@@ -279,7 +279,9 @@ def main():
     motion.set_num_threads(settings.default['ocv_threads'])
 
     try:
-        renderer.render()
+        import timeit
+        tot_time = timeit.timeit(renderer.render, number=1)
+        log.info('butterflow took {} minutes'.format(tot_time / 60))
     except (KeyboardInterrupt, SystemExit):
         log.warning('files left in cache')
         return 1
