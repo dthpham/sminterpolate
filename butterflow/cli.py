@@ -158,7 +158,7 @@ def main():
                 fp = os.path.join(dirpath, f)
                 sz += os.path.getsize(fp)
         sz_mb = float(sz) / (1 << 20)  # size in megabytes
-        print('{} files, {:.2g}MB'.format(num_files, sz_mb))
+        print('{} files, {:.2g} MB'.format(num_files, sz_mb))
         return 0
 
     if args.rm_cache:
