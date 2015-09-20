@@ -34,37 +34,6 @@ class RenderTestCase(unittest.TestCase):
     def assertExists(self, path):
         self.assertTrue(os.path.exists(path))
 
-    def test_normalize_video(self):
-        r = self.make_renderer(self.src_v)
-        r.normalize_for_interpolation(self.out_v)
-        self.assertExists(self.out_v)
-        i = avinfo.get_info(self.out_v)
-        self.assertTrue(i['v_stream_exists'])
-        self.assertFalse(i['a_stream_exists'])
-        self.assertFalse(i['s_stream_exists'])
-
-    def test_normalize_video_audio(self):
-        r = self.make_renderer(self.src_va)
-        r.normalize_for_interpolation(self.out_v)
-        self.assertExists(self.out_v)
-        i = avinfo.get_info(self.out_v)
-        self.assertTrue(i['v_stream_exists'])
-        self.assertTrue(i['a_stream_exists'])
-        self.assertFalse(i['s_stream_exists'])
-
-    def test_normalize_video_audio_subtitles(self):
-        r = self.make_renderer(self.src_vas)
-        r.normalize_for_interpolation(self.out_v)
-        self.assertExists(self.out_v)
-        i = avinfo.get_info(self.out_v)
-        self.assertTrue(i['v_stream_exists'])
-        self.assertTrue(i['a_stream_exists'])
-
-    def test_normalize_no_video(self):
-        r = self.make_renderer(self.src_a)
-        with self.assertRaises(RuntimeError):
-            r.normalize_for_interpolation(self.src_a)
-
     def test_extract_audio(self):
         r = self.make_renderer(self.src_va)
         r.extract_audio(self.out_a)
