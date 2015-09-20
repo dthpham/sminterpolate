@@ -34,14 +34,14 @@ def main():
                      help='Show this help message and exit')
     gen.add_argument('-V', '--version', action='store_true',
                      help='Show program\'s version number and exit')
+    gen.add_argument('-i', '--inspect', action='store_true',
+                     help='Show video information and exit')
     gen.add_argument('-d', '--devices', action='store_true',
                      help='Show detected OpenCL devices and exit')
     gen.add_argument('-c', '--cache', action='store_true',
                      help='Show cache information and exit')
     gen.add_argument('--rm-cache', action='store_true',
                      help='Set to clear the cache and exit')
-    gen.add_argument('-i', '--inspect', action='store_true',
-                     help='Show video information and exit')
     gen.add_argument('-v', '--verbose', action='store_true',
                      help='Set to increase output verbosity')
 
@@ -223,6 +223,7 @@ def main():
 
     if args.inspect:
         if args.video:
+            dur = vid_info['duration']
             streams = []
             if vid_info['v_stream_exists']:
                 streams.append('video')
@@ -231,15 +232,15 @@ def main():
             if vid_info['s_stream_exists']:
                 streams.append('subtitle')
             print('Video information:'
-                  '\n  Streams available   \t: {}'
-                  '\n  Resolution          \t: {}x{}'
-                  '\n  Rate                \t: {}'
-                  '\n  Duration in seconds \t: {}'
-                  '\n  Num of frames       \t: {}'.format(
+                  '\n  Streams available  \t: {}'
+                  '\n  Resolution         \t: {}x{}'
+                  '\n  Rate               \t: {:.3f} fps'
+                  '\n  Duration           \t: {} ({:.2f}s)'
+                  '\n  Num of frames      \t: {}'.format(
                       ','.join(streams),
                       vid_info['width'], vid_info['height'],
                       src_rate,
-                      vid_info['duration'] / 1000.0,
+                      ms_to_time_str(dur), dur / 1000.0,
                       vid_info['frames']
                   ))
             return 0
@@ -310,32 +311,49 @@ def main():
         return 1
 
 
-def time_str_to_ms(time):
-    """Converts a time string to milliseconds. Syntax: [hrs:mins:secs.xxx] OR
-    [mins:secs.xxx] OR [secs.xxx]"""
+def ms_to_time_str(time_ms):
+    # converts a time in ms to a time string
+    # time string in form:
+    # [hrs:mins:secs.xxx]
+    import time
+    t_str = time.strftime('%H:%M:%S', time.gmtime(time_ms / 1000.0))
+    return t_str
+
+
+def time_str_to_ms(time_str):
+    # converts a time str to milliseconds
+    # time str syntax:
+    # [hrs:mins:secs.xxx], [mins:secs.xxx], [secs.xxx]
     hr = 0
     minute = 0
     sec = 0
     valid_char_set = '0123456789:.'
-    syntax_error = ValueError('invalid time syntax')
-    if time == '' or time.count(':') > 2:
-        raise syntax_error
-    for char in time:
+    if time_str == '' or time_str.count(':') > 2:
+        raise ValueError('invalid time syntax')
+    for char in time_str:
         if char not in valid_char_set:
-            raise syntax_error
-    val = time.split(':')
-    if len(val) >= 1 and val[-1] != '':
-        sec = float(val[-1])
-    if len(val) >= 2 and val[-2] != '':
-        minute = float(val[-2])
-    if len(val) == 3 and val[-3] != '':
-        hr = float(val[-3])
+            raise ValueError('unknown char in time string')
+    val = time_str.split(':')
+    val_len = len(val)
+    # going backwards in the list
+    # get secs.xxx portion
+    if val_len >= 1:
+        if val[-1] != '':
+            sec = float(val[-1])
+    # get mins portion
+    if val_len >= 2:
+        if val[-2] != '':
+            minute = float(val[-2])
+    # get hrs portion
+    if val_len == 3:
+        if val[-3] != '':
+            hr = float(val[-3])
     return (hr * 3600 + minute * 60 + sec) * 1000.0
 
 
 def parse_tval_str(string):
-    """Extracts a target and value from a target value string where TARGET is
-    either {fps,dur,spd,btw}. Syntax: TARGET=VALUE"""
+    # extract values from TARGET=VALUE string
+    # target can be fps, dur, spd, or btw
     tgt = string.split('=')[0]
     val = string.split('=')[1]
     if tgt == 'fps':
@@ -347,8 +365,7 @@ def parse_tval_str(string):
         else:
             val = float(val)
     elif tgt == 'dur':
-        # duration in milliseconds
-        val = float(val) * 1000.0
+        val = float(val) * 1000  # duration in ms
     elif tgt == 'spd' or tgt == 'btw':
         val = float(val)
     else:
@@ -357,8 +374,9 @@ def parse_tval_str(string):
 
 
 def sub_from_str(string):
-    """Returns a subregion from a string with no special keywords. Syntax:
-    a=<time>,b=<time>,TARGET=VALUE"""
+    # returns a subregion from string
+    # input syntax:
+    # a=<time>,b=<time>,TARGET=VALUE
     val = string.split(',')
     a = val[0].split('=')[1]  # the `a=` portion
     b = val[1].split('=')[1]  # the `b=` portion
@@ -371,9 +389,9 @@ def sub_from_str(string):
 
 
 def sub_from_str_full_key(string, duration):
-    """Returns a subregion from a string that contains the `full` keyword. the
-    `full` keyword denotes the entire length of the video. Syntax:
-    full,TARGET=VALUE"""
+    # returns a subregion from string with the `full` keyword
+    # input syntax:
+    # full,TARGET=VALUE
     val = string.split(',')
     if val[0] == 'full':
         # create a subregion from [0, duration]
@@ -386,9 +404,9 @@ def sub_from_str_full_key(string, duration):
 
 
 def sub_from_str_end_key(string, duration):
-    """Returns a subregion from a string that contains the `end` keyword. the
-    `end` keyword denotes to the end of the video. Syntax:
-    a=<time>,b=end,TARGET=VALUE"""
+    # returns a subregion from string with the `end` keyword
+    # input syntax:
+    # a=<time>,b=end,TARGET=VALUE
     val = string.split(',')
     b = val[1].split('=')[1]  # the `b=` portion
     if b == 'end':
@@ -401,8 +419,7 @@ def sub_from_str_end_key(string, duration):
 
 
 def sequence_from_str(duration, frames, strings):
-    """Returns a video sequence from multiple subregion strings separated by a
-    colon `:`"""
+    # return a vid sequence from -s <subregion>:<subregion>...
     seq = VideoSequence(duration, frames)
     if strings is None:
         return seq
@@ -419,8 +436,10 @@ def sequence_from_str(duration, frames, strings):
         substrs = newsubstrs
     for substr in substrs:
         sub = None
+        # has the full key
         if 'full' in substr:
             sub = sub_from_str_full_key(substr, duration)
+        # has the end key
         elif 'end' in substr:
             sub = sub_from_str_end_key(substr, duration)
         else:
