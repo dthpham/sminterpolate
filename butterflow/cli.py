@@ -16,7 +16,7 @@ NO_OCL_WARNING = 'No compatible OCL devices detected. Check your OpenCL '\
 def main():
     import logging
     logging.basicConfig(level=settings.default['loglevel_a'],
-                        format='%(message)s')
+                        format='%(levelname)-7s: %(message)s')
 
     par = argparse.ArgumentParser(usage='butterflow [options] [video]',
                                   add_help=False)
@@ -163,7 +163,7 @@ def main():
         if os.path.exists(cache_dir):
             import shutil
             shutil.rmtree(cache_dir)
-        log.info('cache cleared')
+        print('cache cleared')
         return 0
 
     have_ocl = ocl.ocl_device_available()
@@ -171,7 +171,7 @@ def main():
         if have_ocl:
             ocl.print_ocl_devices()
         else:
-            log.warning(NO_OCL_WARNING)
+            print(NO_OCL_WARNING)
         return 0
 
     if have_ocl:
@@ -180,20 +180,20 @@ def main():
             os.makedirs(cache_dir)
         motion.set_cache_path(cache_dir + os.sep)
     else:
-        log.warning(NO_OCL_WARNING)
+        print(NO_OCL_WARNING)
         return 1
 
     src_path = args.video
     if src_path is None:
-        log.error('No input video specified')
+        print('No input video specified')
         return 1
 
     if not os.path.exists(args.video):
-        log.error('Video does not exist at path')
+        print('Video does not exist at path')
         return 1
 
     if settings.default['avutil'] == 'none':
-        log.warning('You need `ffmpeg` to use this app')
+        print('You need `ffmpeg` to use this app')
         return 1
 
     # setup functions that will be used to generate flows and interpolate frames
@@ -234,10 +234,11 @@ def main():
         log.error('Bad subregion string: %s' % e)
         return 1
 
+    src_rate = vid_info['rate_num'] * 1.0 / vid_info['rate_den']
     rate = 0
     if args.playback_rate is None:
         # use original rate
-        rate = vid_info['rate_num'] * 1.0 / vid_info['rate_den']
+        rate = src_rate
     else:
         # allow fractional rates and fractions with non-rational numerators
         # and denominators
@@ -247,6 +248,9 @@ def main():
             rate = float(num) / float(den)
         else:
             rate = float(rate)
+
+    if rate != src_rate:
+        log.warning('rate mismatch: src_rate=%s rate=%s', src_rate, rate)
 
     renderer = Renderer(
         args.output_path,
@@ -277,6 +281,7 @@ def main():
     try:
         renderer.render()
     except (KeyboardInterrupt, SystemExit):
+        log.warning('files left in cache')
         return 1
 
 

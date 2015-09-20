@@ -379,10 +379,13 @@ class Renderer(object):
                 if drp_every > 0:
                     if math.fmod(wrk_idx, drp_every) < 1.0:
                         frs_drp += 1
-                        log.debug('drp: %s,%s,%s',
-                                  pair_a,
-                                  pair_b,
-                                  pair_btw)
+                        log_msg = log.debug
+                        if fr_type == 'source':
+                            log_msg = log.warning
+                        log_msg('drp: %s,%s,%s',
+                                pair_a,
+                                pair_b,
+                                pair_btw)
                         continue
                 if dup_every > 0:
                     if math.fmod(wrk_idx, dup_every) < 1.0:
@@ -573,7 +576,10 @@ class Renderer(object):
             wrt_ratio = 0
         else:
             wrt_ratio = float(frs_wrt) / tgt_frs
-        log.debug('wrt_ratio: {}/{}, {:.2f}%'.format(
+        log_msg = log.debug
+        if frs_wrt != tgt_frs:
+            log_msg = log.warning
+        log_msg('wrt_ratio: {}/{}, {:.2f}%'.format(
             frs_wrt, tgt_frs, wrt_ratio * 100))
 
     def renderable_sequence(self):
