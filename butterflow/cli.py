@@ -73,19 +73,16 @@ def main():
     vid.add_argument('-t', '--trim-regions', action='store_true',
                      help='Set to trim subregions that are not explicitly '
                           'specified')
-    vid.add_argument('-vs', '--video-scale', type=float,
-                     default=settings.default['video_scale'],
-                     help='Specify the output video scale, '
-                     '(default: %(default)s)')
+    # vid.add_argument('-vs', '--video-scale', type=float,
+    #                  default=settings.default['video_scale'],
+    #                  help='Specify the output video scale, '
+    #                  '(default: %(default)s)')
     vid.add_argument('-l', '--lossless', action='store_true',
                      help='Set to use lossless encoding settings')
     vid.add_argument('-npad', '--no-pad', action='store_false',
                      help='Set to discard duplicate frames that are padded to '
                      'the end of subregions. This will alter the expected '
                      'duration of the output video.')
-    vid.add_argument('-dt', '--detelecine', action='store_true',
-                     help='Set to do a basic inverse telecine on the input '
-                     'video')
     vid.add_argument('--grayscale', action='store_true',
                      help='Set to enhance the coloring of grayscale videos')
 
@@ -255,8 +252,7 @@ def main():
         rate,
         flow_func,
         motion.ocl_interpolate_flow,
-        args.video_scale,
-        args.detelecine,
+        settings.default['video_scale'],  # overriding
         args.grayscale,
         args.lossless,
         args.trim_regions,

@@ -24,7 +24,7 @@ class Renderer(object):
         self, dst_path, video_info, video_sequence, playback_rate,
         flow_func=settings['flow_func'],
         interpolate_func=settings['interpolate_func'],
-        scale=settings['video_scale'], detelecine=False, grayscale=False,
+        scale=settings['video_scale'], grayscale=False,
         lossless=False, trim=False, show_preview=True, add_info=False,
         text_type=settings['text_type'], mux=False, pad_with_dupes=True,
         av_loglevel=settings['av_loglevel'],
@@ -44,11 +44,9 @@ class Renderer(object):
         self.enc_loglevel = enc_loglevel
         self.playback_rate = float(playback_rate)
         self.scale = scale
-        self.detelecine = detelecine
         self.grayscale = grayscale
         self.lossless = lossless
         self.trim = trim
-        self.nrm_info = None
         self.render_pipe = None
         self.flow_kwargs = flow_kwargs
         self.total_frs_wrt = 0
@@ -56,73 +54,6 @@ class Renderer(object):
         self.curr_subregion_idx = 0
         self.window_title = '{} - Butterflow'.format(os.path.basename(
             self.video_info['path']))
-
-    def normalize_for_interpolation(self, dst_path):
-        if not self.video_info['v_stream_exists']:
-            raise RuntimeError('no video stream detected')
-        has_sub = self.video_info['s_stream_exists']
-        has_aud = self.video_info['a_stream_exists']
-
-        w = -2
-        h = int(self.video_info['height'] * self.scale * 0.5) * 2
-        scaler = 'bilinear' if self.scale >= 1.0 else 'lanczos'
-
-        tmp_dir = os.path.join(
-            os.path.dirname(dst_path), '~' + os.path.basename(dst_path))
-
-        vf = []
-        vf.append('scale={}:{}'.format(w, h))
-        if self.detelecine:
-            vf.extend(['fieldmatch', 'decimate'])
-        if self.grayscale:
-            vf.append('format=gray')
-        vf.append('format=yuv420p')
-
-        call = [
-            settings['avutil'],
-            '-loglevel', self.av_loglevel,
-            '-y',
-            '-threads', '0',
-            '-i', self.video_info['path'],
-            '-map_metadata', '-1',
-            '-map_chapters', '-1',
-            '-vf', ','.join(vf),
-            '-sws_flags', scaler
-        ]
-        if has_aud:
-            call.extend([
-                '-c:a', 'libvorbis',
-                '-ab', '96k'
-            ])
-        if has_sub:
-            call.extend([
-                '-c:s', 'mov_text'
-            ])
-        call.extend([
-            '-c:v', settings['encoder'],
-            '-preset', settings['preset'],
-        ])
-        if settings['encoder'] == 'libx264':
-            quality = ['-crf', str(settings['crf'])]
-            if self.lossless:
-                quality = ['-qp', '0']
-            call.extend(quality)
-            call.extend(['-level', '4.2'])
-        elif settings['encoder'] == 'libx265':
-            call.extend(['-x265-params'])
-            quality = 'crf={}'.format(settings['crf'])
-            if self.lossless:
-                # ffmpeg doesn't pass -x265-params to x265 correctly, must
-                # provide keys for every single value until fixed
-                # See: https://trac.ffmpeg.org/ticket/4284
-                quality = 'lossless=1'
-            loglevel = 'log-level={}'.format(self.enc_loglevel)
-            call.extend([':'.join([quality, loglevel])])
-        call.extend([tmp_dir])
-        nrm_proc = subprocess.call(call)
-        if nrm_proc == 1:
-            raise RuntimeError('could not normalize video')
-        shutil.move(tmp_dir, dst_path)
 
     def extract_audio(self, dst_path):
         if not self.video_info['a_stream_exists']:
@@ -193,24 +124,31 @@ class Renderer(object):
             os.remove(vid_path)
 
     def make_pipe(self, dst_path, rate):
+        w = self.video_info['width']
+        h = self.video_info['height']
+
         vf = []
+        # vf.append('scale={}:{}'.format(w, h))
         if self.grayscale:
             vf.append('format=gray')
         vf.append('format=yuv420p')
-        w = self.nrm_info['width']
-        h = self.nrm_info['height']
+
         call = [
             settings['avutil'],
             '-loglevel', self.av_loglevel,
             '-y',
+            '-threads', '0',
             '-f', 'rawvideo',
             '-pix_fmt', 'bgr24',
             '-s', '{}x{}'.format(w, h),
             '-r', str(rate),
             '-i', '-',
+            '-map_metadata', '-1',
+            '-map_chapters', '-1',
             '-vf', ','.join(vf),
             '-r', str(rate),
-            '-c:a', 'none',
+            '-an',
+            '-sn',
             '-c:v', settings['encoder'],
             '-preset', settings['preset']]
         if settings['encoder'] == 'libx264':
@@ -218,10 +156,14 @@ class Renderer(object):
             if self.lossless:
                 quality = ['-qp', '0']
             call.extend(quality)
+            call.extend(['-level', '4.2'])
         elif settings['encoder'] == 'libx265':
             call.extend(['-x265-params'])
             quality = 'crf={}'.format(settings['crf'])
             if self.lossless:
+                # ffmpeg doesn't pass -x265-params to x265 correctly, must
+                # provide keys for every single value until fixed
+                # See: https://trac.ffmpeg.org/ticket/4284
                 quality = 'lossless=1'
             loglevel = 'log-level={}'.format(self.enc_loglevel)
             call.extend([':'.join([quality, loglevel])])
@@ -466,8 +408,8 @@ class Renderer(object):
                     fr_to_wrt = fr
                     fr_with_info = cv2.cv.fromarray(fr.copy())
 
-                    w = self.nrm_info['width']
-                    h = self.nrm_info['height']
+                    w = self.video_info['width']
+                    h = self.video_info['height']
                     hscale = min(w / float(settings['h_fits']), 1.0)
                     vscale = min(h / float(settings['v_fits']), 1.0)
                     scale = min(hscale, vscale)
@@ -630,8 +572,8 @@ class Renderer(object):
             frs_wrt, tgt_frs, wrt_ratio * 100))
 
     def renderable_sequence(self):
-        dur = self.nrm_info['duration']
-        frs = self.nrm_info['frames']
+        dur = self.video_info['duration']
+        frs = self.video_info['frames']
 
         new_subregions = []
 
@@ -730,38 +672,24 @@ class Renderer(object):
         unix_time = lambda dt:\
             (dt - datetime.datetime.utcfromtimestamp(0)).total_seconds()
 
-        tmp_name = '{}.{}.{}.{}.{}.{}.{}'.format(
+        tmp_name = '{}.{}.{}.{}.{}.{}'.format(
             os.path.basename(src_path),
             str(unix_time(vid_mod_utc)),
             self.scale,
-            'd' if self.detelecine else 'x',
-            'g' if self.grayscale  else 'x',
-            'l' if self.lossless   else 'x',
+            'g' if self.grayscale else 'x',
+            'l' if self.lossless else 'x',
             settings['encoder']).lower()
 
         makepth = lambda pth: \
             os.path.join(settings['tmp_dir'], pth.format(tmp_name))
 
-        nrm_path = makepth('{}.nrm.mp4')
         rnd_path = makepth('{}.rnd.mp4')
         aud_path = makepth('{}_aud.ogg')
         sub_path = makepth('{}_sub.srt')
 
-        if not os.path.exists(nrm_path):
-            self.normalize_for_interpolation(nrm_path)
-        self.nrm_info = avinfo.get_info(nrm_path)
-
-        # normalization may have changed the framecnt, fps, and duration need
-        # to recalculate the videosequence subregions' time and frame positions
-        # using saved relative positions
-        self.video_sequence.recalculate_subregion_positions(
-            self.nrm_info['duration'], self.nrm_info['frames'])
-
-        frame_src = FrameSource(self.nrm_info['path'])
+        frame_src = FrameSource(src_path)
 
         renderable_seq = self.renderable_sequence()
-
-        self.render_pipe = self.make_pipe(rnd_path, self.playback_rate)
 
         # make a resizable window
         if self.show_preview:
@@ -771,8 +699,13 @@ class Renderer(object):
                 flag = cv2.WINDOW_OPENGL
             cv2.namedWindow(self.window_title, flag)
             cv2.resizeWindow(
-                self.window_title, self.nrm_info['width'],
-                self.nrm_info['height'])
+                self.window_title, self.video_info['width'],
+                self.video_info['height'])
+
+        rnd_tmp_path = os.path.join(
+            os.path.dirname(rnd_path), '~' + os.path.basename(rnd_path))
+
+        self.render_pipe = self.make_pipe(rnd_tmp_path, self.playback_rate)
 
         # start rendering subregions
         self.total_frs_wrt = 0
@@ -788,6 +721,8 @@ class Renderer(object):
         if self.show_preview:
             cv2.destroyAllWindows()
         self.close_pipe()
+
+        shutil.move(rnd_tmp_path, rnd_path)
 
         speed_changed = False
         if self.video_sequence.subregions is not None:
