@@ -11,7 +11,7 @@ from butterflow.sequence import VideoSequence, RenderSubregion
 
 NO_OCL_WARNING = 'No compatible OCL devices detected. Check your OpenCL '\
                  'installation.'
-
+NO_VIDEO_SPECIFIED = 'No input video specified'
 
 def main():
     import logging
@@ -40,6 +40,8 @@ def main():
                      help='Show cache information and exit')
     gen.add_argument('--rm-cache', action='store_true',
                      help='Set to clear the cache and exit')
+    gen.add_argument('-i', '--inspect', action='store_true',
+                     help='Show video information and exit')
     gen.add_argument('-v', '--verbose', action='store_true',
                      help='Set to increase output verbosity')
 
@@ -185,7 +187,7 @@ def main():
 
     src_path = args.video
     if src_path is None:
-        print('No input video specified')
+        print(NO_VIDEO_SPECIFIED)
         return 1
 
     if not os.path.exists(args.video):
@@ -223,6 +225,34 @@ def main():
         log.error('Could not get video information:', exc_info=True)
         return 1
 
+    src_rate = vid_info['rate_num'] * 1.0 / vid_info['rate_den']
+
+    if args.inspect:
+        if args.video:
+            streams = []
+            if vid_info['v_stream_exists']:
+                streams.append('video')
+            if vid_info['a_stream_exists']:
+                streams.append('audio')
+            if vid_info['s_stream_exists']:
+                streams.append('subtitle')
+            print('Video information:'
+                  '\n  Streams available   \t: {}'
+                  '\n  Resolution          \t: {}x{}'
+                  '\n  Rate                \t: {}'
+                  '\n  Duration in seconds \t: {}'
+                  '\n  Num of frames       \t: {}'.format(
+                      ','.join(streams),
+                      vid_info['width'], vid_info['height'],
+                      src_rate,
+                      vid_info['duration'] / 1000.0,
+                      vid_info['frames']
+                  ))
+            return 0
+        else:
+            print(NO_VIDEO_SPECIFIED)
+            return 1
+
     if not vid_info['v_stream_exists']:
         log.error('No video stream detected')
         return 1
@@ -234,7 +264,6 @@ def main():
         log.error('Bad subregion string: %s' % e)
         return 1
 
-    src_rate = vid_info['rate_num'] * 1.0 / vid_info['rate_den']
     rate = 0
     if args.playback_rate is None:
         # use original rate
