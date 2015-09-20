@@ -92,12 +92,6 @@ def main():
                      'may not be in sync with the final video if the duration '
                      'has been altered during the rendering process.')
 
-    fgr.description = 'The Farneback algorithm is used to compute dense ' \
-                      'optical flows for frame interpolation. Use these ' \
-                      'options to pass in different values to the function to ' \
-                      'fine-tune the quality (robustness of image) of the ' \
-                      'resulting videos.'
-
     fgr.add_argument('--fast-pyr', action='store_true',
                      help='Set to use fast pyramids')
     fgr.add_argument('--pyr-scale', type=float,
