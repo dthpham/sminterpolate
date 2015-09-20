@@ -292,6 +292,7 @@ class Renderer(object):
         # keep track of progress in this subregion
         src_gen = 0  # num of source frames seen
         frs_int = 0  # num of frames interpolated
+        frs_src_drp = 0  # num of source frames dropped
         frs_int_drp = 0  # num of interpolated frames dropped
         wrk_idx = 0  # idx in the subregion being worked on
         frs_wrt = 0  # num of frames written in this subregion
@@ -384,6 +385,7 @@ class Renderer(object):
                         log_msg = log.debug
                         if fr_type == 'source':
                             log_msg = log.warning
+                            frs_src_drp += 1
                         else:
                             frs_int_drp += 1
                         log_msg('drp: %s,%s,%s',
@@ -568,7 +570,15 @@ class Renderer(object):
         log.debug('src_gen: %s', src_gen)
         log.debug('frs_int: %s', frs_int)
         log.debug('frs_drp: %s', frs_drp)
-        log.debug('frs_dup: %s', frs_dup)
+        log.debug('frs_src_drp: %s %.2f', frs_src_drp,
+                  frs_src_drp * 1.0 / frs_drp)
+        log.debug('frs_int_drp: %s %.2f', frs_int_drp,
+                  frs_int_drp * 1.0 / frs_drp)
+
+        efficiency = 1 - (frs_drp * 1.0 / (src_gen + frs_int))
+        log.debug('efficiency: %.2f%%', efficiency * 100.0)
+
+        log.debug('frs_dup: %s', frs_dup,)
         log.debug('frs_fin_dup: %s', frs_fin_dup)
 
         act_dur = frs_wrt / self.playback_rate
