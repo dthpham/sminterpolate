@@ -9,7 +9,6 @@ import shutil
 import subprocess
 import cv2
 import numpy as np
-from butterflow import avinfo
 from butterflow.__init__ import __version__
 from butterflow.settings import default as settings
 from butterflow.source import FrameSource
@@ -44,6 +43,13 @@ class Renderer(object):
         self.enc_loglevel = enc_loglevel
         self.playback_rate = float(playback_rate)
         self.scale = scale
+        # maintain aspect ratio
+        self.w = int(video_info['width'] * scale)
+        self.h = int(video_info['height'] * scale)
+        if scale < 1.0:
+            self.scaler = settings['scaler_dn']
+        elif scale > 1.0:
+            self.scaler = settings['scaler_up']
         self.grayscale = grayscale
         self.lossless = lossless
         self.trim = trim
@@ -124,11 +130,7 @@ class Renderer(object):
             os.remove(vid_path)
 
     def make_pipe(self, dst_path, rate):
-        w = self.video_info['width']
-        h = self.video_info['height']
-
         vf = []
-        # vf.append('scale={}:{}'.format(w, h))
         if self.grayscale:
             vf.append('format=gray')
         vf.append('format=yuv420p')
@@ -140,7 +142,7 @@ class Renderer(object):
             '-threads', '0',
             '-f', 'rawvideo',
             '-pix_fmt', 'bgr24',
-            '-s', '{}x{}'.format(w, h),
+            '-s', '{}x{}'.format(self.w, self.h),
             '-r', str(rate),
             '-i', '-',
             '-map_metadata', '-1',
@@ -302,7 +304,9 @@ class Renderer(object):
 
         fr_1 = None
         fr_2 = framesrc.frame_at_idx(fa_idx)  # first frame in the region
-        # log.debug('read: %s', int(framesrc.index))
+        if self.scale != 1.0:
+            fr_2 = cv2.resize(fr_2, (self.w, self.h),
+                              interpolation=self.scaler)
         src_gen += 1
         if fa == fb or tgt_frs == 1:
             # only 1 frame expected. run through the main loop once
@@ -313,7 +317,6 @@ class Renderer(object):
             # the total number of frames in the region - 1. range will run
             # from [0,runs)
             framesrc.seek_to_frame(fa_idx + 1)  # seek to the next frame
-            # log.debug('read: %s', int(framesrc.index))
             runs = reg_len
 
         log.debug('wrt_one: %s', fin_run)  # only write 1 frame
@@ -335,13 +338,15 @@ class Renderer(object):
                 # the frame being read should always be valid otherwise break
                 try:
                     fr_2 = framesrc.read()
-                    # log.debug('read: %s', int(framesrc.index))
                     src_gen += 1
                 except Exception:
                     log.error('Could not read frame:', exc_info=True)
                     break
                 if fr_2 is None:
                     break
+                elif self.scale != 1.0:
+                    fr_2 = cv2.resize(fr_2, (self.w, self.h),
+                                      interpolation=self.scaler)
 
                 fr_1_gr = cv2.cvtColor(fr_1, cv2.COLOR_BGR2GRAY)
                 fr_2_gr = cv2.cvtColor(fr_2, cv2.COLOR_BGR2GRAY)
@@ -408,8 +413,8 @@ class Renderer(object):
                     fr_to_wrt = fr
                     fr_with_info = cv2.cv.fromarray(fr.copy())
 
-                    w = self.video_info['width']
-                    h = self.video_info['height']
+                    w = self.w
+                    h = self.h
                     hscale = min(w / float(settings['h_fits']), 1.0)
                     vscale = min(h / float(settings['v_fits']), 1.0)
                     scale = min(hscale, vscale)
@@ -661,24 +666,21 @@ class Renderer(object):
 
     def render(self):
         dst_name, _ = os.path.splitext(os.path.basename(self.dst_path))
-
         src_path = self.video_info['path']
 
-        # use the modification time of the file to determine if renormalization
-        # is needed. if it hasn't been modified and the settings haven't changed
-        # then we can just use the old video if it exists
         vid_mod_dt = os.path.getmtime(src_path)
         vid_mod_utc = datetime.datetime.utcfromtimestamp(vid_mod_dt)
         unix_time = lambda dt:\
             (dt - datetime.datetime.utcfromtimestamp(0)).total_seconds()
 
-        tmp_name = '{}.{}.{}.{}.{}.{}'.format(
-            os.path.basename(src_path),
-            str(unix_time(vid_mod_utc)),
-            self.scale,
-            'g' if self.grayscale else 'x',
-            'l' if self.lossless else 'x',
-            settings['encoder']).lower()
+        tmp_name = '{name}.{mod_date}.{w}x{h}.{g}.{l}.{enc}'.format(
+            name=os.path.basename(src_path),
+            mod_date=str(unix_time(vid_mod_utc)),
+            w=self.w,
+            h=self.h,
+            g='g' if self.grayscale else 'x',
+            l='l' if self.lossless else 'x',
+            enc=settings['encoder']).lower()
 
         makepth = lambda pth: \
             os.path.join(settings['tmp_dir'], pth.format(tmp_name))
@@ -699,8 +701,7 @@ class Renderer(object):
                 flag = cv2.WINDOW_OPENGL
             cv2.namedWindow(self.window_title, flag)
             cv2.resizeWindow(
-                self.window_title, self.video_info['width'],
-                self.video_info['height'])
+                self.window_title, self.w, self.h)
 
         rnd_tmp_path = os.path.join(
             os.path.dirname(rnd_path), '~' + os.path.basename(rnd_path))

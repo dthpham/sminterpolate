@@ -25,9 +25,14 @@ default = {
     'enc_loglevel':   'error',
     'preset':         'fast',
     'crf':            18,
-    # farneback optical flow options
     'playback_rate':  23.976,
+    # scaling opts
     'video_scale':    1.0,
+    'scaler_up':      cv2.cv.CV_INTER_AREA,
+    # `CV_INTER_CUBIC` looks best but is slower, `CV_INTER_LINEAR` is faster
+    # but still looks okay
+    'scaler_dn':      cv2.cv.CV_INTER_CUBIC,
+    # farneback optical flow options
     'pyr_scale':      0.5,
     'levels':         3,
     'winsize':        25,

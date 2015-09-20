@@ -73,10 +73,10 @@ def main():
     vid.add_argument('-t', '--trim-regions', action='store_true',
                      help='Set to trim subregions that are not explicitly '
                           'specified')
-    # vid.add_argument('-vs', '--video-scale', type=float,
-    #                  default=settings.default['video_scale'],
-    #                  help='Specify the output video scale, '
-    #                  '(default: %(default)s)')
+    vid.add_argument('-vs', '--video-scale', type=float,
+                     default=settings.default['video_scale'],
+                     help='Specify the output video scale, '
+                     '(default: %(default)s)')
     vid.add_argument('-l', '--lossless', action='store_true',
                      help='Set to use lossless encoding settings')
     vid.add_argument('-npad', '--no-pad', action='store_false',
@@ -252,7 +252,7 @@ def main():
         rate,
         flow_func,
         motion.ocl_interpolate_flow,
-        settings.default['video_scale'],  # overriding
+        args.video_scale,
         args.grayscale,
         args.lossless,
         args.trim_regions,
