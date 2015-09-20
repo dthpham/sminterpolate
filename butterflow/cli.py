@@ -56,9 +56,7 @@ def main():
                      default=settings.default['out_path'],
                      help='Specify path to the output video')
     vid.add_argument('-r', '--playback-rate', type=str,
-                     default=str(settings.default['playback_rate']),
-                     help='Specify the playback rate, '
-                     '(default: %(default)s)')
+                     help='Specify the playback rate')
     vid.add_argument('-s', '--sub-regions', type=str,
                      help='Specify rendering sub regions in the form: '
                      '"a=TIME,b=TIME,TARGET=VALUE" where TARGET is either '
@@ -219,15 +217,6 @@ def main():
         ('PolyN', args.poly_n),
         ('PolyS', args.poly_s)])
 
-    # handle fractional rates and fractions with non-rational numerators and
-    # denominators
-    rate = args.playback_rate
-    if '/' in rate and '.' in rate:
-        num, den = rate.split('/')
-        rate = float(num) / float(den)
-    else:
-        rate = float(rate)
-
     try:
         vid_info = avinfo.get_info(args.video)
     except Exception:
@@ -244,6 +233,20 @@ def main():
     except Exception as e:
         log.error('Bad subregion string: %s' % e)
         return 1
+
+    rate = 0
+    if args.playback_rate is None:
+        # use original rate
+        rate = vid_info['rate_num'] * 1.0 / vid_info['rate_den']
+    else:
+        # allow fractional rates and fractions with non-rational numerators
+        # and denominators
+        rate = args.playback_rate
+        if '/' in rate and '.' in rate:
+            num, den = rate.split('/')
+            rate = float(num) / float(den)
+        else:
+            rate = float(rate)
 
     renderer = Renderer(
         args.output_path,

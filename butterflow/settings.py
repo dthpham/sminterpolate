@@ -25,7 +25,6 @@ default = {
     'enc_loglevel':   'error',
     'preset':         'fast',
     'crf':            18,
-    'playback_rate':  23.976,
     # scaling opts
     'video_scale':    1.0,
     'scaler_up':      cv2.cv.CV_INTER_AREA,
