@@ -217,6 +217,7 @@ class Renderer(object):
             tgt_frs = int(self.playback_rate * reg_dur *
                           (1 / subregion.spd))
         elif subregion.btw:
+            subregion.spd = 1  # if unset, as a precaution against div by zero
             tgt_frs = int(reg_len + ((reg_len - 1) * subregion.btw))
 
         tgt_frs = max(0, tgt_frs)
@@ -570,13 +571,16 @@ class Renderer(object):
         log.debug('src_gen: %s', src_gen)
         log.debug('frs_int: %s', frs_int)
         log.debug('frs_drp: %s', frs_drp)
-        log.debug('frs_src_drp: %s %.2f', frs_src_drp,
-                  frs_src_drp * 1.0 / frs_drp)
-        log.debug('frs_int_drp: %s %.2f', frs_int_drp,
-                  frs_int_drp * 1.0 / frs_drp)
 
-        efficiency = 1 - (frs_drp * 1.0 / (src_gen + frs_int))
-        log.debug('efficiency: %.2f%%', efficiency * 100.0)
+        with np.errstate(divide='ignore'):
+            log.debug('frs_src_drp: %s %.2f', frs_src_drp,
+                      np.divide(float(frs_src_drp), frs_drp))
+            log.debug('frs_int_drp: %s %.2f', frs_int_drp,
+                      np.divide(float(frs_int_drp), frs_drp))
+
+            # 1 - (frames dropped : real and interpolated frames)
+            efficiency = 1 - (frs_drp * 1.0 / (src_gen + frs_int))
+            log.debug('efficiency: %.2f%%', efficiency * 100.0)
 
         log.debug('frs_dup: %s', frs_dup,)
         log.debug('frs_fin_dup: %s', frs_fin_dup)
