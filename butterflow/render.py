@@ -43,9 +43,14 @@ class Renderer(object):
         self.enc_loglevel = enc_loglevel
         self.playback_rate = float(playback_rate)
         self.scale = scale
-        # maintain aspect ratio
-        self.w = int(video_info['width'] * scale)
-        self.h = int(video_info['height'] * scale)
+        # keep the aspect ratio
+        # w and h must be divisible by 2 for yuv420p outputs
+        w = video_info['width']  * scale
+        h = video_info['height'] * scale
+        w = math.floor(w / 2) * 2
+        h = math.floor(h / 2) * 2
+        self.w = int(w)
+        self.h = int(h)
         if scale < 1.0:
             self.scaler = settings['scaler_dn']
         elif scale > 1.0:
