@@ -572,7 +572,7 @@ class Renderer(object):
         log.debug('frs_int: %s', frs_int)
         log.debug('frs_drp: %s', frs_drp)
 
-        with np.errstate(divide='ignore'):
+        with np.errstate(divide='ignore', invalid='ignore'):
             log.debug('frs_src_drp: %s %.2f', frs_src_drp,
                       np.divide(float(frs_src_drp), frs_drp))
             log.debug('frs_int_drp: %s %.2f', frs_int_drp,
