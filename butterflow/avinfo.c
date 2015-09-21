@@ -77,7 +77,10 @@ get_info(PyObject *self, PyObject *arg) {
                                   ms_tb);
         c_duration = av_rescale_q(format_ctx->duration, av_tb, ms_tb);
 
-        duration = MAX(v_duration, c_duration);
+        duration = v_duration;
+        if (v_duration == 0) {
+          duration = c_duration;  // use container duration
+        }
 
         AVCodecContext *v_codec_ctx = format_ctx->streams[v_stream_idx]->codec;
 
