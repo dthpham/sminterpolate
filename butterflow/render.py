@@ -161,6 +161,8 @@ class Renderer(object):
             '-preset', settings['preset']]
         if settings['encoder'] == 'libx264':
             quality = ['-crf', str(settings['crf'])]
+            # -qp 0 is recommended over -crf for lossless
+            # See: https://trac.ffmpeg.org/wiki/Encode/H.264#LosslessH.264
             if self.lossless:
                 quality = ['-qp', '0']
             call.extend(quality)

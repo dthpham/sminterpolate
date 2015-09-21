@@ -305,7 +305,10 @@ def main():
     try:
         import timeit
         tot_time = timeit.timeit(renderer.render, number=1)
-        log.info('butterflow took {} minutes'.format(tot_time / 60))
+        log.info('butterflow took {:.3g} minutes, done.'.format(tot_time / 60))
+        sz = os.path.getsize(args.output_path)
+        sz_mb = float(sz) / (1 << 20)  # size in megabytes
+        log.info('out file size: {:.2g} MB'.format(sz_mb))
     except (KeyboardInterrupt, SystemExit):
         log.warning('files left in cache')
         return 1

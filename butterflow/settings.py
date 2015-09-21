@@ -23,8 +23,11 @@ default = {
     # `info` is default, set to `fatal` for quiet
     'av_loglevel':    'fatal',
     'enc_loglevel':   'error',
-    'preset':         'fast',
-    'crf':            18,
+    # See: https://trac.ffmpeg.org/wiki/Encode/H.264#a2.Chooseapreset
+    # presets: ultrafast, superfast, veryfast, faster, fast, medium, slow,
+    # slower, veryslow
+    'preset':         'veryslow',
+    'crf':            18,  # visually lossless
     # scaling opts
     'video_scale':    1.0,
     'scaler_up':      cv2.cv.CV_INTER_AREA,
