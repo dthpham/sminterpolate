@@ -332,6 +332,10 @@ class Renderer(object):
         log.debug('runs: %s', runs)
 
         for run_idx in range(0, runs):
+            # which frame in the video is being worked on
+            pair_a = fa_idx + run_idx + 1
+            pair_b = pair_a + 1 if run_idx + 1 < runs else pair_a
+
             # if working on the last frame, write it out because we cant
             # interpolate without a pair.
             if run_idx >= runs - 1:
@@ -341,7 +345,7 @@ class Renderer(object):
             fr_1 = fr_2  # reference to prev fr saves a seek & read
 
             if fin_run:
-                frs_to_wrt.append((fr_1, 'source'))
+                frs_to_wrt.append((fr_1, 'source', 1))
             else:
                 # begin interpolating frames between pairs
                 # the frame being read should always be valid otherwise break
@@ -366,58 +370,82 @@ class Renderer(object):
                 fr_1_32 = np.float32(fr_1) * 1/255.0
                 fr_2_32 = np.float32(fr_2) * 1/255.0
 
-                int_frs = self.interpolate_func(
-                    fr_1_32, fr_2_32, fu, fv, bu, bv, int_each_go)
+                will_wrt = True  # frames will be written?
 
-                if len(int_frs) != int_each_go:
-                    log.warning('unexpected frs interpolated: act=%s est=%s',
-                                len(int_frs), int_each_go)
+                # look ahead to see if frames will be dropped
+                # compensate by lowering the num of frames to be interpolated
+                cmp_int_each_go = int_each_go    # compensated int_each_go
+                w_drp = []                       # frames that would be dropped
+                tmp_wrk_idx = wrk_idx
+                for x in range(1 + int_each_go):  # 1 real + interpolated frame
+                    tmp_wrk_idx += 1
+                    if drp_every > 0:
+                        if math.fmod(tmp_wrk_idx, drp_every) < 1.0:
+                            w_drp.append(x + 1)
+                n_drp = len(w_drp)
+                # warn if a src frame was going to be dropped
+                log_msg = log.debug
+                if 1 in w_drp:
+                    log_msg = log.warning
+                # start compensating
+                if n_drp > 0:
+                    # can compensate by reducing num of frames to be
+                    # interpolated since they are available
+                    if n_drp <= int_each_go:
+                        cmp_int_each_go -= n_drp
+                    else:
+                        # can't compensate using interpolated frames alone
+                        # will have to drop the source frame. nothing will be
+                        # written
+                        will_wrt = False
+                    log_msg('w_drp: %3s,%3s,%2s c=%s,-%s',
+                            pair_a,
+                            pair_b,
+                            ','.join([str(x) for x in w_drp]),
+                            cmp_int_each_go,
+                            n_drp)
+                    if not will_wrt:
+                        # nothing will be written this go
+                        log.warning('will_wrt: %s', will_wrt)
 
-                frs_int += len(int_frs)
-                frs_to_wrt.append((fr_1, 'source'))
-                frs_to_wrt.extend(
-                    [(fr, 'interpolated') for fr in int_frs])
+                if will_wrt:
+                    int_frs = self.interpolate_func(
+                        fr_1_32, fr_2_32, fu, fv, bu, bv, cmp_int_each_go)
 
-            for btw_idx, (fr, fr_type) in enumerate(frs_to_wrt):
+                    if len(int_frs) != cmp_int_each_go:
+                        log.warning('unexpected frs interpolated: act=%s '
+                                    'est=%s',
+                                    len(int_frs), cmp_int_each_go)
+
+                    frs_int += len(int_frs)
+                    frs_to_wrt.append((fr_1, 'source', 1))
+                    for x, fr in enumerate(int_frs):
+                        frs_to_wrt.append((fr, 'interpolated', x + 2))
+
+            for (fr, fr_type, btw_idx) in frs_to_wrt:
                 wrk_idx += 1
                 wrts_needed = 1
-                pair_a = fa_idx + run_idx + 1
-                pair_b = pair_a + 1 if run_idx + 1 < runs else pair_a
-                pair_btw = btw_idx + 1
-
-                if drp_every > 0:
-                    if math.fmod(wrk_idx, drp_every) < 1.0:
-                        frs_drp += 1
-                        log_msg = log.debug
-                        if fr_type == 'source':
-                            log_msg = log.warning
-                            frs_src_drp += 1
-                        else:
-                            frs_int_drp += 1
-                        log_msg('drp: %s,%s,%s',
-                                pair_a,
-                                pair_b,
-                                pair_btw)
-                        continue
+                # duping should never happen unless the subregion being worked
+                # on only has one frame
                 if dup_every > 0:
                     if math.fmod(wrk_idx, dup_every) < 1.0:
                         frs_dup += 1
                         wrts_needed = 2
-                        log.debug('dup: %s,%s,%s 2x',
-                                  pair_a,
-                                  pair_b,
-                                  pair_btw)
+                        log.warning('dup: %s,%s,%s 2x',
+                                    pair_a,
+                                    pair_b,
+                                    btw_idx)
                 if fin_run:
                     wrts_needed = (tgt_frs - frs_wrt)
                     frs_fin_dup = wrts_needed - 1
                     if not self.pad_with_dupes:
                         # write out frame at least once
-                        if frs_fin_dup > 0:
+                        if len(frs_to_wrt) == 1:
                             wrts_needed = 1
-                    log.debug('fin_dup: %s,%s,%s %sx',
+                    log.debug('fin_dup: %s,%s,%s wrts=%sx',
                               pair_a,
                               pair_b,
-                              pair_btw,
+                              btw_idx,
                               wrts_needed)
 
                 for wrt_idx in range(wrts_needed):
@@ -475,7 +503,7 @@ class Renderer(object):
                         self.total_frs_wrt,
                         pair_a,
                         pair_b,
-                        pair_btw,
+                        btw_idx,
                         'Y' if fr_type == 'source' else 'N',
                         'Y' if fr_type == 'interpolated' else 'N',
                         'Y' if wrt_idx > 0 else 'N',
