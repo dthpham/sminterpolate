@@ -78,13 +78,7 @@ def main():
                      help='Specify the output video scale, '
                      '(default: %(default)s)')
     vid.add_argument('-l', '--lossless', action='store_true',
-                     help='Set to use lossless encoding settings')
-    vid.add_argument('-npad', '--no-pad', action='store_false',
-                     help='Set to discard duplicate frames that are padded to '
-                     'the end of subregions. This will alter the expected '
-                     'duration of the output video.')
-    vid.add_argument('--grayscale', action='store_true',
-                     help='Set to enhance the coloring of grayscale videos')
+                     help='Set to use true lossless encoding settings')
 
     mux.add_argument('-m', '--mux', action='store_true',
                      help='Set to mux source audio and subtitles with the '
@@ -126,6 +120,12 @@ def main():
 
     if settings.default['debug_opts']:
         dbg = par.add_argument_group('Debugging arguments')
+        dbg.add_argument('-npad', '--no-pad', action='store_false',
+                         help='Set to discard duplicate frames that are '
+                         'padded to the end of subregions. This will alter '
+                         'the expected duration of the output video.')
+        dbg.add_argument('--grayscale', action='store_true',
+                         help='Set output a grayscale video')
 
     args = par.parse_args()
 
@@ -284,21 +284,22 @@ def main():
         flow_func,
         motion.ocl_interpolate_flow,
         args.video_scale,
-        args.grayscale,
+        False,  # grayscale
         args.lossless,
         args.trim_regions,
         args.no_preview,
         args.add_info,
         args.text_type,
         args.mux,
-        args.no_pad,
+        True,  # pad with dupes?
         settings.default['av_loglevel'],
         settings.default['enc_loglevel'],
         flow_kwargs)
 
     # apply debugging options
     if settings.default['debug_opts']:
-        pass
+        renderer.grayscale = args.grayscale
+        renderer.pad_with_dupes = args.no_pad
 
     motion.set_num_threads(settings.default['ocv_threads'])
 
