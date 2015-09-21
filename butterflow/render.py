@@ -312,7 +312,11 @@ class Renderer(object):
         fa_idx = fa - 1   # seek pos of the frame in the video
 
         fr_1 = None
-        fr_2 = framesrc.frame_at_idx(fa_idx)  # first frame in the region
+        framesrc.seek_to_frame(fa_idx)
+        # log.debug('seek: %s', framesrc.index + 1)  # seek pos of first frame
+        # log.debug('read: %s', framesrc.index + 1)  # next frame to be read
+        fr_2 = framesrc.read()       # first frame in the region
+
         if self.scale != 1.0:
             fr_2 = cv2.resize(fr_2, (self.w, self.h),
                               interpolation=self.scaler)
@@ -326,6 +330,7 @@ class Renderer(object):
             # the total number of frames in the region - 1. range will run
             # from [0,runs)
             framesrc.seek_to_frame(fa_idx + 1)  # seek to the next frame
+            # log.debug('seek: %s', framesrc.index + 1)
             runs = reg_len
 
         log.debug('wrt_one: %s', fin_run)  # only write 1 frame
@@ -350,6 +355,7 @@ class Renderer(object):
                 # begin interpolating frames between pairs
                 # the frame being read should always be valid otherwise break
                 try:
+                    # log.debug('read: %s', framesrc.index + 1)
                     fr_2 = framesrc.read()
                     src_gen += 1
                 except Exception:
@@ -376,7 +382,7 @@ class Renderer(object):
                 # compensate by lowering the num of frames to be interpolated
                 cmp_int_each_go = int_each_go    # compensated int_each_go
                 w_drp = []                       # frames that would be dropped
-                tmp_wrk_idx = wrk_idx
+                tmp_wrk_idx = wrk_idx - 1        # zero indexed
                 for x in range(1 + int_each_go):  # 1 real + interpolated frame
                     tmp_wrk_idx += 1
                     if drp_every > 0:
@@ -398,7 +404,7 @@ class Renderer(object):
                         # will have to drop the source frame. nothing will be
                         # written
                         will_wrt = False
-                    log_msg('w_drp: %3s,%3s,%2s c=%s,-%s',
+                    log_msg('w_drp: %3s,%3s,%2s %s,-%s',
                             pair_a,
                             pair_b,
                             ','.join([str(x) for x in w_drp]),
@@ -406,6 +412,7 @@ class Renderer(object):
                             n_drp)
                     if not will_wrt:
                         # nothing will be written this go
+                        wrk_idx += 1  # still have to increment the work index
                         log.warning('will_wrt: %s', will_wrt)
 
                 if will_wrt:
@@ -447,11 +454,17 @@ class Renderer(object):
                               pair_b,
                               btw_idx,
                               wrts_needed)
+                    # final frame should be dropped if needed
+                    if drp_every > 0:
+                        if math.fmod(wrk_idx, drp_every) < 1.0:
+                            log.warning('drp last frame')
+                            continue
 
                 for wrt_idx in range(wrts_needed):
                     frs_wrt += 1
                     self.total_frs_wrt += 1
-
+                    # log.debug('wrt: %s,%s,%s (%s)', pair_a, pair_b, btw_idx,
+                    #           self.total_frs_wrt)
                     # frame copy has a minimal effect on performance
                     fr_to_wrt = fr
                     fr_with_info = cv2.cv.fromarray(fr.copy())
