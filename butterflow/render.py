@@ -140,6 +140,9 @@ class Renderer(object):
         if self.grayscale:
             vf.append('format=gray')
         vf.append('format=yuv420p')
+        # https://ffmpeg.org/ffmpeg-filters.html#setdar_002c-setsar
+        vf.append('setdar={}:{}'.format(self.video_info['dar_n'],
+                                        self.video_info['dar_d']))
         call = [
             settings['avutil'],
             '-loglevel', self.av_loglevel,
