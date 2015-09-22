@@ -10,6 +10,7 @@
 *~
 *.DS_Store
 *.directory
+butterflow.wiki
 
 #virtualenv
 bin
