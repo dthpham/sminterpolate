@@ -48,22 +48,32 @@ default = {
     'ocv_threads':    1*-1,
     # milliseconds to display image in preview window
     'imshow_ms':      1,
-    # debugging info font options
-    'text_type':      'light',
+    # debug text settings
+    'text_type':      'light',  # other options: `dark`, `stroke`
     'light_color':    cv2.cv.RGB(255, 255, 255),
     'dark_color':     cv2.cv.RGB(0, 0, 0),
     # h_fits and v_fits is the minimium size in which the unscaled
     # CV_FONT_HERSHEY_PLAIN font text fits in the rendered video. The font is
     # scaled up and down based on this reference point
-    'font':           cv2.cv.CV_FONT_HERSHEY_PLAIN,
-    'text_thick':     1,
+    'font_face':      cv2.cv.CV_FONT_HERSHEY_PLAIN,
+    'font_type':      cv2.cv.CV_AA,
+    'txt_thick':      1,
     'strk_thick':     2,
     'h_fits':         768,
     'v_fits':         216,
-    't_padding':      20,
-    'l_padding':      20,
-    'r_padding':      20,
-    'line_d_padding': 10,
+    'txt_t_pad':      20,
+    'txt_l_pad':      20,
+    'txt_r_pad':      20,
+    'txt_ln_b_pad':   10,    # spacing between lines
+    'txt_min_scale':  0.6,   # don't draw if the font is scaled below this
+    # progress bar settings
+    'bar_t_pad':      0.7,   # relative padding from the top
+    'bar_s_pad':      0.12,  # relative padding on each side
+    'ln_thick':       3,     # pixels of lines that make outer rectangle
+    'ln_type':        cv2.cv.CV_FILLED,  # -1, a filled line
+    'bar_in_pad':     3,     # padding from the inner bar
+    'bar_thick':      15,    # thickness of the inner bar
+    'bar_color':      cv2.cv.RGB(255, 255, 255),
 }
 
 if sys.platform.startswith('linux'):
