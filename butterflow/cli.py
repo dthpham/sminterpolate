@@ -317,9 +317,10 @@ def main():
         import timeit
         tot_time = timeit.timeit(renderer.render, number=1)
         log.info('butterflow took {:.3g} minutes, done.'.format(tot_time / 60))
-        sz = os.path.getsize(args.output_path)
-        sz_mb = float(sz) / (1 << 20)  # size in megabytes
-        log.info('out file size: {:.2g} MB'.format(sz_mb))
+        new_sz = float(os.path.getsize(args.output_path)) / (1 << 20)  # in MB
+        old_sz = float(os.path.getsize(args.video)) / (1 << 20)
+        diff = new_sz - old_sz
+        log.info('out file size: {:.3g} MB ({:+.3g} MB)'.format(new_sz, diff))
     except (KeyboardInterrupt, SystemExit):
         log.warning('files left in cache')
         return 1
