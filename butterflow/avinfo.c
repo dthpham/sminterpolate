@@ -59,6 +59,7 @@ get_info(PyObject *self, PyObject *arg) {
 
     int w = 0;
     int h = 0;
+    AVRational sar = {-1, -1};
     int64_t duration = 0.0;
     int64_t v_duration = 0.0;
     int64_t c_duration = 0.0;
@@ -98,6 +99,10 @@ get_info(PyObject *self, PyObject *arg) {
         // min_rate is the smallest possible rate of the video stream that can
         // be represented without losing any unique frames
         min_rate   = frames / (duration / 1000.0);
+
+        // the display aspect ratio can be calculated from the pixal aspect
+        // ratio and sample aspect ratio: DAR = PAR * SAR
+        sar = format_ctx->streams[v_stream_idx]->sample_aspect_ratio;
     }
 
     // An avformat_free_context call is not needed because avformat_close_input
@@ -114,6 +119,10 @@ get_info(PyObject *self, PyObject *arg) {
     py_safe_set(py_info, "s_stream_exists", PyBool_FromLong(s_stream_exists));
     py_safe_set(py_info, "width", PyInt_FromLong(w));
     py_safe_set(py_info, "height", PyInt_FromLong(h));
+    py_safe_set(py_info, "sar_n", PyInt_FromLong(sar.num));
+    py_safe_set(py_info, "sar_d", PyInt_FromLong(sar.den));
+    py_safe_set(py_info, "dar_n", PyInt_FromLong(w * sar.num));
+    py_safe_set(py_info, "dar_d", PyInt_FromLong(h * sar.den));
     py_safe_set(py_info, "duration", PyFloat_FromDouble(duration));
     py_safe_set(py_info, "rate_num", PyInt_FromLong(rate_num));
     py_safe_set(py_info, "rate_den", PyInt_FromLong(rate_den));

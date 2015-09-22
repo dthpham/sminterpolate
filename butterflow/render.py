@@ -140,7 +140,6 @@ class Renderer(object):
         if self.grayscale:
             vf.append('format=gray')
         vf.append('format=yuv420p')
-
         call = [
             settings['avutil'],
             '-loglevel', self.av_loglevel,

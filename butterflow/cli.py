@@ -223,6 +223,9 @@ def main():
 
     if args.inspect:
         if args.video:
+            from fractions import Fraction
+            # simplify the display aspect ratio
+            dar = Fraction(vid_info['dar_n'], vid_info['dar_d'])
             dur = vid_info['duration']
             streams = []
             if vid_info['v_stream_exists']:
@@ -233,12 +236,14 @@ def main():
                 streams.append('subtitle')
             print('Video information:'
                   '\n  Streams available  \t: {}'
-                  '\n  Resolution         \t: {}x{}'
+                  '\n  Resolution         \t: {}x{}, SAR {}:{} DAR {}:{}'
                   '\n  Rate               \t: {:.3f} fps'
                   '\n  Duration           \t: {} ({:.2f}s)'
                   '\n  Num of frames      \t: {}'.format(
                       ','.join(streams),
                       vid_info['width'], vid_info['height'],
+                      vid_info['sar_n'], vid_info['sar_d'],
+                      dar.numerator, dar.denominator,
                       src_rate,
                       ms_to_time_str(dur), dur / 1000.0,
                       vid_info['frames']
