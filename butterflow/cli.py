@@ -47,12 +47,6 @@ def main():
 
     dsp.add_argument('-np', '--no-preview', action='store_false',
                      help='Set to disable video preview')
-    dsp.add_argument('-a', '--add-info', action='store_true',
-                     help='Set to embed debugging info into the output video')
-    dsp.add_argument('-tt', '--text-type', choices=['light', 'dark', 'stroke'],
-                     default=settings.default['text_type'],
-                     help='Specify text type for debugging info, '
-                     '(default: %(default)s)')
 
     vid.add_argument('-o', '--output-path', type=str,
                      default=settings.default['out_path'],
@@ -119,12 +113,21 @@ def main():
                      'estimation, (default: %(default)s)')
 
     if settings.default['debug_opts']:
-        dbg = par.add_argument_group('Debugging arguments')
-        dbg.add_argument('-npad', '--no-pad', action='store_false',
+        # display args
+        dsp.add_argument('-a', '--add-info', action='store_true',
+                         help='Set to embed debugging info into the output '
+                              'video')
+        dsp.add_argument('-tt', '--text-type',
+                         choices=['light', 'dark', 'stroke'],
+                         default=settings.default['text_type'],
+                         help='Specify text type for debugging info, '
+                         '(default: %(default)s)')
+        # video args
+        vid.add_argument('-npad', '--no-pad', action='store_false',
                          help='Set to discard duplicate frames that are '
                          'padded to the end of subregions. This will alter '
                          'the expected duration of the output video.')
-        dbg.add_argument('--grayscale', action='store_true',
+        vid.add_argument('--grayscale', action='store_true',
                          help='Set output a grayscale video')
 
     args = par.parse_args()
@@ -293,8 +296,8 @@ def main():
         args.lossless,
         args.trim_regions,
         args.no_preview,
-        args.add_info,
-        args.text_type,
+        False,  # add info?
+        settings.default['text_type'],
         args.mux,
         True,  # pad with dupes?
         settings.default['av_loglevel'],
@@ -303,8 +306,10 @@ def main():
 
     # apply debugging options
     if settings.default['debug_opts']:
-        renderer.grayscale = args.grayscale
+        renderer.grayscale      = args.grayscale
         renderer.pad_with_dupes = args.no_pad
+        renderer.add_info       = args.add_info
+        renderer.text_type      = args.text_type
 
     motion.set_num_threads(settings.default['ocv_threads'])
 

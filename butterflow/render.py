@@ -467,150 +467,155 @@ class Renderer(object):
                 for wrt_idx in range(wrts_needed):
                     frs_wrt += 1
                     self.total_frs_wrt += 1
-                    # log.debug('wrt: %s,%s,%s (%s)', pair_a, pair_b, btw_idx,
-                    #           self.total_frs_wrt)
                     # frame copy has a minimal effect on performance
                     fr_to_wrt = fr
-                    fr_with_info = cv2.cv.fromarray(fr.copy())
+                    fr_with_info = None
+                    if self.add_info:
+                        fr_with_info = cv2.cv.fromarray(fr.copy())
 
-                    w = self.w
-                    h = self.h
-                    hscale = min(w / float(settings['h_fits']), 1.0)
-                    vscale = min(h / float(settings['v_fits']), 1.0)
-                    scale = min(hscale, vscale)
+                        w = self.w
+                        h = self.h
+                        hscale = min(w / float(settings['h_fits']), 1.0)
+                        vscale = min(h / float(settings['v_fits']), 1.0)
+                        scale = min(hscale, vscale)
 
-                    if self.text_type == 'light':
-                        text_color = settings['light_color']
-                    elif self.text_type == 'dark':
-                        text_color = settings['dark_color']
-                    elif self.text_type == 'stroke':
-                        text_color = settings['light_color']
-                        strk_color = settings['dark_color']
+                        if self.text_type == 'light':
+                            text_color = settings['light_color']
+                        elif self.text_type == 'dark':
+                            text_color = settings['dark_color']
+                        elif self.text_type == 'stroke':
+                            text_color = settings['light_color']
+                            strk_color = settings['dark_color']
 
-                    font = cv2.cv.InitFont(
-                        settings['font'], scale, scale, 0.0,
-                        settings['text_thick'], cv2.cv.CV_AA)
-                    stroke = cv2.cv.InitFont(
-                        settings['font'], scale, scale, 0.0,
-                        settings['strk_thick'], cv2.cv.CV_AA)
+                        font = cv2.cv.InitFont(
+                            settings['font'], scale, scale, 0.0,
+                            settings['text_thick'], cv2.cv.CV_AA)
+                        stroke = cv2.cv.InitFont(
+                            settings['font'], scale, scale, 0.0,
+                            settings['strk_thick'], cv2.cv.CV_AA)
 
-                    txt = "butterflow {} ({})\n"\
-                          "Res: {},{}\n"\
-                          "Playback Rate: {} fps\n"
-                    txt = txt.format(__version__, sys.platform, w, h,
-                                     self.playback_rate)
+                        txt = "butterflow {} ({})\n"\
+                              "Res: {},{}\n"\
+                              "Playback Rate: {} fps\n"
+                        txt = txt.format(__version__, sys.platform, w, h,
+                                         self.playback_rate)
 
-                    if self.flow_kwargs is not None:
-                        flow_format = ''
-                        i = 0
-                        for k, v in self.flow_kwargs.items():
-                            flow_format += "{}: {}".format(k, v)
-                            if i == len(self.flow_kwargs) - 1:
-                                flow_format += '\n\n'
-                            else:
-                                flow_format += ', '
-                            i += 1
-                        txt += flow_format
+                        if self.flow_kwargs is not None:
+                            flow_format = ''
+                            i = 0
+                            for k, v in self.flow_kwargs.items():
+                                flow_format += "{}: {}".format(k, v)
+                                if i == len(self.flow_kwargs) - 1:
+                                    flow_format += '\n\n'
+                                else:
+                                    flow_format += ', '
+                                i += 1
+                            txt += flow_format
 
-                    txt += "Frame: {}\n"\
-                           "Pair Index: {}, {}, {}\n"\
-                           "Type Src: {}, Int: {}, Dup: {}\n"\
-                           "Mem: {}\n"
-                    txt = txt.format(
-                        self.total_frs_wrt,
-                        pair_a,
-                        pair_b,
-                        btw_idx,
-                        'Y' if fr_type == 'source' else 'N',
-                        'Y' if fr_type == 'interpolated' else 'N',
-                        'Y' if wrt_idx > 0 else 'N',
-                        hex(id(fr_to_wrt)))
+                        txt += "Frame: {}\n"\
+                               "Pair Index: {}, {}, {}\n"\
+                               "Type Src: {}, Int: {}, Dup: {}\n"\
+                               "Mem: {}\n"
+                        txt = txt.format(
+                            self.total_frs_wrt,
+                            pair_a,
+                            pair_b,
+                            btw_idx,
+                            'Y' if fr_type == 'source' else 'N',
+                            'Y' if fr_type == 'interpolated' else 'N',
+                            'Y' if wrt_idx > 0 else 'N',
+                            hex(id(fr_to_wrt)))
 
-                    for line_idx, line in enumerate(txt.split('\n')):
-                        line_sz, _ = cv2.cv.GetTextSize(line, font)
-                        _, line_h = line_sz
-                        origin = (int(settings['l_padding']),
-                                  int(settings['t_padding'] +
-                                  (line_idx * (line_h +
-                                   settings['line_d_padding']))))
-                        if self.text_type == 'stroke':
+                        for line_idx, line in enumerate(txt.split('\n')):
+                            line_sz, _ = cv2.cv.GetTextSize(line, font)
+                            _, line_h = line_sz
+                            origin = (int(settings['l_padding']),
+                                      int(settings['t_padding'] +
+                                      (line_idx * (line_h +
+                                       settings['line_d_padding']))))
+                            if self.text_type == 'stroke':
+                                cv2.cv.PutText(
+                                    fr_with_info, line, origin, stroke, strk_color)
                             cv2.cv.PutText(
-                                fr_with_info, line, origin, stroke, strk_color)
-                        cv2.cv.PutText(
-                            fr_with_info, line, origin, font, text_color)
+                                fr_with_info, line, origin, font, text_color)
 
-                    sub_tgt_dur = '{:.2f}s'.format(
-                        subregion.dur / 1000.0) if subregion.dur else '_'
-                    sub_tgt_fps = '{}'.format(
-                        subregion.fps) if subregion.fps else '_'
-                    sub_tgt_spd = '{:.2f}'.format(
-                        subregion.spd) if subregion.spd else '_'
-                    sub_tgt_btw = '{:.2f}'.format(
-                        subregion.btw) if subregion.btw else '_'
+                        sub_tgt_dur = '{:.2f}s'.format(
+                            subregion.dur / 1000.0) if subregion.dur else '_'
+                        sub_tgt_fps = '{}'.format(
+                            subregion.fps) if subregion.fps else '_'
+                        sub_tgt_spd = '{:.2f}'.format(
+                            subregion.spd) if subregion.spd else '_'
+                        sub_tgt_btw = '{:.2f}'.format(
+                            subregion.btw) if subregion.btw else '_'
 
-                    tgt_dur = tgt_frs / float(self.playback_rate)
-                    write_ratio = frs_wrt * 100.0 / tgt_frs
+                        tgt_dur = tgt_frs / float(self.playback_rate)
+                        write_ratio = frs_wrt * 100.0 / tgt_frs
 
-                    txt = "Region {}/{} F: [{}, {}] T: [{:.2f}s, {:.2f}s]\n"\
-                          "Len F: {}, T: {:.2f}s\n"\
-                          "Target Spd: {} Dur: {} Fps: {} Btw: {}\n"\
-                          "Out Len F: {}, Dur: {:.2f}s\n"\
-                          "Drp every {:.1f}, Dup every {:.1f}\n"\
-                          "Src seen: {}, Int: {}, Drp: {}, Dup: {}\n"\
-                          "Write Ratio: {}/{} ({:.2f}%)\n"
+                        txt = "Region {}/{} F: [{}, {}] T: [{:.2f}s, {:.2f}s]\n"\
+                              "Len F: {}, T: {:.2f}s\n"\
+                              "Target Spd: {} Dur: {} Fps: {} Btw: {}\n"\
+                              "Out Len F: {}, Dur: {:.2f}s\n"\
+                              "Drp every {:.1f}, Dup every {:.1f}\n"\
+                              "Src seen: {}, Int: {}, Drp: {}, Dup: {}\n"\
+                              "Write Ratio: {}/{} ({:.2f}%)\n"
 
-                    txt = txt.format(
-                        self.curr_subregion_idx + 1,
-                        self.subregions_to_render,
-                        fa,
-                        fb,
-                        ta / 1000,
-                        tb / 1000,
-                        reg_len,
-                        reg_dur,
-                        sub_tgt_spd,
-                        sub_tgt_dur,
-                        sub_tgt_fps,
-                        sub_tgt_btw,
-                        tgt_frs,
-                        tgt_dur,
-                        drp_every,
-                        dup_every,
-                        src_gen,
-                        frs_int,
-                        frs_drp,
-                        frs_dup,
-                        frs_wrt,
-                        tgt_frs,
-                        write_ratio)
+                        txt = txt.format(
+                            self.curr_subregion_idx + 1,
+                            self.subregions_to_render,
+                            fa,
+                            fb,
+                            ta / 1000,
+                            tb / 1000,
+                            reg_len,
+                            reg_dur,
+                            sub_tgt_spd,
+                            sub_tgt_dur,
+                            sub_tgt_fps,
+                            sub_tgt_btw,
+                            tgt_frs,
+                            tgt_dur,
+                            drp_every,
+                            dup_every,
+                            src_gen,
+                            frs_int,
+                            frs_drp,
+                            frs_dup,
+                            frs_wrt,
+                            tgt_frs,
+                            write_ratio)
 
-                    for line_idx, line in enumerate(txt.split('\n')):
-                        line_sz, _ = cv2.cv.GetTextSize(line, font)
-                        line_w, line_h = line_sz
-                        origin = (int(w - settings['r_padding'] - line_w),
-                                  int(settings['t_padding'] +
-                                  (line_idx * (line_h +
-                                   settings['line_d_padding']))))
-                        if self.text_type == 'stroke':
+                        for line_idx, line in enumerate(txt.split('\n')):
+                            line_sz, _ = cv2.cv.GetTextSize(line, font)
+                            line_w, line_h = line_sz
+                            origin = (int(w - settings['r_padding'] - line_w),
+                                      int(settings['t_padding'] +
+                                      (line_idx * (line_h +
+                                       settings['line_d_padding']))))
+                            if self.text_type == 'stroke':
+                                cv2.cv.PutText(
+                                    fr_with_info, line, origin, stroke, strk_color)
                             cv2.cv.PutText(
-                                fr_with_info, line, origin, stroke, strk_color)
-                        cv2.cv.PutText(
-                            fr_with_info, line, origin, font, text_color)
+                                fr_with_info, line, origin, font, text_color)
 
                     # show the frame on the screen
                     if self.show_preview:
-                        cv2.imshow(self.window_title, np.asarray(fr_with_info))
+                        if self.add_info:
+                            cv2.imshow(self.window_title,
+                                       np.asarray(fr_with_info))
+                        else:
+                            cv2.imshow(self.window_title,
+                                       np.asarray(fr_to_wrt))
                         # every imshow call should be followed by waitKey to
                         # display the image for x milliseconds, otherwise it
                         # won't display the image
                         cv2.waitKey(settings['imshow_ms'])
-
                     # add debugging information
                     if self.add_info:
                         fr_to_wrt = np.asarray(fr_with_info)
-
                     # send the frame to the pipe
                     self.write_frame_to_pipe(self.render_pipe, fr_to_wrt)
+                    # log.debug('wrt: %s,%s,%s (%s)', pair_a, pair_b, btw_idx,
+                    #           self.total_frs_wrt)
 
         # finished encoding
         self.total_frs_inter += (frs_int - frs_int_drp)
