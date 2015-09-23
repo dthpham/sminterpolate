@@ -227,7 +227,6 @@ class Renderer(object):
             tgt_frs = int(self.playback_rate * reg_dur *
                           (1 / subregion.spd))
         elif subregion.btw:
-            subregion.spd = 1  # if unset, as a precaution against div by zero
             tgt_frs = int(reg_len + ((reg_len - 1) * subregion.btw))
 
         tgt_frs = max(0, tgt_frs)
@@ -271,10 +270,14 @@ class Renderer(object):
         log.debug('reg_len: %s', reg_len)
         log.debug('tgt_fps: %s', subregion.fps)
         log.debug('tgt_dur: %s', subregion.dur)
-        log.debug('tgt_spd: %s %.2gx', subregion.spd, 1 / subregion.spd)
+        with np.errstate(divide='ignore', invalid='ignore'):
+            s = subregion.spd
+            if subregion.spd is None:
+                s = 0
+            log.debug('tgt_spd: %s %.2gx', subregion.spd,
+                      np.divide(1, s))
         log.debug('tgt_btw: %s', subregion.btw)
         log.debug('tgt_frs: %s', tgt_frs)
-
         sub_div = int_each_go + 1
         ts = []
         for x in range(int_each_go):
