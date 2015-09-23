@@ -11,6 +11,12 @@ def draw_progress_bar(img, p):
     # make the drawing function
     draw_rect = lambda x, y: \
         cv2.rectangle(img, x, y, s['bar_color'], s['ln_type'])
+    # shift is how much to shift horiz and vert
+    # ext is how much to extend the vertexes
+    draw_strk = lambda x, y, shift_x, shift_y, ext_x, ext_y: \
+        cv2.rectangle(img, (x[0] + shift_x - ext_x, x[1] + shift_y - ext_y),
+                      (y[0] + shift_x + ext_x, y[1] + shift_y + ext_y),
+                      s['bar_strk_color'], s['ln_type'])
     # get dimensions
     h = img.shape[0]
     w = img.shape[1]
@@ -21,18 +27,22 @@ def draw_progress_bar(img, p):
     # draw the top line
     top_v1 = (int(w * s['bar_s_pad']), int(h * s['bar_t_pad']))
     top_v2 = (int(w * (1 - s['bar_s_pad'])), top_v1[1] + s['ln_thick'])
+    draw_strk(top_v1, top_v2, 0, -s['strk_sz'], 1, 0)
     draw_rect(top_v1, top_v2)
     # bottom
     bot_v1 = (top_v1[0], top_v2[1] + 2 * s['bar_in_pad'] + s['bar_thick'])
     bot_v2 = (top_v2[0], bot_v1[1] + s['ln_thick'])
+    draw_strk(bot_v1, bot_v2, 0, s['strk_sz'], 1, 0)
     draw_rect(bot_v1, bot_v2)
     # left
     left_v1 = top_v1
     left_v2 = (bot_v1[0] + s['ln_thick'], bot_v1[1] + s['ln_thick'])
+    draw_strk(left_v1, left_v2, -s['strk_sz'], 0, 0, 0)
     draw_rect(left_v1, left_v2)
     # right
-    right_v1 = (top_v2[0] - s['ln_thick'], top_v2[1])
+    right_v1 = (top_v2[0] - s['ln_thick'], top_v1[1])
     right_v2 = bot_v2
+    draw_strk(right_v1, right_v2, s['strk_sz'], 0, 0, 0)
     draw_rect(right_v1, right_v2)
     # draw the progress bar inside the rect
     pad = s['ln_thick'] + s['bar_in_pad']
@@ -43,6 +53,7 @@ def draw_progress_bar(img, p):
               bot_v2[1] - pad)
     # only draw if the progress is > 0
     if p > 0:
+        draw_strk(bar_v1, bar_v2, 0, 0, 1, 1)  # complete outline
         draw_rect(bar_v1, bar_v2)
 
 

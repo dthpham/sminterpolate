@@ -70,10 +70,12 @@ default = {
     'bar_t_pad':      0.7,   # relative padding from the top
     'bar_s_pad':      0.12,  # relative padding on each side
     'ln_thick':       3,     # pixels of lines that make outer rectangle
+    'strk_sz':        1,     # size of the stroke in pixels
     'ln_type':        cv2.cv.CV_FILLED,  # -1, a filled line
     'bar_in_pad':     3,     # padding from the inner bar
     'bar_thick':      15,    # thickness of the inner bar
     'bar_color':      cv2.cv.RGB(255, 255, 255),
+    'bar_strk_color': cv2.cv.RGB(192, 192, 192),
 }
 
 if sys.platform.startswith('linux'):
