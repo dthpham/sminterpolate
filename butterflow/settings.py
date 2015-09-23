@@ -66,6 +66,7 @@ default = {
     'txt_r_pad':      20,
     'txt_ln_b_pad':   10,    # spacing between lines
     'txt_min_scale':  0.6,   # don't draw if the font is scaled below this
+    'txt_placeh':     '_',   # placeholder if value in fmt text is None
     # progress bar settings
     'bar_t_pad':      0.7,   # relative padding from the top
     'bar_s_pad':      0.12,  # relative padding on each side

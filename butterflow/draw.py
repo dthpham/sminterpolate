@@ -83,12 +83,12 @@ def draw_debug_text(img, text_type, rate, flow_kwargs, total_frs_wrt, pair_a,
         cv2.putText(img, x, y, s['font_face'], scale, s['dark_color'],
                     s['strk_thick'], s['font_type'])
     draw_text = lambda x, y: \
-        cv2.putText(img, line, origin, s['font_face'], scale, color,
+        cv2.putText(img, x, y, s['font_face'], scale, color,
                     s['txt_thick'], s['font_type'])
     # draw text at the top left corner
     txt = "butterflow {} ({})\n"\
           "Res: {},{}\n"\
-          "Playback Rate: {:.3f} fps\n"
+          "Playback Rate: {:.2f} fps\n"
     txt = txt.format(__version__, sys.platform, w, h, rate)
     # add flow args text
     if flow_kwargs is not None:
@@ -136,8 +136,17 @@ def draw_debug_text(img, text_type, rate, flow_kwargs, total_frs_wrt, pair_a,
                      sub.tb / 1000.0,
                      (sub.fb - sub.fa) + 1,
                      (sub.tb - sub.ta) / 1000.0)
-    # TODO: add subregion target information
-    # <insert code>
+    # use formatted string or placeholder
+    def fsorp(f, v):
+        if v is None:
+            return s['txt_placeh']
+        return f.format(v)
+    txt += "Target Spd: {} Dur: {} Fps: {} Btw: {}\n"
+    txt = txt.format(fsorp('{:.2f}', sub.spd),
+                     fsorp('{:.2f}s', sub.dur / 1000.0) if sub.dur
+                           else s['txt_placeh'],
+                     fsorp('{}', sub.fps),
+                     fsorp('{:.2f}', sub.btw))
     txt += "Out Len F: {}, Dur: {:.2f}s\n"\
            "Drp every {:.1f}, Dup every {:.1f}\n"\
            "Src seen: {}, Int: {}, Drp: {}, Dup: {}\n"\
