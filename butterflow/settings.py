@@ -1,12 +1,13 @@
-from __future__ import absolute_import
+# Author: Duong Pham
+# Copyright 2015
 
 import os
 import sys
+import logging
 import tempfile
+import cv2
 from butterflow.__init__ import __version__
 from butterflow import motion
-import cv2
-import logging
 
 
 default = {
@@ -18,11 +19,13 @@ default = {
     'loglevel_b':     logging.DEBUG,
     'verbose':        False,
     # only support `ffmpeg` for now
+    # Documentation: https://ffmpeg.org/ffmpeg.html
     'avutil':         'ffmpeg',
     # avutil and encoder loglevel
     # `info` is default, set to `fatal` for quiet
     'av_loglevel':    'fatal',
     'enc_loglevel':   'error',
+    # See: https://trac.ffmpeg.org/wiki/Encode/H.264
     # See: https://trac.ffmpeg.org/wiki/Encode/H.264#a2.Chooseapreset
     # presets: ultrafast, superfast, veryfast, faster, fast, medium, slow,
     # slower, veryslow
@@ -34,6 +37,15 @@ default = {
     # `CV_INTER_CUBIC` looks best but is slower, `CV_INTER_LINEAR` is faster
     # but still looks okay
     'scaler_dn':      cv2.cv.CV_INTER_CUBIC,
+    # muxing opts
+    'v_container':    'mp4',
+    # See: https://trac.ffmpeg.org/wiki/Encode/HighQualityAudio
+    'a_container':    'm4a',  # will keep some useful metadata
+    # audio codec and quality
+    # See: https://trac.ffmpeg.org/wiki/Encode/AAC
+    'ca':             'aac',   # built in encoder, doesnt require an ext lib
+    'ba':             '240k',  # bitrate, usable >= 192k
+    'qa':             4,       # quality scale of audio from 0.1 to 10
     # farneback optical flow options
     'pyr_scale':      0.5,
     'levels':         3,
@@ -80,13 +92,14 @@ default = {
 }
 
 if sys.platform.startswith('linux'):
+    # considered an unstable encoder?
     # for x265 options: http://x265.readthedocs.org/en/default/cli.html
-    default['encoder'] = 'libx265'
+    default['cv'] = 'libx265'
 else:
-    default['encoder'] = 'libx264'
+    default['cv'] = 'libx264'
 
 # define location of files and directories
-default['out_path'] = os.path.join(os.getcwd(), 'out.mp4')
+default['out_path'] = os.path.join(os.getcwd(), 'output.mp4')
 
 tempdir = tempfile.gettempdir()
 default['tmp_dir'] = os.path.join(tempdir, 'butterflow-{}'.format(__version__))

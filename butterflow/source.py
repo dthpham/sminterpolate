@@ -1,54 +1,55 @@
-from cv2 import cv, VideoCapture
+# Author: Duong Pham
+# Copyright 2015
+
+import cv2
 
 
 class FrameSource(object):
-    def __init__(self, video_path):
-        self.capture = VideoCapture(video_path)
-        if self.capture is None or not self.capture.isOpened():
+    def __init__(self, path):
+        self.cap = cv2.VideoCapture(path)
+        if self.cap is None:
             raise RuntimeError('unable to open video')
-        self.frames = int(self.capture.get(cv.CV_CAP_PROP_FRAME_COUNT))
-        self.duration = float(self.frames) / \
-            self.capture.get(cv.CV_CAP_PROP_FPS) * 1000.0
-        self.time_position = 0.0
-        self.index = 0
+        if self.cap.isOpened():
+            import logging
+            log = logging.getLogger('butterflow')
+            log.warning('capturing already initialized')
+        # frames is used in app but duration is for debugging only
+        self.frames = int(self.cap.get(cv2.cv.CV_CAP_PROP_FRAME_COUNT))
+        self.duration = self.frames * 1.0 / \
+            self.cap.get(cv2.cv.CV_CAP_PROP_FPS) * 1000.0
+        self.idx = 0  # index of the frame to be read, zero-indexed
 
-    def update_position(self):
-        self.time_position = self.capture.get(cv.CV_CAP_PROP_POS_MSEC)
-        self.index = self.capture.get(cv.CV_CAP_PROP_POS_FRAMES)
+    def update_pos(func):
+        # decorator, update frame and time position in the video
+        # should be added to every seek and read
+        def wrapper(self, *args, **kwargs):
+            fr = func(self, *args, **kwargs)
+            if fr is not None:
+                self.idx = self.cap.get(cv2.cv.CV_CAP_PROP_POS_FRAMES)
+            return fr
+        return wrapper
 
+    @update_pos
     def seek_to_frame(self, idx):
-        if idx < 0 or idx >= self.frames:
-            raise IndexError(
-                'idx is out of frame range [0,{})'.format(self.frames))
-        self.capture.set(cv.CV_CAP_PROP_POS_FRAMES, idx)
-        self.update_position()
+        if idx < 0 or idx > self.frames - 1:
+            msg = 'seeked out of frame range f[0,%s]'.format(self.frames - 1)
+            raise IndexError(msg)
+        self.cap.set(cv2.cv.CV_CAP_PROP_POS_FRAMES, idx)  # do seek
+        # should always be successful if checked we were in bounds correctly
+        return True
 
-    def frame_at_idx(self, idx):
-        self.seek_to_frame(idx)
-        return self.read()
-
-    def frame_at_time(self, t):
-        self.seek_to_time(t)
-        return self.read()
-
-    def seek_to_time(self, t):
-        if t < 0 or t > self.duration:
-            raise IndexError(
-                'time is out of video range [0,{}]'.format(self.duration))
-        self.capture.set(cv.CV_CAP_PROP_POS_MSEC, t)
-        self.update_position()
-
+    @update_pos
     def read(self):
-        """returns None if there are not longer any frames to be read"""
-        if self.index >= self.frames:
+        # reads frame at `self.idx` and return it
+        # returns None if there are not longer any frames to be read
+        if self.idx > self.frames - 1:
             return None
-        rc, frame = self.capture.read()
-        if rc is False:
-            raise RuntimeError(
-                'unable to read a frame at idx {}'.format(self.index))
+        rc, fr = self.cap.read()
+        if rc is True:
+            return fr
         else:
-            self.update_position()
-            return frame
+            msg = 'unable to read frame at idx %s'.format(self.idx)
+            raise RuntimeError(msg)
 
     def __del__(self):
-        self.capture.release()
+        self.cap.release()

@@ -1,4 +1,5 @@
-from __future__ import absolute_import
+# Author: Duong Pham
+# Copyright 2015
 
 import os
 import argparse
@@ -12,6 +13,7 @@ from butterflow.sequence import VideoSequence, RenderSubregion
 NO_OCL_WARNING = 'No compatible OCL devices detected. Check your OpenCL '\
                  'installation.'
 NO_VIDEO_SPECIFIED = 'No input video specified'
+
 
 def main():
     import logging
@@ -75,10 +77,9 @@ def main():
                      help='Set to use true lossless encoding settings')
 
     mux.add_argument('-m', '--mux', action='store_true',
-                     help='Set to mux source audio and subtitles with the '
-                     'output video. Audio and subtitles may be truncated or '
-                     'may not be in sync with the final video if the duration '
-                     'has been altered during the rendering process.')
+                     help='Set to mux source audio with the output video. '
+                     'Audio may not be in sync with the final video if '
+                     'speed has been altered during the rendering process.')
 
     fgr.add_argument('--fast-pyr', action='store_true',
                      help='Set to use fast pyramids')
@@ -96,8 +97,8 @@ def main():
                      '(default: %(default)s)')
     fgr.add_argument('--iters', type=int,
                      default=settings.default['iters'],
-                     help='Specify number of iterations at each pyramid level, '
-                     '(default: %(default)s)')
+                     help='Specify number of iterations at each pyramid '
+                     'level, (default: %(default)s)')
     fgr.add_argument('--poly-n', type=int,
                      choices=settings.default['poly_n_choices'],
                      default=settings.default['poly_n'],
@@ -112,8 +113,8 @@ def main():
                      help='Specify which filter to use for optical flow '
                      'estimation, (default: %(default)s)')
 
+    # only available when `debug_opts` is True in settings.py
     if settings.default['debug_opts']:
-        # display args
         dsp.add_argument('-a', '--add-info', action='store_true',
                          help='Set to embed debugging info into the output '
                               'video')
@@ -122,7 +123,7 @@ def main():
                          default=settings.default['text_type'],
                          help='Specify text type for debugging info, '
                          '(default: %(default)s)')
-        # video args
+
         vid.add_argument('-npad', '--no-pad', action='store_false',
                          help='Set to discard duplicate frames that are '
                          'padded to the end of subregions. This will alter '
@@ -140,28 +141,12 @@ def main():
         print(__version__)
         return 0
 
-    # clb_dir exists inside the tmp_dir
-    cache_dir = settings.default['tmp_dir']
-
     if args.cache:
-        num_files = 0
-        sz = 0
-        for dirpath, dirnames, filenames in os.walk(cache_dir):
-            # ignore the clb_dir
-            if dirpath == settings.default['clb_dir']:
-                continue
-            for f in filenames:
-                num_files += 1
-                fp = os.path.join(dirpath, f)
-                sz += os.path.getsize(fp)
-        sz_mb = float(sz) / (1 << 20)  # size in megabytes
-        print('{} files, {:.2g} MB'.format(num_files, sz_mb))
+        print_cache_info()
         return 0
 
     if args.rm_cache:
-        if os.path.exists(cache_dir):
-            import shutil
-            shutil.rmtree(cache_dir)
+        rm_cache()
         print('cache cleared')
         return 0
 
@@ -174,10 +159,7 @@ def main():
         return 0
 
     if have_ocl:
-        cache_dir = settings.default['clb_dir']
-        if not os.path.exists(cache_dir):
-            os.makedirs(cache_dir)
-        motion.set_cache_path(cache_dir + os.sep)
+        set_clb_dir()
     else:
         print(NO_OCL_WARNING)
         return 1
@@ -195,62 +177,15 @@ def main():
         print('You need `ffmpeg` to use this app')
         return 1
 
-    # setup functions that will be used to generate flows and interpolate frames
-    farneback_method = motion.ocl_farneback_optical_flow if have_ocl \
-        else sw_farneback_optical_flow
-    flags = 0
-    if args.flow_filter == 'gaussian':
-        import cv2
-        flags = cv2.OPTFLOW_FARNEBACK_GAUSSIAN
-    flow_func = lambda x, y: \
-        farneback_method(x, y, args.pyr_scale, args.levels, args.winsize,
-                         args.iters, args.poly_n, args.poly_s, args.fast_pyr,
-                         flags)
-
-    # for the information filter
-    flow_kwargs = collections.OrderedDict([
-        ('Pyr', args.pyr_scale),
-        ('L', args.levels),
-        ('W', args.winsize),
-        ('I', args.iters),
-        ('PolyN', args.poly_n),
-        ('PolyS', args.poly_s)])
-
     try:
         vid_info = avinfo.get_info(args.video)
     except Exception:
         log.error('Could not get video information:', exc_info=True)
         return 1
 
-    src_rate = vid_info['rate_num'] * 1.0 / vid_info['rate_den']
-
     if args.inspect:
         if args.video:
-            from fractions import Fraction
-            # simplify the display aspect ratio
-            dar = Fraction(vid_info['dar_n'], vid_info['dar_d'])
-            dur = vid_info['duration']
-            streams = []
-            if vid_info['v_stream_exists']:
-                streams.append('video')
-            if vid_info['a_stream_exists']:
-                streams.append('audio')
-            if vid_info['s_stream_exists']:
-                streams.append('subtitle')
-            print('Video information:'
-                  '\n  Streams available  \t: {}'
-                  '\n  Resolution         \t: {}x{}, SAR {}:{} DAR {}:{}'
-                  '\n  Rate               \t: {:.3f} fps'
-                  '\n  Duration           \t: {} ({:.2f}s)'
-                  '\n  Num of frames      \t: {}'.format(
-                      ','.join(streams),
-                      vid_info['width'], vid_info['height'],
-                      vid_info['sar_n'], vid_info['sar_d'],
-                      dar.numerator, dar.denominator,
-                      src_rate,
-                      ms_to_time_str(dur), dur / 1000.0,
-                      vid_info['frames']
-                  ))
+            print_vid_info(vid_info)
             return 0
         else:
             print(NO_VIDEO_SPECIFIED)
@@ -267,6 +202,9 @@ def main():
         log.error('Bad subregion string: %s' % e)
         return 1
 
+    # set playback rate
+    src_rate = (vid_info['rate_n'] * 1.0 /
+                vid_info['rate_d'])
     rate = 0
     if args.playback_rate is None:
         # use original rate
@@ -284,6 +222,29 @@ def main():
     if rate != src_rate:
         log.warning('rate mismatch: src_rate=%s rate=%s', src_rate, rate)
 
+    # make functions that will generate flows and interpolate frames
+    # ocl or software?
+    farneback_method = motion.ocl_farneback_optical_flow if have_ocl \
+        else sw_farneback_optical_flow
+    flags = 0
+    if args.flow_filter == 'gaussian':
+        import cv2
+        flags = cv2.OPTFLOW_FARNEBACK_GAUSSIAN
+    flow_func = lambda x, y: \
+        farneback_method(x, y, args.pyr_scale, args.levels, args.winsize,
+                         args.iters, args.poly_n, args.poly_s, args.fast_pyr,
+                         flags)
+
+    # for the debug text
+    # TODO: should be determined in the render module
+    flow_kwargs = collections.OrderedDict([
+        ('Pyr', args.pyr_scale),
+        ('L', args.levels),
+        ('W', args.winsize),
+        ('I', args.iters),
+        ('PolyN', args.poly_n),
+        ('PolyS', args.poly_s)])
+
     renderer = Renderer(
         args.output_path,
         vid_info,
@@ -298,38 +259,121 @@ def main():
         args.no_preview,
         False,  # add info?
         settings.default['text_type'],
-        args.mux,
         True,  # pad with dupes?
         settings.default['av_loglevel'],
         settings.default['enc_loglevel'],
-        flow_kwargs)
+        flow_kwargs,
+        args.mux)
 
     # apply debugging options
+    # must be done after the render obj is inited
     if settings.default['debug_opts']:
         renderer.grayscale      = args.grayscale
         renderer.pad_with_dupes = args.no_pad
         renderer.add_info       = args.add_info
         renderer.text_type      = args.text_type
 
+    # set the number of threads and run
     motion.set_num_threads(settings.default['ocv_threads'])
 
     try:
+        # time how long it takes to render
+        # timeit will turn off gc, must turn it back on to maximize performance
         import timeit
-        tot_time = timeit.timeit(renderer.render, number=1)
+        tot_time = timeit.timeit(renderer.render, number=1)  # only run once
         log.info('butterflow took {:.3g} minutes, done.'.format(tot_time / 60))
-        new_sz = float(os.path.getsize(args.output_path)) / (1 << 20)  # in MB
-        old_sz = float(os.path.getsize(args.video)) / (1 << 20)
-        diff = new_sz - old_sz
-        log.info('out file size: {:.3g} MB ({:+.3g} MB)'.format(new_sz, diff))
+
+        # sizeit and show the diff
+        n_sz = sz_in_mb(args.output_path)
+        o_sz = sz_in_mb(args.video)
+        log.info('out file size: {:.3g} MB ({:+.3g} MB)'.format(n_sz,
+                                                                n_sz - o_sz))
     except (KeyboardInterrupt, SystemExit):
-        log.warning('files left in cache')
+        log.warning('files were left in the cache')
         return 1
 
 
+def sz_in_mb(p):
+    # p, path to file
+    # get size of file in megabytes
+    sz = float(os.path.getsize(p))
+    sz_mb = sz / (1 << 20)
+    return sz_mb
+
+
+def set_clb_dir():
+    # set the location of the clb dir
+    # make the folder if it doesn't exist
+    clb_dir = settings.default['clb_dir']
+    if not os.path.exists(clb_dir):
+        os.makedirs(clb_dir)
+    motion.set_cache_path(clb_dir + os.sep)
+
+
+def print_cache_info():
+    # print cache info
+    # clb_dir exists inside the tmp_dir
+    cache_dir = settings.default['tmp_dir']
+    num_files = 0
+    sz = 0
+    for dirpath, dirnames, filenames in os.walk(cache_dir):
+        # ignore the clb_dir
+        if dirpath == settings.default['clb_dir']:
+            continue
+        for f in filenames:
+            num_files += 1
+            fp = os.path.join(dirpath, f)
+            sz += os.path.getsize(fp)
+    sz_mb = float(sz) / (1 << 20)  # size in megabytes
+    print('{} files, {:.2g} MB'.format(num_files, sz_mb))
+
+
+def rm_cache():
+    # delete contents of cache, including the clb_dir
+    cache_dir = settings.default['tmp_dir']
+    if os.path.exists(cache_dir):
+        import shutil
+        shutil.rmtree(cache_dir)
+
+
+def print_vid_info(v):
+    # v, info dictionary from avinfo
+    # use Fraction obj to reduce the display aspect ratio fraction
+    from fractions import Fraction
+    dar = Fraction(v['dar_n'],
+                   v['dar_d'])
+    # which streams are avail?
+    # make a list then join for text
+    streams = []
+    if v['v_stream_exists']:
+        streams.append('video')
+    if v['a_stream_exists']:
+        streams.append('audio')
+    if v['s_stream_exists']:
+        streams.append('subtitle')
+    # calculate the src rate
+    src_rate = (v['rate_n'] * 1.0 /
+                v['rate_d'])
+    print('Video information:'
+          '\n  Streams available  \t: {}'
+          '\n  Resolution         \t: {}x{}, SAR {}:{} DAR {}:{}'
+          '\n  Rate               \t: {:.3f} fps'
+          '\n  Duration           \t: {} ({:.2f}s)'
+          '\n  Num of frames      \t: {}'.format(
+              ','.join(streams),
+              v['w'], v['h'],
+              v['sar_n'], v['sar_d'],
+              dar.numerator, dar.denominator,
+              src_rate,
+              ms_to_time_str(v['duration']), v['duration'] / 1000.0,
+              v['frames']
+          ))
+
+
 def ms_to_time_str(time_ms):
-    # converts a time in ms to a time string
-    # time string in form:
-    # [hrs:mins:secs.xxx]
+    # converts a time in ms to a string in a friendly form
+    # time str will be in form:
+    # [hrs:mins:secs]
     import time
     t_str = time.strftime('%H:%M:%S', time.gmtime(time_ms / 1000.0))
     return t_str
@@ -344,10 +388,10 @@ def time_str_to_ms(time_str):
     sec = 0
     valid_char_set = '0123456789:.'
     if time_str == '' or time_str.count(':') > 2:
-        raise ValueError('invalid time syntax')
+        raise ValueError('invalid syntax')
     for char in time_str:
         if char not in valid_char_set:
-            raise ValueError('unknown char in time string')
+            raise ValueError('unknown char in time')
     val = time_str.split(':')
     val_len = len(val)
     # going backwards in the list
@@ -426,7 +470,7 @@ def sub_from_str_end_key(string, duration):
     b = val[1].split('=')[1]  # the `b=` portion
     if b == 'end':
         # replace the `end` with the duration of the video in seconds. the
-        # duration will eventually be reconverted to milliseconds automatically
+        # duration will be converted to ms automatically
         string = string.replace('end', str(duration / 1000.0))
         return sub_from_str(string)
     else:

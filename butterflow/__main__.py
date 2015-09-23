@@ -1,4 +1,5 @@
-from __future__ import absolute_import
+# Author: Duong Pham
+# Copyright 2015
 
 import sys
 

@@ -1,2 +1,3 @@
 # Auto detect text files and perform LF normalization
+# it's the default on nix and osx
 * text=auto

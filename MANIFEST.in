@@ -1,5 +1,7 @@
 recursive-exclude share *
 recursive-exclude tests *
+recursive-exclude vendor *
+recursive-include vendor/opencv-ndarray-conversion *
 exclude .git*
 include LICENSE
 include README.md

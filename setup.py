@@ -64,7 +64,7 @@ if homebrew_prefix is not None:
     # bindings against the first `python` (and `python-config`) in `PATH`
     # (check `which python`).
     #
-    # Hombrew site-packages should preceed all others on sys.path if it
+    # Homebrew site-packages should preceed all others on sys.path if it
     # exists:
     sys.path.insert(1, homebrew_site_pkgs)
 
@@ -223,8 +223,9 @@ motion_ext = Extension('butterflow.motion',
                                              'conversion.cpp')],
                        language='c++')
 
+# should we use cxfreeze?
 use_cx_freeze = False
-if 'build_exe' in sys.argv:
+if is_win and 'build_exe' in sys.argv:
     try:
         # cx_Freeze extends setuptools and should be imported after it
         from cx_Freeze import setup, Executable
@@ -278,8 +279,8 @@ if use_cx_freeze:
     }
     executables = [
         Executable(script='butterflow/__main__.py',
-                   targetName='butterflow.exe',
                    icon='share/butterflow.ico',
+                   targetName='butterflow.exe',
                    base=None)
     ]
     setup_function(

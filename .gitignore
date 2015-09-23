@@ -12,39 +12,35 @@
 *.directory
 butterflow.wiki
 
-#virtualenv
+# virtualenv
 bin
 lib
 include
 Scripts
 env
 
-#pip
+# pip
 pip-selfcheck.json
 
-#setuptools
+# setuptools
 build
 dist
 *.egg-info
 .Python
 __pycache__
 
-#nosetests
+# nosetests
 .coverage
 
-#visualstudio
+# visualstudio
 .vs
 *.pyproj*
 *.sln
 
-#development
+# development
 tags
 *.pth
 dev_settings.py
 out.mp4
-v.mp4
-x.mp4
-z.mp4
 todo
 clear.sh
-out*.mp4

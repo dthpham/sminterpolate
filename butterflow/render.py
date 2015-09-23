@@ -1,19 +1,19 @@
 # -*- coding: utf-8 -*-
-from __future__ import absolute_import
+
+# Author: Duong Pham
+# Copyright 2015
 
 import os
-import sys
-import datetime
 import math
 import shutil
 import subprocess
 import cv2
 import numpy as np
+from butterflow.draw import draw_progress_bar, draw_debug_text
 from butterflow.settings import default as settings
 from butterflow.source import FrameSource
 from butterflow.sequence import VideoSequence, RenderSubregion
-from butterflow.draw import draw_progress_bar, draw_debug_text
-
+from butterflow.mux import extract_audio, mux, concat_files
 
 import logging
 log = logging.getLogger('butterflow')
@@ -21,129 +21,62 @@ log = logging.getLogger('butterflow')
 
 class Renderer(object):
     def __init__(
-        self, dst_path, video_info, video_sequence, playback_rate,
+        self, dst_path, vid_info, vid_seq, playback_rate,
         flow_func=settings['flow_func'],
         interpolate_func=settings['interpolate_func'],
-        scale=settings['video_scale'], grayscale=False,
-        lossless=False, trim=False, show_preview=True, add_info=False,
-        text_type=settings['text_type'], mux=False, pad_with_dupes=True,
+        v_scale=settings['video_scale'], grayscale=False, lossless=False,
+        trim=False, show_preview=True, add_info=False,
+        text_type=settings['text_type'], pad_with_dupes=True,
         av_loglevel=settings['av_loglevel'],
-        enc_loglevel=settings['enc_loglevel'], flow_kwargs=None):
-
-        self.dst_path = dst_path
-        self.video_info = video_info
-        self.video_sequence = video_sequence
-        self.flow_func = flow_func
+        enc_loglevel=settings['enc_loglevel'], flow_kwargs=None, mux=False):
+        # user args
+        self.dst_path         = dst_path      # path to write the render
+        self.vid_info         = vid_info      # information from avinfo
+        self.vid_seq          = vid_seq       # passed using `-s`
+        self.playback_rate    = float(playback_rate)
+        self.flow_func        = flow_func
         self.interpolate_func = interpolate_func
-        self.show_preview = show_preview
-        self.text_type = text_type
-        self.add_info = add_info
-        self.mux = mux
-        self.pad_with_dupes = pad_with_dupes
-        self.av_loglevel = av_loglevel
-        self.enc_loglevel = enc_loglevel
-        self.playback_rate = float(playback_rate)
-        self.scale = scale
-        # keep the aspect ratio
-        # w and h must be divisible by 2 for yuv420p outputs
-        w = video_info['width']  * scale
-        h = video_info['height'] * scale
-        w = math.floor(w / 2) * 2
-        h = math.floor(h / 2) * 2
-        self.w = int(w)
-        self.h = int(h)
-        if scale < 1.0:
+        self.v_scale          = v_scale       # scale video by factor
+        self.grayscale        = grayscale     # make a grayscale video?
+        self.lossless         = lossless      # encode losslessly?
+        self.trim             = trim          # trim extra subregion?
+        self.show_preview     = show_preview  # show preview window?
+        self.add_info         = add_info      # embed debug info?
+        self.text_type        = text_type     # overlay text type
+        self.pad_with_dupes   = pad_with_dupes
+        self.av_loglevel      = av_loglevel   # ffmpeg loglevel
+        self.enc_loglevel     = enc_loglevel  # x264, x265 loglevel
+        self.flow_kwargs      = flow_kwargs   # will pass to draw_debug_text
+        self.mux              = mux           # mux?
+        # keep track of things
+        self.render_pipe      = None
+        self.tot_frs_wrt      = 0             # total frames written
+        self.tot_frs_int      = 0             # total interpolated
+        self.subs_to_render   = 0
+        self.curr_sub_idx     = 0             # region being worked on
+        # precalculate the w and h
+        # keep the aspect ratio of the video if it is scaled. w and h must be
+        # divisible by 2 for yuv420p outputs
+        self.w = int(math.floor(vid_info['w'] * v_scale / 2) * 2)
+        self.h = int(math.floor(vid_info['h'] * v_scale / 2) * 2)
+        # choose the best scaler
+        if v_scale < 1.0:
             self.scaler = settings['scaler_dn']
-        elif scale > 1.0:
+        if v_scale > 1.0:
             self.scaler = settings['scaler_up']
-        self.grayscale = grayscale
-        self.lossless = lossless
-        self.trim = trim
-        self.render_pipe = None
-        self.flow_kwargs = flow_kwargs
-        self.total_frs_wrt = 0
-        self.total_frs_inter = 0
-        self.subregions_to_render = 0
-        self.curr_subregion_idx = 0
-        self.window_title = '{} - Butterflow'.format(os.path.basename(
-            self.video_info['path']))
-
-    def extract_audio(self, dst_path):
-        if not self.video_info['a_stream_exists']:
-            raise RuntimeError('no audio stream detected')
-        proc = subprocess.call([
-            settings['avutil'],
-            '-loglevel', self.av_loglevel,
-            '-y',
-            '-i', self.video_info['path'],
-            '-vn',
-            '-sn',
-            dst_path
-        ])
-        if proc == 1:
-            raise RuntimeError('unable to extract audio from video')
-
-    def extract_subtitles(self, dst_path):
-        if not self.video_info['s_stream_exists']:
-            raise RuntimeError('no subtitle stream detected')
-        proc = subprocess.call([
-            settings['avutil'],
-            '-loglevel', self.av_loglevel,
-            '-y',
-            '-i', self.video_info['path'],
-            '-vn',
-            '-an',
-            dst_path
-        ])
-        if proc == 1:
-            raise RuntimeError('unable to extract subtitle from video')
-
-    def mux_video(self, vid_path, aud_path, sub_path, dst_path, cleanup=False):
-        if not os.path.exists(vid_path):
-            raise IOError('video file not found')
-        if aud_path is not None and not os.path.exists(aud_path):
-            raise IOError('audio file not found')
-        if sub_path is not None and not os.path.exists(sub_path):
-            raise IOError('subtitle file not found')
-
-        if aud_path is None and sub_path is None:
-            if cleanup:
-                shutil.move(vid_path, dst_path)
-            else:
-                shutil.copy(vid_path, dst_path)
-            return
-
-        call = [
-            settings['avutil'],
-            '-loglevel', self.av_loglevel,
-            '-y',
-        ]
-        if aud_path:
-            call.extend(['-i', aud_path])
-        call.extend(['-i', vid_path])
-        if sub_path:
-            call.extend(['-i', sub_path])
-        if aud_path:
-            call.extend(['-c:a', 'copy'])
-        call.extend(['-c:v', 'copy'])
-        if sub_path:
-            call.extend(['-c:s', 'mov_text'])
-        call.extend([dst_path])
-        proc = subprocess.call(call)
-        if proc == 1:
-            raise RuntimeError('unable to mux video')
-
-        if cleanup:
-            os.remove(vid_path)
+        # set the window title
+        filename = os.path.basename(vid_info['path'])
+        self.window_title = '{} - Butterflow'.format(filename)
 
     def make_pipe(self, dst_path, rate):
         vf = []
         if self.grayscale:
             vf.append('format=gray')
         vf.append('format=yuv420p')
-        # https://ffmpeg.org/ffmpeg-filters.html#setdar_002c-setsar
-        vf.append('setdar={}:{}'.format(self.video_info['dar_n'],
-                                        self.video_info['dar_d']))
+        # keep the original display aspect ratio
+        # see: https://ffmpeg.org/ffmpeg-filters.html#setdar_002c-setsar
+        vf.append('setdar={}:{}'.format(self.vid_info['dar_n'],
+                                        self.vid_info['dar_d']))
         call = [
             settings['avutil'],
             '-loglevel', self.av_loglevel,
@@ -160,9 +93,9 @@ class Renderer(object):
             '-r', str(rate),
             '-an',
             '-sn',
-            '-c:v', settings['encoder'],
+            '-c:v', settings['cv'],
             '-preset', settings['preset']]
-        if settings['encoder'] == 'libx264':
+        if settings['cv'] == 'libx264':
             quality = ['-crf', str(settings['crf'])]
             # -qp 0 is recommended over -crf for lossless
             # See: https://trac.ffmpeg.org/wiki/Encode/H.264#LosslessH.264
@@ -170,7 +103,7 @@ class Renderer(object):
                 quality = ['-qp', '0']
             call.extend(quality)
             call.extend(['-level', '4.2'])
-        elif settings['encoder'] == 'libx265':
+        elif settings['cv'] == 'libx265':
             call.extend(['-x265-params'])
             quality = 'crf={}'.format(settings['crf'])
             if self.lossless:
@@ -189,14 +122,13 @@ class Renderer(object):
             raise RuntimeError('could not create pipe')
         return pipe
 
-    def close_pipe(self):
-        p = self.render_pipe
-        if p is not None and not p.stdin.closed:
-            # flush does not necessarily write the file's data to disk. Use
-            # flush followed by os.fsync to ensure this behavior.
-            p.stdin.flush()
-            p.stdin.close()
-            p.wait()
+    def close_pipe(self, pipe):
+        # flush does not necessarily write the file's data to disk. Use
+        # flush followed by os.fsync to ensure this behavior
+        if pipe is not None and not pipe.stdin.closed:
+            pipe.stdin.flush()
+            pipe.stdin.close()
+            pipe.wait()
 
     def write_frame_to_pipe(self, pipe, frame):
         try:
@@ -204,8 +136,8 @@ class Renderer(object):
         except Exception:
             log.error('Writing frame to pipe failed:', exc_info=True)
 
-    def render_subregion(self, framesrc, subregion):
-        log.debug('Working on subregion: %s', self.curr_subregion_idx + 1)
+    def render_subregion(self, frame_src, subregion):
+        log.debug('Working on subregion: %s', self.curr_sub_idx + 1)
 
         fa = subregion.fa
         fb = subregion.fb
@@ -320,12 +252,12 @@ class Renderer(object):
         fa_idx = fa - 1   # seek pos of the frame in the video
 
         fr_1 = None
-        framesrc.seek_to_frame(fa_idx)
-        # log.debug('seek: %s', framesrc.index + 1)  # seek pos of first frame
-        # log.debug('read: %s', framesrc.index + 1)  # next frame to be read
-        fr_2 = framesrc.read()       # first frame in the region
+        frame_src.seek_to_frame(fa_idx)
+        # log.debug('seek: %s', frame_src.idx + 1)  # seek pos of first frame
+        # log.debug('read: %s', frame_src.idx + 1)  # next frame to be read
+        fr_2 = frame_src.read()       # first frame in the region
 
-        if self.scale != 1.0:
+        if self.v_scale != 1.0:
             fr_2 = cv2.resize(fr_2, (self.w, self.h),
                               interpolation=self.scaler)
         src_gen += 1
@@ -337,8 +269,8 @@ class Renderer(object):
             # at least one frame pair is available. num of runs is equal to the
             # the total number of frames in the region - 1. range will run
             # from [0,runs)
-            framesrc.seek_to_frame(fa_idx + 1)  # seek to the next frame
-            # log.debug('seek: %s', framesrc.index + 1)
+            frame_src.seek_to_frame(fa_idx + 1)  # seek to the next frame
+            # log.debug('seek: %s', frame_src.idx + 1)
             runs = reg_len
 
         log.debug('wrt_one: %s', fin_run)  # only write 1 frame
@@ -363,15 +295,15 @@ class Renderer(object):
                 # begin interpolating frames between pairs
                 # the frame being read should always be valid otherwise break
                 try:
-                    # log.debug('read: %s', framesrc.index + 1)
-                    fr_2 = framesrc.read()
+                    # log.debug('read: %s', frame_src.idx + 1)
+                    fr_2 = frame_src.read()
                     src_gen += 1
                 except Exception:
                     log.error('Could not read frame:', exc_info=True)
                     break
                 if fr_2 is None:
                     break
-                elif self.scale != 1.0:
+                elif self.v_scale != 1.0:
                     fr_2 = cv2.resize(fr_2, (self.w, self.h),
                                       interpolation=self.scaler)
 
@@ -470,13 +402,13 @@ class Renderer(object):
 
                 for wrt_idx in range(wrts_needed):
                     frs_wrt += 1
-                    self.total_frs_wrt += 1
+                    self.tot_frs_wrt += 1
                     if self.add_info:
                         draw_debug_text(fr,
                                         self.text_type,
                                         self.playback_rate,
                                         self.flow_kwargs,
-                                        self.total_frs_wrt,
+                                        self.tot_frs_wrt,
                                         pair_a,
                                         pair_b,
                                         btw_idx,
@@ -485,8 +417,8 @@ class Renderer(object):
                                         tgt_frs,
                                         frs_wrt,
                                         subregion,
-                                        self.curr_subregion_idx,
-                                        self.subregions_to_render,
+                                        self.curr_sub_idx,
+                                        self.subs_to_render,
                                         drp_every,
                                         dup_every,
                                         src_gen,
@@ -505,10 +437,10 @@ class Renderer(object):
                     # send the frame to the pipe
                     self.write_frame_to_pipe(self.render_pipe, fr)
                     # log.debug('wrt: %s,%s,%s (%s)', pair_a, pair_b, btw_idx,
-                    #           self.total_frs_wrt)
+                    #           self.tot_frs_wrt)
 
         # finished encoding
-        self.total_frs_inter += (frs_int - frs_int_drp)
+        self.tot_frs_int += (frs_int - frs_int_drp)
 
         act_aud_drift = float(tgt_frs - frs_wrt) / self.playback_rate
         log.debug('act_aud_drift: %s', act_aud_drift)
@@ -547,16 +479,16 @@ class Renderer(object):
         log_msg('wrt_ratio: {}/{}, {:.2f}%'.format(
             frs_wrt, tgt_frs, wrt_ratio * 100))
 
-    def renderable_sequence(self):
-        dur = self.video_info['duration']
-        frs = self.video_info['frames']
-
+    def get_renderable_sequence(self):
+        # this method will fill holes in the sequence with dummy subregions
+        dur = self.vid_info['duration']
+        frs = self.vid_info['frames']
         new_subregions = []
 
-        if self.video_sequence.subregions is None or \
-                len(self.video_sequence.subregions) == 0:
+        if self.vid_seq.subregions is None or \
+                len(self.vid_seq.subregions) == 0:
             # make a subregion from 0 to vid duration if there are no regions
-            # in the video sequence. only framerate is changing.
+            # in the video sequence. only the framerate could be changing
             fa, ta = (0, 0)
             fb, tb = (frs, dur)
             s = RenderSubregion(ta, tb)
@@ -571,33 +503,36 @@ class Renderer(object):
             setattr(s, 'trim', False)
             new_subregions.append(s)
         else:
-            # create dummy subregions that fill holes in the video sequence
-            # where subregions were not explicity specified
+            # create placeholder/dummy subregions that fill holes in the video
+            # sequence where subregions were not explicity specified
             cut_points = set([])
             # add start and end of video cutting points
-            cut_points.add((1, 0))  # (frame idx, duration in millesconds)
-            cut_points.add((frs, dur))
+            # (fr index, dur in milliseconds)
+            cut_points.add((1, 0))      # frame 0 and time 0
+            cut_points.add((frs, dur))  # last frame and end time
 
-            for s in self.video_sequence.subregions:
+            # add current subregions
+            for s in self.vid_seq.subregions:
                 cut_points.add((s.fa, s.ta))
                 cut_points.add((s.fb, s.tb))
 
+            # sort them out
             cut_points = list(cut_points)
             cut_points = sorted(cut_points,
                                 key=lambda x: (x[0], x[1]),
                                 reverse=False)
 
+            # make dummy regions
             to_make = len(cut_points) - 1
-
             for x in range(0, to_make):
-                fa, ta = cut_points[x]
-                fb, tb = cut_points[x + 1]
-                sub_for_range = None
-                # look for matching subregion in the sequence
-                for s in self.video_sequence.subregions:
+                fa, ta = cut_points[x]      # get start of region
+                fb, tb = cut_points[x + 1]  # get end
+                sub_for_range = None        # matching subregion in range
+                # look for matching subregion
+                for s in self.vid_seq.subregions:
                     if s.fa == fa and s.fb == fb:
                         sub_for_range = s
-                        setattr(s, 'trim', False)
+                        setattr(s, 'trim', False)  # found it, won't trim it
                         break
                 # if subregion isnt found, make a dummy region
                 if sub_for_range is None:
@@ -614,25 +549,11 @@ class Renderer(object):
                     setattr(s, 'trim', self.trim)
                 new_subregions.append(sub_for_range)
 
-        # create a new video sequence. the new subregions will
-        # be auto validated and sorted as they are added to the sequence
+        # create a new video sequence w/ original plus dummy regions
+        # they will automatically be validated and sorted as they are added in
         seq = VideoSequence(dur, frs)
         for s in new_subregions:
             seq.add_subregion(s)
-
-        log.debug('Rendering sequence:')
-        for s in new_subregions:
-            log.debug(
-                'subregion: {},{},{} {:.3g},{:.3g},{:.3g} {:.3g},{:.3g},{:.3g}'.
-                format(s.fa,
-                       s.fb,
-                       (s.fb - s.fa + 1),
-                       s.ta / 1000,
-                       s.tb / 1000,
-                       (s.tb - s.ta) / 1000,
-                       s.ra,
-                       s.rb,
-                       s.rb - s.ra))
         return seq
 
     def render(self):
@@ -645,106 +566,86 @@ class Renderer(object):
             log.debug('turning gc on ...')
             gc.enable()
 
-        dst_name, _ = os.path.splitext(os.path.basename(self.dst_path))
-        src_path = self.video_info['path']
+        src_path = self.vid_info['path']
+        src_name = os.path.splitext(os.path.basename(src_path))[0]
 
-        vid_mod_dt = os.path.getmtime(src_path)
-        vid_mod_utc = datetime.datetime.utcfromtimestamp(vid_mod_dt)
-        unix_time = lambda dt:\
-            (dt - datetime.datetime.utcfromtimestamp(0)).total_seconds()
-
-        tmp_name = '{name}.{mod_date}.{w}x{h}.{g}.{l}.{enc}'.format(
-            name=os.path.basename(src_path),
-            mod_date=str(unix_time(vid_mod_utc)),
-            w=self.w,
-            h=self.h,
-            g='g' if self.grayscale else 'x',
-            l='l' if self.lossless else 'x',
-            enc=settings['encoder']).lower()
-
-        makepth = lambda pth: \
-            os.path.join(settings['tmp_dir'], pth.format(tmp_name))
-
-        rnd_path = makepth('{}.rnd.mp4')
-        aud_path = makepth('{}_aud.ogg')
-        sub_path = makepth('{}_sub.srt')
-
-        frame_src = FrameSource(src_path)
-
-        renderable_seq = self.renderable_sequence()
+        # where we're going to put the tmp file
+        tmp_name = '~{filename}.{ext}'.format(filename=src_name,
+                                              ext=settings['v_container']).lower()
+        tmp_path = os.path.join(settings['tmp_dir'], tmp_name)
 
         # make a resizable window
         if self.show_preview:
-            if sys.platform.startswith('darwin'):
-                flag = cv2.WINDOW_NORMAL  # avoid opengl dependency on osx
-            else:
-                flag = cv2.WINDOW_OPENGL
+            # to get opengl on osx you have to build opencv --with-opengl
+            # TODO: butterflow.rb and wiki needs to be updated for this
+            flag = cv2.WINDOW_OPENGL
             cv2.namedWindow(self.window_title, flag)
-            cv2.resizeWindow(
-                self.window_title, self.w, self.h)
+            cv2.resizeWindow(self.window_title, self.w, self.h)
 
-        rnd_tmp_path = os.path.join(
-            os.path.dirname(rnd_path), '~' + os.path.basename(rnd_path))
+        # prep for rendering
+        self.render_pipe = self.make_pipe(tmp_path, self.playback_rate)
+        frame_src = FrameSource(src_path)
+        renderable_seq = self.get_renderable_sequence()
 
-        self.render_pipe = self.make_pipe(rnd_tmp_path, self.playback_rate)
+        log.debug('Rendering sequence:')
+        for s in renderable_seq.subregions:
+            log.debug(
+                'subregion: {},{},{} {:.3g},{:.3g},{:.3g} {:.3g},{:.3g},{:.3g}'.
+                format(s.fa,
+                       s.fb,
+                       (s.fb - s.fa + 1),
+                       s.ta / 1000,0,
+                       s.tb / 1000.0,
+                       (s.tb - s.ta) / 1000.0,
+                       s.ra,
+                       s.rb,
+                       s.rb - s.ra))
 
         # start rendering subregions
-        self.total_frs_wrt = 0
-        self.subregions_to_render = len(renderable_seq.subregions)
+        self.tot_frs_wrt = 0
+        self.subs_to_render = len(renderable_seq.subregions)
         for x, s in enumerate(renderable_seq.subregions):
-            self.curr_subregion_idx = x
+            self.curr_sub_idx = x
             if s.trim:
-                # the region is being trimmed and shouldnt be rendered
+                # the region is being trimmed and shouldn't be rendered
                 continue
             else:
                 self.render_subregion(frame_src, s)
 
+        # cleanup
         if self.show_preview:
             cv2.destroyAllWindows()
-        self.close_pipe()
+        self.close_pipe(self.render_pipe)
 
-        shutil.move(rnd_tmp_path, rnd_path)
-
-        speed_changed = False
-        if self.video_sequence.subregions is not None:
-            for s in self.video_sequence.subregions:
-                if s.fps != self.playback_rate:
-                    speed_changed = True
-                elif s.spd != 1.0:
-                    speed_changed = True
-                elif s.dur != (s.fb - s.fa):
-                    speed_changed = True
-                if speed_changed:
-                    break
-
-        # dont mux if speed changed or video was trimmed
-        if self.trim or speed_changed:
-            shutil.move(rnd_path, self.dst_path)
+        if self.mux:
+            log.debug('muxing ...')
+            aud_files = []
+            for x, s in enumerate(renderable_seq.subregions):
+                if s.trim:
+                    continue
+                tmp_name = '~{filename}.{sub}.{ext}'.format(
+                        filename=src_name,
+                        sub=x,
+                        ext=settings['a_container']).lower()
+                aud_path = os.path.join(settings['tmp_dir'], tmp_name)
+                extract_audio(src_path, aud_path, s.ta, s.tb, s.spd)
+                aud_files.append(aud_path)
+            merged_audio = '~{filename}.merged.{ext}'.format(
+                filename=src_name,
+                ext=settings['a_container']
+            ).lower()
+            merged_audio = os.path.join(settings['tmp_dir'], merged_audio)
+            concat_files(merged_audio, aud_files)
+            mux(tmp_path, merged_audio, self.dst_path)
+            for f in aud_files:
+                os.remove(f)
+            os.remove(merged_audio)
+            os.remove(tmp_path)
         else:
-            if self.mux:
-                # start extracting audio and subtitle streams if they exist
-                if self.video_info['a_stream_exists']:
-                    self.extract_audio(aud_path)
-                else:
-                    aud_path = None
-                if self.video_info['s_stream_exists']:
-                    self.extract_subtitles(sub_path)
-                    # it's possible for a subtitle stream to exist but have no
-                    # information
-                    with open(sub_path, 'r') as f:
-                        if f.read() == '':
-                            sub_path = None
-                else:
-                    sub_path = None
-                # move files to their destinations
-                try:
-                    self.mux_video(rnd_path, aud_path, sub_path, self.dst_path,
-                                   cleanup=True)
-                except RuntimeError:
-                    shutil.move(rnd_path, self.dst_path)
-            else:
-                shutil.move(rnd_path, self.dst_path)
+            shutil.move(tmp_path, self.dst_path)
 
     def __del__(self):
-        """close the pipe if it was inadvertently left open"""
-        self.close_pipe()
+        # close the pipe if it was inadvertently left open. this could happen
+        # if the user does ctr+c while rendering. this would leave temporary
+        # files in the cache
+        self.close_pipe(self.render_pipe)

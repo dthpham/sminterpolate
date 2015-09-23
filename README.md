@@ -1,4 +1,4 @@
-#Butterflow
+# Butterflow
 
 *Butterflow* is an easy to use command-line tool that lets you create fluid slow
 motion and motion interpolated videos.
@@ -30,9 +30,9 @@ apparent. Playing it back in full speed would produce a "soap opera effect".
 See the [In Action](https://github.com/dthpham/butterflow/wiki/In-Action) page
 for more demonstrations.
 
-##Installation
+## Installation
 
-###OS X:
+### OS X:
 
 With [`homebrew`](http://brew.sh/):
 
@@ -40,17 +40,17 @@ With [`homebrew`](http://brew.sh/):
 brew install homebrew/science/butterflow
 ```
 
-###Arch Linux:
+### Arch Linux:
 
 A package is available in the AUR under
 [`butterflow`](https://aur.archlinux.org/packages/butterflow/).
 
-###From Source:
+### From Source:
 
 Refer to the [Install From Source Guide](https://github.com/dthpham/butterflow/wiki/Install-From-Source-Guide)
 on the wiki.
 
-##Setup
+## Setup
 
 After installing the package, you still need to install at least one
 vendor-specific implementation of OpenCL that supports your hardware. No setup
@@ -66,7 +66,7 @@ read [How to set up OpenCL in Linux](http://wiki.tiker.net/OpenCLHowTo). If
 you're on Arch Linux, have a look at their
 [GPGPU wiki page](https://wiki.archlinux.org/index.php/GPGPU).
 
-##Usage
+## Usage
 
 Run `butterflow -h` for a full list of options and their default values.
 

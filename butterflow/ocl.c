@@ -1,3 +1,6 @@
+// Author: Duong Pham
+// Copyright 2015
+
 #include <Python.h>
 #include <stdio.h>
 #if defined(__APPLE__) && defined(__MACH__)

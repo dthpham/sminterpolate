@@ -1,3 +1,6 @@
+// Author: Duong Pham
+// Copyright 2015
+
 #include <Python.h>
 #include <stdio.h>
 #include <libavcodec/avcodec.h>
@@ -15,19 +18,19 @@
 
 static PyObject*
 get_info(PyObject *self, PyObject *arg) {
-    char *vid_path = PyString_AsString(arg);
+    char *path = PyString_AsString(arg);
 
     av_register_all();
 
     AVFormatContext *format_ctx = avformat_alloc_context();
 
-    int ret = avformat_open_input(&format_ctx, vid_path, NULL, NULL);
-    if (ret != 0) {
+    int rc = avformat_open_input(&format_ctx, path, NULL, NULL);
+    if (rc != 0) {
         PyErr_SetString(PyExc_RuntimeError, "could not open input");
         return (PyObject*)NULL;
     }
-    ret = avformat_find_stream_info(format_ctx, NULL);
-    if (ret < 0) {
+    rc = avformat_find_stream_info(format_ctx, NULL);
+    if (rc < 0) {
         avformat_close_input(&format_ctx);
         PyErr_SetString(PyExc_RuntimeError, "could not find stream");
         return (PyObject*)NULL;
@@ -40,6 +43,7 @@ get_info(PyObject *self, PyObject *arg) {
     int s_stream_idx = av_find_best_stream(format_ctx, AVMEDIA_TYPE_SUBTITLE,
                                            -1, -1, NULL, 0);
 
+    // do streams exist and can they be decoded?
     int v_stream_exists = 1;
     int a_stream_exists = 1;
     int s_stream_exists = 1;
@@ -57,16 +61,16 @@ get_info(PyObject *self, PyObject *arg) {
         s_stream_exists = 0;
     }
 
-    int w = 0;
-    int h = 0;
-    AVRational sar = {-1, -1};
-    int64_t duration = 0.0;
-    int64_t v_duration = 0.0;
-    int64_t c_duration = 0.0;
-    int rate_num = -1;
-    int rate_den = -1;
-    double min_rate = 0.0;
-    unsigned long frames = 0;
+    int w                  = 0;
+    int h                  = 0;
+    AVRational sar         = {-1, -1};  // sample aspect ratio
+    int64_t duration       = 0.0;       // duration in milliseconds
+    int64_t v_duration     = 0.0;       // video stream duration
+    int64_t c_duration     = 0.0;       // container duration
+    unsigned long frames   = 0;         // number of frames in the video stream
+    int rate_n             = -1;        // fps numerator
+    int rate_d             = -1;        // fps denominator
+    double min_rate        = 0.0;       // smallest rate w/o losing unique frame
 
     if (v_stream_exists) {
         AVStream *v_stream = format_ctx->streams[v_stream_idx];
@@ -80,7 +84,7 @@ get_info(PyObject *self, PyObject *arg) {
 
         duration = v_duration;
         if (v_duration == 0) {
-          duration = c_duration;  // use container duration
+            duration = c_duration;  // use container duration
         }
 
         AVCodecContext *v_codec_ctx = format_ctx->streams[v_stream_idx]->codec;
@@ -91,17 +95,17 @@ get_info(PyObject *self, PyObject *arg) {
         AVRational rational_rate =
             format_ctx->streams[v_stream_idx]->avg_frame_rate;
 
-        rate_num = rational_rate.num;
-        rate_den = rational_rate.den;
-        double rate = rate_num * 1.0 / rate_den;
+        rate_n = rational_rate.num;
+        rate_d = rational_rate.den;
+        double rate = rate_n * 1.0 / rate_d;
 
         frames = rate * (duration / 1000.0);
         // min_rate is the smallest possible rate of the video stream that can
         // be represented without losing any unique frames
-        min_rate   = frames / (duration / 1000.0);
+        min_rate = frames / (duration / 1000.0);
 
-        // the display aspect ratio can be calculated from the pixal aspect
-        // ratio and sample aspect ratio: DAR = PAR * SAR
+        // the display aspect ratio can be calculated from the pixel aspect
+        // ratio and sample aspect ratio: PAR * SAR = DAR
         sar = format_ctx->streams[v_stream_idx]->sample_aspect_ratio;
     }
 
@@ -111,21 +115,22 @@ get_info(PyObject *self, PyObject *arg) {
     // those using Libav
     avformat_close_input(&format_ctx);
 
+    // create dictionary with video information
     PyObject *py_info = PyDict_New();
 
-    py_safe_set(py_info, "path", PyString_FromString(vid_path));
+    py_safe_set(py_info, "path", PyString_FromString(path));
     py_safe_set(py_info, "v_stream_exists", PyBool_FromLong(v_stream_exists));
     py_safe_set(py_info, "a_stream_exists", PyBool_FromLong(a_stream_exists));
     py_safe_set(py_info, "s_stream_exists", PyBool_FromLong(s_stream_exists));
-    py_safe_set(py_info, "width", PyInt_FromLong(w));
-    py_safe_set(py_info, "height", PyInt_FromLong(h));
+    py_safe_set(py_info, "w", PyInt_FromLong(w));
+    py_safe_set(py_info, "h", PyInt_FromLong(h));
     py_safe_set(py_info, "sar_n", PyInt_FromLong(sar.num));
     py_safe_set(py_info, "sar_d", PyInt_FromLong(sar.den));
     py_safe_set(py_info, "dar_n", PyInt_FromLong(w * sar.num));
     py_safe_set(py_info, "dar_d", PyInt_FromLong(h * sar.den));
     py_safe_set(py_info, "duration", PyFloat_FromDouble(duration));
-    py_safe_set(py_info, "rate_num", PyInt_FromLong(rate_num));
-    py_safe_set(py_info, "rate_den", PyInt_FromLong(rate_den));
+    py_safe_set(py_info, "rate_n", PyInt_FromLong(rate_n));
+    py_safe_set(py_info, "rate_d", PyInt_FromLong(rate_d));
     py_safe_set(py_info, "min_rate", PyFloat_FromDouble(min_rate));
     py_safe_set(py_info, "frames", PyInt_FromLong(frames));
 

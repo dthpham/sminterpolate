@@ -1,3 +1,6 @@
+# Author: Duong Pham
+# Copyright 2015
+
 import cv2
 import sys
 from butterflow.settings import default as s
@@ -57,7 +60,7 @@ def draw_progress_bar(img, p):
         draw_rect(bar_v1, bar_v2)
 
 
-def draw_debug_text(img, text_type, rate, flow_kwargs, total_frs_wrt, pair_a,
+def draw_debug_text(img, text_type, rate, flow_kwargs, tot_frs_wrt, pair_a,
                     pair_b, btw_idx, fr_type, is_dup, tgt_frs, frs_wrt,
                     sub, sub_idx, subs_to_render, drp_every,
                     dup_every, src_seen, frs_int, frs_drp, frs_dup):
@@ -107,7 +110,7 @@ def draw_debug_text(img, text_type, rate, flow_kwargs, total_frs_wrt, pair_a,
            "Pair Index: {}, {}, {}\n"\
            "Type Src: {}, Int: {}, Dup: {}\n"\
            "Mem: {}\n"
-    txt = txt.format(total_frs_wrt,
+    txt = txt.format(tot_frs_wrt,
                      pair_a,
                      pair_b,
                      btw_idx,

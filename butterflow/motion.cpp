@@ -1,3 +1,6 @@
+// Author: Duong Pham
+// Copyright 2015
+
 #include <Python.h>
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
@@ -28,8 +31,8 @@ ocl_farneback_optical_flow(PyObject *self, PyObject *args) {
     PyObject *py_flags;
 
     if (!PyArg_UnpackTuple(args, "", 10, 10, &py_fr_1, &py_fr_2, &py_scale,
-                         &py_levels, &py_winsize, &py_iters, &py_poly_n,
-                         &py_poly_sigma, &py_fast_pyramids, &py_flags)) {
+                           &py_levels, &py_winsize, &py_iters, &py_poly_n,
+                           &py_poly_sigma, &py_fast_pyramids, &py_flags)) {
         PyErr_SetString(PyExc_TypeError, "could not unpack tuple");
         return (PyObject*)NULL;
     }
@@ -39,7 +42,7 @@ ocl_farneback_optical_flow(PyObject *self, PyObject *args) {
     int winsize  = PyInt_AsLong(py_winsize);
     int iters    = PyInt_AsLong(py_iters);
     int poly_n   = PyInt_AsLong(py_poly_n);
-    double poly_sigma = PyFloat_AsDouble(py_poly_sigma);
+    double poly_sigma  = PyFloat_AsDouble(py_poly_sigma);
     bool fast_pyramids = PyObject_IsTrue(py_fast_pyramids);
     int flags    = PyInt_AsLong(py_flags);
 
@@ -87,9 +90,6 @@ ocl_farneback_optical_flow(PyObject *self, PyObject *args) {
     // element in the list will be decrefed.
     PyList_SetItem(py_flows, 0, py_flow_1);
     PyList_SetItem(py_flows, 1, py_flow_2);
-
-    assert(py_flow_1->ob_refcnt == 1);
-    assert(py_flow_2->ob_refcnt == 1);
 
     return py_flows;
 }
@@ -178,8 +178,6 @@ ocl_interpolate_flow(PyObject *self, PyObject *args) {
         PyList_Append(py_frs, py_new_fr);
 
         Py_DECREF(py_new_fr);
-
-        assert(py_new_fr->ob_refcnt == 1);
     }
 
     return py_frs;

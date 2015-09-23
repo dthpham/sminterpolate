@@ -1,69 +1,62 @@
+# Author: Duong Pham
+# Copyright 2015
+
+
 class VideoSequence(object):
     def __init__(self, duration, frames):
-        self.duration = float(duration)
-        self.frames = frames
+        self.duration = float(duration)  # in milliseconds
+        self.frames = frames             # total frames in the video
         self.subregions = []
 
     def add_subregion(self, s):
-        s.ra = self.relative_position(s.ta)
-        s.rb = self.relative_position(s.tb)
-        s.fa = self.nearest_frame(s.ta)
-        s.fb = self.nearest_frame(s.tb)
+        # set relative position from 0 to 1 based on time
+        s.ra = self.get_rel_position(s.ta)
+        s.rb = self.get_rel_position(s.tb)
+        # set frame position
+        s.fa = self.get_nearest_frame(s.ta)
+        s.fb = self.get_nearest_frame(s.tb)
+        # validate it with other subregions in the sequence
+        # append and sort based on the relative position
         self.validate(s)
         self.subregions.append(s)
-        # sort subregions based on relative position
-        self.subregions.sort(key=lambda x: (x.rb, x.ra), reverse=False)
+        self.subregions.sort(key=lambda x: (x.rb, x.ra),
+                             reverse=False)
 
-    def relative_position(self, time):
-        """relative position in the video from [0,1]"""
-        return max(0.0, min(float(time) / self.duration, 1.0))
+    def get_rel_position(self, t):
+        # returns a float, the relative position in the video from [0, 1]
+        rel_pos = float(t) / self.duration
+        return max(0.0, min(rel_pos, 1.0))
 
-    def nearest_frame(self, time):
-        """index of frame, non-zero indexed so it starts at 1"""
-        fr_idx = int(self.relative_position(time) * self.frames + 0.5)
+    def get_nearest_frame(self, t):
+        # index of frame, non-zero indexed so it starts at 1
+        fr_idx = int(self.get_rel_position(t) * self.frames + 0.5)
         return max(1, min(fr_idx, self.frames))
 
-    def recalculate_subregion_positions(self, duration, frames):
-        self.duration = duration
-        self.frames = frames
-        for s in self.subregions:
-            s.ta = s.ra * duration
-            s.tb = s.rb * duration
-            s.fa = self.nearest_frame(s.ta)
-            s.fb = self.nearest_frame(s.tb)
-        for s in self.subregions:
-            self.validate(s)
-        # sort subregions based on frame position
-        self.subregions.sort(key=lambda x: (x.fb, x.fa), reverse=False)
-
     def validate(self, s):
-        """a subregion, x, is valid if and only if x's time is within bounds
-        [0,duration] and x's frame positions are within bounds [0,frames-1] and
-        x doesn't already exist in the collection or intersect any other
-        subregion.
-        """
+        # a subregion, x, is valid if and only if x's time is within bounds
+        # [0, duration] and x's frame positions are within bounds [0, frames-1]
+        # and x doesn't already exist in the collection or intersect any other
+        # subregion.
         in_bounds = lambda x: \
             x.ta >= 0 and x.tb <= self.duration and \
             x.fa >= 0 and x.fb <= self.frames
         if not in_bounds(s):
-            raise RuntimeError(
-                'subregion not in bounds t[0,{}],f[0,{}]'.
-                format(self.duration, self.frames))
+            msg = 'subregion not in bounds t[0,{}],f[0,{}]'.format(self.duration,
+                                                                   self.frames)
+            raise RuntimeError(msg)
         for x in self.subregions:
             if x is s:
                 continue
             elif s.intersects(x):
-                raise RuntimeError(
-                    'subregion intersects existing region')
+                raise RuntimeError('subregion intersects existing region')
         return True
 
 
 class Subregion(object):
     def __init__(self, ta, tb):
-        if ta < 0:
-            raise ValueError('ta={} < 0'.format(ta))
-        if ta > tb:
-            raise ValueError('ta={} >= tb={}'.format(ta, tb))
+        # ta should be <  0
+        # ta should be >= tb
+        # start and end time, frame, relative position:
         self.ta = ta
         self.tb = tb
         self.fa = 0.0
@@ -72,10 +65,9 @@ class Subregion(object):
         self.rb = 1.0
 
     def intersects(self, o):
-        """a region intersects with another if either ends, in terms of time and
-        frame, fall within each others ranges or when one region covers or is
-        enveloped by another.
-        """
+        # a region intersects with another if either ends, in terms of time and
+        # frame, fall within each others ranges or when one region covers or is
+        # enveloped by another.
         return self.time_intersects(o) or self.time_intersects(o)
 
     def time_intersects(self, o):
@@ -102,6 +94,7 @@ class Subregion(object):
 class RenderSubregion(Subregion):
     def __init__(self, ta, tb, fps=None, dur=None, spd=None, btw=None):
         super(RenderSubregion, self).__init__(ta, tb)
+        # what's being targeted?
         self.fps = fps
         self.dur = dur
         self.spd = spd
