@@ -41,6 +41,6 @@ __pycache__
 tags
 *.pth
 dev_settings.py
-out.mp4
+output.mp4
 todo
 clear.sh
