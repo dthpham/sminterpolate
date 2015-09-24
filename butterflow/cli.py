@@ -76,7 +76,7 @@ def main():
     vid.add_argument('-l', '--lossless', action='store_true',
                      help='Set to use true lossless encoding settings')
 
-    mux.add_argument('-m', '--mux', action='store_true',
+    mux.add_argument('-mux', action='store_true',
                      help='Set to mux source audio with the output video. '
                      'Audio may not be in sync with the final video if '
                      'speed has been altered during the rendering process.')
