@@ -216,6 +216,9 @@ def main():
         if '/' in rate and '.' in rate:
             num, den = rate.split('/')
             rate = float(num) / float(den)
+        elif 'x' in rate:
+            rate = float(rate.replace('x', ''))
+            rate = rate * src_rate
         else:
             rate = float(rate)
 
