@@ -284,13 +284,23 @@ def main():
         tot_time = timeit.timeit(renderer.render,
                                  setup='import gc;gc.enable()',
                                  number=1)  # only run once
-        log.info('butterflow took {:.3g} minutes, done.'.format(tot_time / 60))
-
+        print('Frames: src: {} int: {} dup: {} drp: {}'.format(
+            renderer.tot_src_frs,
+            renderer.tot_frs_int,
+            renderer.tot_frs_dup,
+            renderer.tot_frs_drp
+        ))
+        print('Write ratio: {}/{}, ({:.2f}%)'.format(
+            renderer.tot_frs_wrt,
+            renderer.tot_tgt_frs,
+            renderer.tot_frs_wrt * 100.0 / renderer.tot_tgt_frs,
+        ))
+        print('Butterflow took {:.3g} minutes, done.'.format(tot_time / 60))
         # sizeit and show the diff
-        n_sz = sz_in_mb(args.output_path)
-        o_sz = sz_in_mb(args.video)
-        log.info('out file size: {:.3g} MB ({:+.3g} MB)'.format(n_sz,
-                                                                n_sz - o_sz))
+        new = sz_in_mb(args.output_path)
+        old = sz_in_mb(args.video)
+        log.debug('out file size: {:.3g} MB ({:+.3g} MB)'.format(new,
+                                                                 new - old))
     except (KeyboardInterrupt, SystemExit):
         log.warning('files were left in the cache')
         return 1

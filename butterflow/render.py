@@ -48,10 +48,14 @@ class Renderer(object):
         self.enc_loglevel     = enc_loglevel  # x264, x265 loglevel
         self.flow_kwargs      = flow_kwargs   # will pass to draw_debug_text
         self.mux              = mux           # mux?
-        # keep track of things
         self.render_pipe      = None
+        # keep track of progress
         self.tot_frs_wrt      = 0             # total frames written
+        self.tot_tgt_frs      = 0
+        self.tot_src_frs      = 0             # total source frames read
         self.tot_frs_int      = 0             # total interpolated
+        self.tot_frs_dup      = 0
+        self.tot_frs_drp      = 0
         self.subs_to_render   = 0
         self.curr_sub_idx     = 0             # region being worked on
         # precalculate the w and h
@@ -172,6 +176,8 @@ class Renderer(object):
         # written
         if int_each_go == 0:
             tgt_frs = 1
+
+        self.tot_tgt_frs += tgt_frs
 
         # TODO: overcompensate for frames?
         # int_each_go = math.ceil(int_each_go)
@@ -357,6 +363,7 @@ class Renderer(object):
                         # nothing will be written this go
                         wrk_idx += 1  # still have to increment the work index
                         log.warning('will_wrt: %s', will_wrt)
+                        self.tot_frs_drp += 1
 
                 if will_wrt:
                     int_frs = self.interpolate_func(
@@ -401,11 +408,20 @@ class Renderer(object):
                     if drp_every > 0:
                         if math.fmod(wrk_idx, drp_every) < 1.0:
                             log.warning('drp last frame')
+                            self.tot_frs_drp += 1
                             continue
 
                 for wrt_idx in range(wrts_needed):
                     frs_wrt += 1
+                    if wrt_idx == 0:
+                        if fr_type == 'source':
+                            self.tot_src_frs += 1
+                        else:
+                            self.tot_frs_int += 1
+                    else:
+                        self.tot_frs_dup += 1
                     self.tot_frs_wrt += 1
+
                     if self.add_info:
                         draw_debug_text(fr,
                                         self.text_type,
@@ -443,8 +459,6 @@ class Renderer(object):
                     #           self.tot_frs_wrt)
 
         # finished encoding
-        self.tot_frs_int += (frs_int - frs_int_drp)
-
         act_aud_drift = float(tgt_frs - frs_wrt) / self.playback_rate
         log.debug('act_aud_drift: %s', act_aud_drift)
 
@@ -596,7 +610,6 @@ class Renderer(object):
                        s.rb - s.ra))
 
         # start rendering subregions
-        self.tot_frs_wrt = 0
         self.subs_to_render = len(renderable_seq.subregions)
         for x, s in enumerate(renderable_seq.subregions):
             self.curr_sub_idx = x
