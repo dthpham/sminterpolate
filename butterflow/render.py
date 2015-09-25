@@ -26,8 +26,7 @@ class Renderer(object):
         interpolate_func=settings['interpolate_func'],
         w=None, h=None, lossless=False, trim=False, show_preview=True,
         add_info=False, text_type=settings['text_type'],
-        av_loglevel=settings['av_loglevel'],
-        enc_loglevel=settings['enc_loglevel'], flow_kwargs=None, mux=False):
+        flow_kwargs=None, mux=False):
         # user args
         self.dst_path         = dst_path      # path to write the render
         self.vid_info         = vid_info      # information from avinfo
@@ -42,8 +41,6 @@ class Renderer(object):
         self.show_preview     = show_preview  # show preview window?
         self.add_info         = add_info      # embed debug info?
         self.text_type        = text_type     # overlay text type
-        self.av_loglevel      = av_loglevel   # ffmpeg loglevel
-        self.enc_loglevel     = enc_loglevel  # x264, x265 loglevel
         self.flow_kwargs      = flow_kwargs   # will pass to draw_debug_text
         self.mux              = mux           # mux?
         self.render_pipe      = None
@@ -79,7 +76,7 @@ class Renderer(object):
                                             self.vid_info['dar_d']))
         call = [
             settings['avutil'],
-            '-loglevel', self.av_loglevel,
+            '-loglevel', settings['av_loglevel'],
             '-y',
             '-threads', '0',
             '-f', 'rawvideo',
@@ -105,7 +102,7 @@ class Renderer(object):
             call.extend(['-level', '4.2'])
         params = []
         call.extend(['-{}-params'.format(settings['cv'].replace('lib', ''))])
-        params.append('log-level={}'.format(self.enc_loglevel))
+        params.append('log-level={}'.format(settings['enc_loglevel']))
         if settings['cv'] == 'libx265':
             quality = 'crf={}'.format(settings['crf'])
             if self.lossless:

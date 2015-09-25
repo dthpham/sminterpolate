@@ -14,7 +14,7 @@ from butterflow.sequence import VideoSequence, RenderSubregion
 
 NO_OCL_WARNING = 'No compatible OCL devices detected. Check your OpenCL '\
                  'installation.'
-NO_VIDEO_SPECIFIED = 'No input video specified'
+NO_VIDEO_SPECIFIED_WARNING = 'No input video specified'
 
 
 def main():
@@ -130,7 +130,7 @@ def main():
                      help='Specify which filter to use for optical flow '
                      'estimation, (default: %(default)s)')
 
-    # handle values that start with a negative number
+    # make args that start with a negative number valid
     # needed for the -vs option
     for i, arg in enumerate(sys.argv):
         if (arg[0] == '-') and arg[1].isdigit():
@@ -164,22 +164,18 @@ def main():
         return 0
 
     if have_ocl:
-        set_clb_dir()
+        set_clb_dir(settings.default['clb_dir'])
     else:
         print(NO_OCL_WARNING)
         return 1
 
     src_path = args.video
     if src_path is None:
-        print(NO_VIDEO_SPECIFIED)
+        print(NO_VIDEO_SPECIFIED_WARNING)
         return 1
 
     if not os.path.exists(args.video):
         print('Video does not exist at path')
-        return 1
-
-    if settings.default['avutil'] == 'none':
-        print('You need `ffmpeg` to use this app')
         return 1
 
     try:
@@ -190,16 +186,16 @@ def main():
 
     if args.inspect:
         if args.video:
-            print_vid_info(vid_info)
-            return 0
+            print_vid_info(args.video)
         else:
-            print(NO_VIDEO_SPECIFIED)
-            return 1
+            print(NO_VIDEO_SPECIFIED_WARNING)
+        return 0
 
     if not vid_info['v_stream_exists']:
         log.error('No video stream detected')
         return 1
 
+    # make subregions
     try:
         vid_sequence = sequence_from_str(
             vid_info['duration'], vid_info['frames'], args.sub_regions)
@@ -210,77 +206,49 @@ def main():
     # set playback rate
     src_rate = (vid_info['rate_n'] * 1.0 /
                 vid_info['rate_d'])
-    rate = 0
-    if args.playback_rate is None:
-        # use original rate
-        rate = src_rate
-    else:
-        # allow fractional rates and fractions with non-rational numerators
-        # and denominators
-        rate = args.playback_rate
-        if '/' in rate and '.' in rate:
-            num, den = rate.split('/')
-            rate = float(num) / float(den)
-        elif 'x' in rate:
-            rate = float(rate.replace('x', ''))
-            rate = rate * src_rate
-        else:
-            rate = float(rate)
-
+    try:
+        rate = rate_from_str(args.playback_rate, src_rate)
+    except Exception as e:
+        log.error('Bad playback rate: %s' % e)
+        return 1
     if rate != src_rate:
-        log.warning('rate mismatch: src_rate=%s rate=%s', src_rate, rate)
+        log.warning('rate : src_rate=%s rate=%s', src_rate, rate)
 
-    w = vid_info['w']
-    h = vid_info['h']
-    aspect = w * 1.0 / h
-    if ':' in args.video_scale:
-        # using WIDTH:HEIGHT syntax. keep aspect ratio
-        w, h = args.video_scale.split(':')
-        w = int(w)
-        h = int(h)
-        if w == -1:
-            w = int(h / aspect)
-        if h == -1:
-            h = int(w / aspect)
-    elif float(args.video_scale) != 1.0:
-        # keep the aspect ratio of the video if it is scaled. w and h must be
-        # divisible by 2 for yuv420p outputs
-        w = int(math.floor(w * float(args.video_scale) / 2) * 2)
-        h = int(math.floor(h * float(args.video_scale) / 2) * 2)
-    if math.fmod(w, 2) != 0 or math.fmod(h, 2) != 0:
-        log.error("Size {width}x{height}, component not divisible by two".
-                  format(width=w, height=h))
+    # set video size
+    try:
+        w, h = w_h_from_str(args.video_scale, vid_info['w'], vid_info['h'])
+    except Exception as e:
+        log.error('Bad video scale: %s' % e)
         return 1
 
     # make functions that will generate flows and interpolate frames
-    # ocl or software?
     farneback_method = motion.ocl_farneback_optical_flow if have_ocl \
         else sw_farneback_optical_flow
     flags = 0
     if args.flow_filter == 'gaussian':
         import cv2
         flags = cv2.OPTFLOW_FARNEBACK_GAUSSIAN
-    flow_func = lambda x, y: \
+    opt_flow_function = lambda x, y: \
         farneback_method(x, y, args.pyr_scale, args.levels, args.winsize,
                          args.iters, args.poly_n, args.poly_s, args.fast_pyr,
                          flags)
 
-    # for the debug text
-    # TODO: should be determined in the render module
+    # to pass to butterflow.draw.draw_debug_text
     flow_kwargs = collections.OrderedDict([
         ('Pyr', args.pyr_scale),
         ('L', args.levels),
         ('W', args.winsize),
         ('I', args.iters),
         ('PolyN', args.poly_n),
-        ('PolyS', args.poly_s)])
+        ('PolyS', args.poly_s),
+        ('Filt', flags)])
 
     renderer = Renderer(
         args.output_path,
         vid_info,
         vid_sequence,
         rate,
-        flow_func,
+        opt_flow_function,
         motion.ocl_interpolate_flow,
         w,
         h,
@@ -289,8 +257,6 @@ def main():
         args.no_preview,
         args.add_info,
         args.text_type,
-        settings.default['av_loglevel'],
-        settings.default['enc_loglevel'],
         flow_kwargs,
         args.mux)
 
@@ -327,21 +293,20 @@ def main():
         return 1
 
 
-def sz_in_mb(p):
-    # p, path to file
+def sz_in_mb(file):
+    # file, path to file
     # get size of file in megabytes
-    sz = float(os.path.getsize(p))
+    sz = float(os.path.getsize(file))
     sz_mb = sz / (1 << 20)
     return sz_mb
 
 
-def set_clb_dir():
+def set_clb_dir(dir):
     # set the location of the clb dir
     # make the folder if it doesn't exist
-    clb_dir = settings.default['clb_dir']
-    if not os.path.exists(clb_dir):
-        os.makedirs(clb_dir)
-    motion.set_cache_path(clb_dir + os.sep)
+    if not os.path.exists(dir):
+        os.makedirs(dir)
+    motion.set_cache_path(dir + os.sep)
 
 
 def print_cache_info():
@@ -370,24 +335,24 @@ def rm_cache():
         shutil.rmtree(cache_dir)
 
 
-def print_vid_info(v):
-    # v, info dictionary from avinfo
-    # use Fraction obj to reduce the display aspect ratio fraction
+def print_vid_info(video):
+    info = avinfo.get_info(video)
+    # use Fraction to reduce the display aspect ratio fraction
     from fractions import Fraction
-    dar = Fraction(v['dar_n'],
-                   v['dar_d'])
+    dar = Fraction(info['dar_n'],
+                   info['dar_d'])
     # which streams are avail?
     # make a list then join for text
     streams = []
-    if v['v_stream_exists']:
+    if info['v_stream_exists']:
         streams.append('video')
-    if v['a_stream_exists']:
+    if info['a_stream_exists']:
         streams.append('audio')
-    if v['s_stream_exists']:
+    if info['s_stream_exists']:
         streams.append('subtitle')
     # calculate the src rate
-    src_rate = (v['rate_n'] * 1.0 /
-                v['rate_d'])
+    src_rate = (info['rate_n'] * 1.0 /
+                info['rate_d'])
     print('Video information:'
           '\n  Streams available  \t: {}'
           '\n  Resolution         \t: {}x{}, SAR {}:{} DAR {}:{}'
@@ -395,13 +360,55 @@ def print_vid_info(v):
           '\n  Duration           \t: {} ({:.2f}s)'
           '\n  Num of frames      \t: {}'.format(
               ','.join(streams),
-              v['w'], v['h'],
-              v['sar_n'], v['sar_d'],
+              info['w'], info['h'],
+              info['sar_n'], info['sar_d'],
               dar.numerator, dar.denominator,
               src_rate,
-              ms_to_time_str(v['duration']), v['duration'] / 1000.0,
-              v['frames']
+              ms_to_time_str(info['duration']), info['duration'] / 1000.0,
+              info['frames']
           ))
+
+
+def w_h_from_str(string, source_width, source_height):
+    w = source_width
+    h = source_height
+    aspect = w * 1.0 / h
+    if ':' in string:  # using w:h syntax
+        w, h = string.split(':')
+        w = int(w)
+        h = int(h)
+        # keep aspect ratio if either component is -1
+        if w == -1:
+            w = int(h / aspect)
+        if h == -1:
+            h = int(w / aspect)
+    elif float(string) != 1.0:  # using a factor
+        w = int(math.floor(w * float(string) / 2) * 2)
+        h = int(math.floor(h * float(string) / 2) * 2)
+    # w and h must be divisible by 2 for yuv420p outputs
+    if math.fmod(w, 2) != 0 or math.fmod(h, 2) != 0:
+        msg = "size {width}x{height}, component not divisible by two".\
+            format(width=w, height=h)
+        raise ValueError(msg)
+    return w, h
+
+
+def rate_from_str(string, source_rate):
+    # allow fractional rates and fractions with non-rational numbers
+    # use original rate if nothing is specified
+    rate = 0
+    if string is None:
+        rate = source_rate
+    else:
+        if '/' in string and '.' in string:  # fraction with non-rational num
+            num, den = rate.split('/')
+            rate = float(num) / float(den)
+        elif 'x' in string:  # used the "multiple of" syntax
+            rate = float(string.replace('x', ''))
+            rate = rate * source_rate
+        else:  # used a singular integer or float
+            rate = float(rate)
+    return rate
 
 
 def ms_to_time_str(time_ms):
@@ -413,7 +420,7 @@ def ms_to_time_str(time_ms):
     return t_str
 
 
-def time_str_to_ms(time_str):
+def time_str_to_ms(time):
     # converts a time str to milliseconds
     # time str syntax:
     # [hrs:mins:secs.xxx], [mins:secs.xxx], [secs.xxx]
@@ -421,12 +428,12 @@ def time_str_to_ms(time_str):
     minute = 0
     sec = 0
     valid_char_set = '0123456789:.'
-    if time_str == '' or time_str.count(':') > 2:
+    if time == '' or time.count(':') > 2:
         raise ValueError('invalid syntax')
-    for char in time_str:
+    for char in time:
         if char not in valid_char_set:
             raise ValueError('unknown char in time')
-    val = time_str.split(':')
+    val = time.split(':')
     val_len = len(val)
     # going backwards in the list
     # get secs.xxx portion
