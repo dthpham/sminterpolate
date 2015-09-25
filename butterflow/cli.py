@@ -279,8 +279,11 @@ def main():
     try:
         # time how long it takes to render
         # timeit will turn off gc, must turn it back on to maximize performance
+        # re-nable it in the setup function
         import timeit
-        tot_time = timeit.timeit(renderer.render, number=1)  # only run once
+        tot_time = timeit.timeit(renderer.render,
+                                 setup='import gc;gc.enable()',
+                                 number=1)  # only run once
         log.info('butterflow took {:.3g} minutes, done.'.format(tot_time / 60))
 
         # sizeit and show the diff

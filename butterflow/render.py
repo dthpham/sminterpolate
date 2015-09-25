@@ -560,15 +560,6 @@ class Renderer(object):
         return seq
 
     def render(self):
-        # timeit() turns off gc by default to make timings more comparable
-        # the disadvantage is tht gc is important component of performance of
-        # the function being measured. we re-enable it here
-        import gc
-        log.debug('gc enabled? %s', gc.isenabled())
-        if not gc.isenabled():
-            log.debug('turning gc on ...')
-            gc.enable()
-
         src_path = self.vid_info['path']
         src_name = os.path.splitext(os.path.basename(src_path))[0]
 
