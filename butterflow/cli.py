@@ -2,8 +2,10 @@
 # Copyright 2015
 
 import os
+import sys
 import argparse
 import collections
+import math
 from cv2 import calcOpticalFlowFarneback as sw_farneback_optical_flow
 from butterflow.__init__ import __version__
 from butterflow import avinfo, motion, ocl, settings
@@ -69,9 +71,12 @@ def main():
     vid.add_argument('-t', '--trim-regions', action='store_true',
                      help='Set to trim subregions that are not explicitly '
                           'specified')
-    vid.add_argument('-vs', '--video-scale', type=float,
-                     default=settings.default['video_scale'],
-                     help='Specify the output video scale, '
+    vid.add_argument('-vs', '--video-scale', type=str,
+                     default=str(settings.default['video_scale']),
+                     help='Specify the output video size in the form: '
+                     '"WIDTH:HEIGHT" or by using a factor. To keep the '
+                     'aspect ratio only specify one component, either width '
+                     'or height, and set the other component to -1, '
                      '(default: %(default)s)')
     vid.add_argument('-l', '--lossless', action='store_true',
                      help='Set to use true lossless encoding settings')
@@ -130,6 +135,12 @@ def main():
                          'the expected duration of the output video.')
         vid.add_argument('--grayscale', action='store_true',
                          help='Set output a grayscale video')
+
+    # handle values that start with a negative number
+    # needed for the -vs option
+    for i, arg in enumerate(sys.argv):
+        if (arg[0] == '-') and arg[1].isdigit():
+            sys.argv[i] = ' ' + arg
 
     args = par.parse_args()
 
@@ -225,6 +236,28 @@ def main():
     if rate != src_rate:
         log.warning('rate mismatch: src_rate=%s rate=%s', src_rate, rate)
 
+    w = vid_info['w']
+    h = vid_info['h']
+    aspect = w * 1.0 / h
+    if ':' in args.video_scale:
+        # using WIDTH:HEIGHT syntax. keep aspect ratio
+        w, h = args.video_scale.split(':')
+        w = int(w)
+        h = int(h)
+        if w == -1:
+            w = int(h / aspect)
+        if h == -1:
+            h = int(w / aspect)
+    elif float(args.video_scale) != 1.0:
+        # keep the aspect ratio of the video if it is scaled. w and h must be
+        # divisible by 2 for yuv420p outputs
+        w = int(math.floor(w * float(args.video_scale) / 2) * 2)
+        h = int(math.floor(h * float(args.video_scale) / 2) * 2)
+    if math.fmod(w, 2) != 0 or math.fmod(h, 2) != 0:
+        log.error("Size {width}x{height}, component not divisible by two".
+                  format(width=w, height=h))
+        return 1
+
     # make functions that will generate flows and interpolate frames
     # ocl or software?
     farneback_method = motion.ocl_farneback_optical_flow if have_ocl \
@@ -255,7 +288,8 @@ def main():
         rate,
         flow_func,
         motion.ocl_interpolate_flow,
-        args.video_scale,
+        w,
+        h,
         False,  # grayscale
         args.lossless,
         args.trim_regions,

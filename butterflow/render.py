@@ -24,7 +24,7 @@ class Renderer(object):
         self, dst_path, vid_info, vid_seq, playback_rate,
         flow_func=settings['flow_func'],
         interpolate_func=settings['interpolate_func'],
-        v_scale=settings['video_scale'], grayscale=False, lossless=False,
+        w=None, h=None, grayscale=False, lossless=False,
         trim=False, show_preview=True, add_info=False,
         text_type=settings['text_type'], pad_with_dupes=True,
         av_loglevel=settings['av_loglevel'],
@@ -36,7 +36,8 @@ class Renderer(object):
         self.playback_rate    = float(playback_rate)
         self.flow_func        = flow_func
         self.interpolate_func = interpolate_func
-        self.v_scale          = v_scale       # scale video by factor
+        self.w                = w
+        self.h                = h
         self.grayscale        = grayscale     # make a grayscale video?
         self.lossless         = lossless      # encode losslessly?
         self.trim             = trim          # trim extra subregion?
@@ -58,15 +59,14 @@ class Renderer(object):
         self.tot_frs_drp      = 0
         self.subs_to_render   = 0
         self.curr_sub_idx     = 0             # region being worked on
-        # precalculate the w and h
-        # keep the aspect ratio of the video if it is scaled. w and h must be
-        # divisible by 2 for yuv420p outputs
-        self.w = int(math.floor(vid_info['w'] * v_scale / 2) * 2)
-        self.h = int(math.floor(vid_info['h'] * v_scale / 2) * 2)
         # choose the best scaler
-        if v_scale < 1.0:
+        new_res = w * h
+        src_res = vid_info['w'] * vid_info['h']
+        if new_res == src_res:
+            self.scaler = None
+        elif new_res < src_res:
             self.scaler = settings['scaler_dn']
-        if v_scale > 1.0:
+        else:
             self.scaler = settings['scaler_up']
         # set the window title
         filename = os.path.basename(vid_info['path'])
@@ -79,8 +79,9 @@ class Renderer(object):
         vf.append('format=yuv420p')
         # keep the original display aspect ratio
         # see: https://ffmpeg.org/ffmpeg-filters.html#setdar_002c-setsar
-        vf.append('setdar={}:{}'.format(self.vid_info['dar_n'],
-                                        self.vid_info['dar_d']))
+        if self.scaler is None:
+            vf.append('setdar={}:{}'.format(self.vid_info['dar_n'],
+                                            self.vid_info['dar_d']))        
         call = [
             settings['avutil'],
             '-loglevel', self.av_loglevel,
@@ -266,7 +267,7 @@ class Renderer(object):
         # log.debug('read: %s', frame_src.idx + 1)  # next frame to be read
         fr_2 = frame_src.read()       # first frame in the region
 
-        if self.v_scale != 1.0:
+        if self.scaler is not None:
             fr_2 = cv2.resize(fr_2, (self.w, self.h),
                               interpolation=self.scaler)
         src_gen += 1
@@ -312,7 +313,7 @@ class Renderer(object):
                     break
                 if fr_2 is None:
                     break
-                elif self.v_scale != 1.0:
+                elif self.scaler is not None:
                     fr_2 = cv2.resize(fr_2, (self.w, self.h),
                                       interpolation=self.scaler)
 
