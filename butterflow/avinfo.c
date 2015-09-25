@@ -24,11 +24,15 @@ get_info(PyObject *self, PyObject *arg) {
 
     AVFormatContext *format_ctx = avformat_alloc_context();
 
+    int initial_level = av_log_get_level();
+    av_log_set_level(AV_LOG_ERROR);
+
     int rc = avformat_open_input(&format_ctx, path, NULL, NULL);
     if (rc != 0) {
         PyErr_SetString(PyExc_RuntimeError, "could not open input");
         return (PyObject*)NULL;
     }
+
     rc = avformat_find_stream_info(format_ctx, NULL);
     if (rc < 0) {
         avformat_close_input(&format_ctx);
@@ -108,6 +112,8 @@ get_info(PyObject *self, PyObject *arg) {
         // ratio and sample aspect ratio: PAR * SAR = DAR
         sar = format_ctx->streams[v_stream_idx]->sample_aspect_ratio;
     }
+
+    av_log_set_level(initial_level);
 
     // An avformat_free_context call is not needed because avformat_close_input
     // will automatically perform file cleanup and free everything associated

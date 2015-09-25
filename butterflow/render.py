@@ -103,16 +103,19 @@ class Renderer(object):
                 quality = ['-qp', '0']
             call.extend(quality)
             call.extend(['-level', '4.2'])
-        elif settings['cv'] == 'libx265':
-            call.extend(['-x265-params'])
+        params = []
+        call.extend(['-{}-params'.format(settings['cv'].replace('lib', ''))])
+        params.append('log-level={}'.format(self.enc_loglevel))
+        if settings['cv'] == 'libx265':
             quality = 'crf={}'.format(settings['crf'])
             if self.lossless:
                 # ffmpeg doesn't pass -x265-params to x265 correctly, must
                 # provide keys for every single value until fixed
                 # See: https://trac.ffmpeg.org/ticket/4284
                 quality = 'lossless=1'
-            loglevel = 'log-level={}'.format(self.enc_loglevel)
-            call.extend([':'.join([quality, loglevel])])
+            params.append(quality)
+        if len(params) > 0:
+            call.extend([':'.join(params)])
         call.extend([dst_path])
         pipe = subprocess.Popen(
             call,

@@ -22,9 +22,8 @@ default = {
     # Documentation: https://ffmpeg.org/ffmpeg.html
     'avutil':         'ffmpeg',
     # avutil and encoder loglevel
-    # `info` is default, set to `fatal` for quiet
-    'av_loglevel':    'fatal',
-    'enc_loglevel':   'error',
+    # options: panic, fatal, error, warning, info, verbose, debug, trace
+    'av_loglevel':    'error',  # `info` is default
     # See: https://trac.ffmpeg.org/wiki/Encode/H.264
     # See: https://trac.ffmpeg.org/wiki/Encode/H.264#a2.Chooseapreset
     # presets: ultrafast, superfast, veryfast, faster, fast, medium, slow,
@@ -91,12 +90,15 @@ default = {
     'bar_strk_color': cv2.cv.RGB(192, 192, 192),
 }
 
+# default loglevel is `info` for both encoders
+# options: none, error, warning, info, debug, plus `full` for x265
 if sys.platform.startswith('linux'):
     # considered an unstable encoder?
     # for x265 options: http://x265.readthedocs.org/en/default/cli.html
     default['cv'] = 'libx265'
 else:
     default['cv'] = 'libx264'
+default['enc_loglevel'] = 'error'
 
 # define location of files and directories
 default['out_path'] = os.path.join(os.getcwd(), 'output.mp4')
