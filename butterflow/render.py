@@ -26,8 +26,7 @@ class Renderer(object):
         interpolate_func=settings['interpolate_func'],
         w=None, h=None, grayscale=False, lossless=False,
         trim=False, show_preview=True, add_info=False,
-        text_type=settings['text_type'], pad_with_dupes=True,
-        av_loglevel=settings['av_loglevel'],
+        text_type=settings['text_type'], av_loglevel=settings['av_loglevel'],
         enc_loglevel=settings['enc_loglevel'], flow_kwargs=None, mux=False):
         # user args
         self.dst_path         = dst_path      # path to write the render
@@ -44,7 +43,6 @@ class Renderer(object):
         self.show_preview     = show_preview  # show preview window?
         self.add_info         = add_info      # embed debug info?
         self.text_type        = text_type     # overlay text type
-        self.pad_with_dupes   = pad_with_dupes
         self.av_loglevel      = av_loglevel   # ffmpeg loglevel
         self.enc_loglevel     = enc_loglevel  # x264, x265 loglevel
         self.flow_kwargs      = flow_kwargs   # will pass to draw_debug_text
@@ -397,10 +395,6 @@ class Renderer(object):
                 if fin_run:
                     wrts_needed = (tgt_frs - frs_wrt)
                     frs_fin_dup = wrts_needed - 1
-                    if not self.pad_with_dupes:
-                        # write out frame at least once
-                        if len(frs_to_wrt) == 1:
-                            wrts_needed = 1
                     log.debug('fin_dup: %s,%s,%s wrts=%sx',
                               pair_a,
                               pair_b,

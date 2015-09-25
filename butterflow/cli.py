@@ -129,10 +129,6 @@ def main():
                          help='Specify text type for debugging info, '
                          '(default: %(default)s)')
 
-        vid.add_argument('-npad', '--no-pad', action='store_false',
-                         help='Set to discard duplicate frames that are '
-                         'padded to the end of subregions. This will alter '
-                         'the expected duration of the output video.')
         vid.add_argument('--grayscale', action='store_true',
                          help='Set output a grayscale video')
 
@@ -296,7 +292,6 @@ def main():
         args.no_preview,
         False,  # add info?
         settings.default['text_type'],
-        True,  # pad with dupes?
         settings.default['av_loglevel'],
         settings.default['enc_loglevel'],
         flow_kwargs,
@@ -306,7 +301,6 @@ def main():
     # must be done after the render obj is inited
     if settings.default['debug_opts']:
         renderer.grayscale      = args.grayscale
-        renderer.pad_with_dupes = args.no_pad
         renderer.add_info       = args.add_info
         renderer.text_type      = args.text_type
 
