@@ -24,9 +24,9 @@ class Renderer(object):
         self, dst_path, vid_info, vid_seq, playback_rate,
         flow_func=settings['flow_func'],
         interpolate_func=settings['interpolate_func'],
-        w=None, h=None, grayscale=False, lossless=False,
-        trim=False, show_preview=True, add_info=False,
-        text_type=settings['text_type'], av_loglevel=settings['av_loglevel'],
+        w=None, h=None, lossless=False, trim=False, show_preview=True,
+        add_info=False, text_type=settings['text_type'],
+        av_loglevel=settings['av_loglevel'],
         enc_loglevel=settings['enc_loglevel'], flow_kwargs=None, mux=False):
         # user args
         self.dst_path         = dst_path      # path to write the render
@@ -37,7 +37,6 @@ class Renderer(object):
         self.interpolate_func = interpolate_func
         self.w                = w
         self.h                = h
-        self.grayscale        = grayscale     # make a grayscale video?
         self.lossless         = lossless      # encode losslessly?
         self.trim             = trim          # trim extra subregion?
         self.show_preview     = show_preview  # show preview window?
@@ -72,8 +71,6 @@ class Renderer(object):
 
     def make_pipe(self, dst_path, rate):
         vf = []
-        if self.grayscale:
-            vf.append('format=gray')
         vf.append('format=yuv420p')
         # keep the original display aspect ratio
         # see: https://ffmpeg.org/ffmpeg-filters.html#setdar_002c-setsar

@@ -129,9 +129,6 @@ def main():
                          help='Specify text type for debugging info, '
                          '(default: %(default)s)')
 
-        vid.add_argument('--grayscale', action='store_true',
-                         help='Set output a grayscale video')
-
     # handle values that start with a negative number
     # needed for the -vs option
     for i, arg in enumerate(sys.argv):
@@ -286,7 +283,6 @@ def main():
         motion.ocl_interpolate_flow,
         w,
         h,
-        False,  # grayscale
         args.lossless,
         args.trim_regions,
         args.no_preview,
@@ -300,7 +296,6 @@ def main():
     # apply debugging options
     # must be done after the render obj is inited
     if settings.default['debug_opts']:
-        renderer.grayscale      = args.grayscale
         renderer.add_info       = args.add_info
         renderer.text_type      = args.text_type
 
