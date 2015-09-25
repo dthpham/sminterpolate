@@ -64,34 +64,38 @@ def main():
                      default=settings.default['out_path'],
                      help='Specify path to the output video')
     vid.add_argument('-r', '--playback-rate', type=str,
-                     help='Specify the playback rate')
+                     help='Specify the playback rate as an integer or a '
+                     'float. Fractional forms are acceptable. To use a '
+                     'multiple of the source video\'s rate, follow a number '
+                     'with `x`, e.g., "2x" will double the frame rate. The '
+                     'original rate will be used by default if nothing is '
+                     'specified.')
     vid.add_argument('-s', '--sub-regions', type=str,
-                     help='Specify rendering sub regions in the form: '
+                     help='Specify rendering subregions in the form: '
                      '"a=TIME,b=TIME,TARGET=VALUE" where TARGET is either '
                      '`fps`, `dur`, `spd`, `btw`. Valid TIME syntaxes are '
                      '[hr:m:s], [m:s], [s], [s.xxx], or `end`, which '
                      'signifies to the end the video. You can specify '
-                     'multiple sub regions by separating them with a colon '
+                     'multiple subregions by separating them with a colon '
                      '`:`. A special region format that conveniently '
                      'describes the entire clip is available in the form: '
                      '"full,TARGET=VALUE".')
-
     vid.add_argument('-t', '--trim-regions', action='store_true',
                      help='Set to trim subregions that are not explicitly '
                           'specified')
     vid.add_argument('-vs', '--video-scale', type=str,
                      default=str(settings.default['video_scale']),
-                     help='Specify the output video size in the form: '
+                     help='Specify output video size in the form: '
                      '"WIDTH:HEIGHT" or by using a factor. To keep the '
                      'aspect ratio only specify one component, either width '
                      'or height, and set the other component to -1, '
                      '(default: %(default)s)')
     vid.add_argument('-l', '--lossless', action='store_true',
-                     help='Set to use true lossless encoding settings')
+                     help='Set to use lossless encoding settings')
 
     mux.add_argument('-mux', action='store_true',
-                     help='Set to mux source audio with the output video. '
-                     'Audio may not be in sync with the final video if '
+                     help='Set to mux the source audio with the output '
+                     'video. Audio may not be in sync with the final video if '
                      'speed has been altered during the rendering process.')
 
     fgr.add_argument('--fast-pyr', action='store_true',
