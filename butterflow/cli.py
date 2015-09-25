@@ -51,6 +51,14 @@ def main():
 
     dsp.add_argument('-np', '--no-preview', action='store_false',
                      help='Set to disable video preview')
+    dsp.add_argument('-a', '--add-info', action='store_true',
+                     help='Set to embed debugging info into the output '
+                          'video')
+    dsp.add_argument('-tt', '--text-type',
+                     choices=['light', 'dark', 'stroke'],
+                     default=settings.default['text_type'],
+                     help='Specify text type for debugging info, '
+                     '(default: %(default)s)')
 
     vid.add_argument('-o', '--output-path', type=str,
                      default=settings.default['out_path'],
@@ -117,17 +125,6 @@ def main():
                      default=settings.default['flow_filter'],
                      help='Specify which filter to use for optical flow '
                      'estimation, (default: %(default)s)')
-
-    # only available when `debug_opts` is True in settings.py
-    if settings.default['debug_opts']:
-        dsp.add_argument('-a', '--add-info', action='store_true',
-                         help='Set to embed debugging info into the output '
-                              'video')
-        dsp.add_argument('-tt', '--text-type',
-                         choices=['light', 'dark', 'stroke'],
-                         default=settings.default['text_type'],
-                         help='Specify text type for debugging info, '
-                         '(default: %(default)s)')
 
     # handle values that start with a negative number
     # needed for the -vs option
@@ -286,18 +283,12 @@ def main():
         args.lossless,
         args.trim_regions,
         args.no_preview,
-        False,  # add info?
-        settings.default['text_type'],
+        args.add_info,
+        args.text_type,
         settings.default['av_loglevel'],
         settings.default['enc_loglevel'],
         flow_kwargs,
         args.mux)
-
-    # apply debugging options
-    # must be done after the render obj is inited
-    if settings.default['debug_opts']:
-        renderer.add_info       = args.add_info
-        renderer.text_type      = args.text_type
 
     # set the number of threads and run
     motion.set_num_threads(settings.default['ocv_threads'])
