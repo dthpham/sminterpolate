@@ -81,7 +81,7 @@ class Renderer(object):
         # see: https://ffmpeg.org/ffmpeg-filters.html#setdar_002c-setsar
         if self.scaler is None:
             vf.append('setdar={}:{}'.format(self.vid_info['dar_n'],
-                                            self.vid_info['dar_d']))        
+                                            self.vid_info['dar_d']))
         call = [
             settings['avutil'],
             '-loglevel', self.av_loglevel,
@@ -267,7 +267,8 @@ class Renderer(object):
         # log.debug('read: %s', frame_src.idx + 1)  # next frame to be read
         fr_2 = frame_src.read()       # first frame in the region
 
-        if self.scaler is not None:
+        # scale down now but wait after drawing on the frame before scaling up
+        if self.scaler == settings['scaler_dn']:
             fr_2 = cv2.resize(fr_2, (self.w, self.h),
                               interpolation=self.scaler)
         src_gen += 1
@@ -313,7 +314,7 @@ class Renderer(object):
                     break
                 if fr_2 is None:
                     break
-                elif self.scaler is not None:
+                elif self.scaler == settings['scaler_dn']:
                     fr_2 = cv2.resize(fr_2, (self.w, self.h),
                                       interpolation=self.scaler)
 
@@ -422,7 +423,9 @@ class Renderer(object):
                     else:
                         self.tot_frs_dup += 1
                     self.tot_frs_wrt += 1
-
+                    if self.scaler == settings['scaler_up']:
+                        fr = cv2.resize(fr, (self.w, self.h),
+                                        interpolation=self.scaler)
                     if self.add_info:
                         draw_debug_text(fr,
                                         self.text_type,
