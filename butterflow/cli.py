@@ -179,14 +179,14 @@ def main():
         return 1
 
     try:
-        vid_info = avinfo.get_info(args.video)
+        vid_info = avinfo.get_av_info(args.video)
     except Exception:
         log.error('Could not get video information:', exc_info=True)
-        return 1
+        return 1   
 
     if args.inspect:
         if args.video:
-            print_vid_info(args.video)
+            avinfo.print_av_info(args.video)
         else:
             print(NO_VIDEO_SPECIFIED_WARNING)
         return 0
@@ -333,40 +333,6 @@ def rm_cache():
     if os.path.exists(cache_dir):
         import shutil
         shutil.rmtree(cache_dir)
-
-
-def print_vid_info(video):
-    info = avinfo.get_info(video)
-    # use Fraction to reduce the display aspect ratio fraction
-    from fractions import Fraction
-    dar = Fraction(info['dar_n'],
-                   info['dar_d'])
-    # which streams are avail?
-    # make a list then join for text
-    streams = []
-    if info['v_stream_exists']:
-        streams.append('video')
-    if info['a_stream_exists']:
-        streams.append('audio')
-    if info['s_stream_exists']:
-        streams.append('subtitle')
-    # calculate the src rate
-    src_rate = (info['rate_n'] * 1.0 /
-                info['rate_d'])
-    print('Video information:'
-          '\n  Streams available  \t: {}'
-          '\n  Resolution         \t: {}x{}, SAR {}:{} DAR {}:{}'
-          '\n  Rate               \t: {:.3f} fps'
-          '\n  Duration           \t: {} ({:.2f}s)'
-          '\n  Num of frames      \t: {}'.format(
-              ','.join(streams),
-              info['w'], info['h'],
-              info['sar_n'], info['sar_d'],
-              dar.numerator, dar.denominator,
-              src_rate,
-              ms_to_time_str(info['duration']), info['duration'] / 1000.0,
-              info['frames']
-          ))
 
 
 def w_h_from_str(string, source_width, source_height):

@@ -3,6 +3,7 @@
 
 #include <Python.h>
 #include <stdio.h>
+#include <string.h>
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
 #include <libavutil/avutil.h>
@@ -15,29 +16,37 @@
     return (PyObject*)NULL; }
 #define MS_PER_SEC 1000
 
+struct AvInfo {
+    int v_stream_exists;
+    int a_stream_exists;
+    int s_stream_exists;
+    int w;
+    int h;
+    AVRational sar;
+    AVRational dar;
+    int64_t duration;
+    unsigned long frames;
+    AVRational rate;
+};
 
-static PyObject*
-get_info(PyObject *self, PyObject *arg) {
-    char *path = PyString_AsString(arg);
-
+int mk_av_info_struct(char *file, struct AvInfo *av_info) {
     av_register_all();
 
     AVFormatContext *format_ctx = avformat_alloc_context();
 
+    /* make quiet. should reset when finished */
     int initial_level = av_log_get_level();
     av_log_set_level(AV_LOG_ERROR);
 
-    int rc = avformat_open_input(&format_ctx, path, NULL, NULL);
+    int rc = avformat_open_input(&format_ctx, file, NULL, NULL);
     if (rc != 0) {
-        PyErr_SetString(PyExc_RuntimeError, "could not open input");
-        return (PyObject*)NULL;
+        return -1;
     }
 
     rc = avformat_find_stream_info(format_ctx, NULL);
     if (rc < 0) {
         avformat_close_input(&format_ctx);
-        PyErr_SetString(PyExc_RuntimeError, "could not find stream");
-        return (PyObject*)NULL;
+        return -1;
     }
 
     int v_stream_idx = av_find_best_stream(format_ctx, AVMEDIA_TYPE_VIDEO,
@@ -47,7 +56,7 @@ get_info(PyObject *self, PyObject *arg) {
     int s_stream_idx = av_find_best_stream(format_ctx, AVMEDIA_TYPE_SUBTITLE,
                                            -1, -1, NULL, 0);
 
-    // do streams exist and can they be decoded?
+    /* check if streams exist and can be decoded */
     int v_stream_exists = 1;
     int a_stream_exists = 1;
     int s_stream_exists = 1;
@@ -65,16 +74,13 @@ get_info(PyObject *self, PyObject *arg) {
         s_stream_exists = 0;
     }
 
-    int w                  = 0;
-    int h                  = 0;
-    AVRational sar         = {-1, -1};  // sample aspect ratio
-    int64_t duration       = 0.0;       // duration in milliseconds
-    int64_t v_duration     = 0.0;       // video stream duration
-    int64_t c_duration     = 0.0;       // container duration
-    unsigned long frames   = 0;         // number of frames in the video stream
-    int rate_n             = -1;        // fps numerator
-    int rate_d             = -1;        // fps denominator
-    double min_rate        = 0.0;       // smallest rate w/o losing unique frame
+    int w = 0;
+    int h = 0;
+    int64_t duration = 0.0;  /* in milliseconds */
+    unsigned long frames  = 0;
+    AVRational sar;   /* sample aspect ratio */
+    AVRational dar;   /* display aspect ratio */
+    AVRational rate;  /* average fps */
 
     if (v_stream_exists) {
         AVStream *v_stream = format_ctx->streams[v_stream_idx];
@@ -82,13 +88,17 @@ get_info(PyObject *self, PyObject *arg) {
         AVRational ms_tb = {1, MS_PER_SEC};
         AVRational av_tb = {1, AV_TIME_BASE};
 
-        v_duration = av_rescale_q(v_stream->duration, v_stream->time_base,
-                                  ms_tb);
-        c_duration = av_rescale_q(format_ctx->duration, av_tb, ms_tb);
+        int64_t v_stream_duration  = av_rescale_q(v_stream->duration,
+                                                  v_stream->time_base,
+                                                  ms_tb);
+        int64_t container_duration = av_rescale_q(format_ctx->duration,
+                                                  av_tb, ms_tb);
 
-        duration = v_duration;
-        if (v_duration == 0) {
-            duration = c_duration;  // use container duration
+        duration = v_stream_duration;
+        if (v_stream_duration == 0) {
+            /* fallback to the container duration if the video stream doesnt
+             * report anything */
+            duration = container_duration;
         }
 
         AVCodecContext *v_codec_ctx = format_ctx->streams[v_stream_idx]->codec;
@@ -96,55 +106,133 @@ get_info(PyObject *self, PyObject *arg) {
         w = v_codec_ctx->width;
         h = v_codec_ctx->height;
 
-        AVRational rational_rate =
-            format_ctx->streams[v_stream_idx]->avg_frame_rate;
+        rate = format_ctx->streams[v_stream_idx]->avg_frame_rate;
 
-        rate_n = rational_rate.num;
-        rate_d = rational_rate.den;
-        double rate = rate_n * 1.0 / rate_d;
+        frames = (rate.num * 1.0 / rate.den) * (duration / 1000.0);
 
-        frames = rate * (duration / 1000.0);
-        // min_rate is the smallest possible rate of the video stream that can
-        // be represented without losing any unique frames
-        min_rate = frames / (duration / 1000.0);
-
-        // the display aspect ratio can be calculated from the pixel aspect
-        // ratio and sample aspect ratio: PAR * SAR = DAR
+        /* the display aspect ratio can be calculated from the pixel aspect
+         * ratio and sample aspect ratio: PAR * SAR = DAR */
         sar = format_ctx->streams[v_stream_idx]->sample_aspect_ratio;
+        dar = format_ctx->streams[v_stream_idx]->display_aspect_ratio;
     }
 
     av_log_set_level(initial_level);
 
-    // An avformat_free_context call is not needed because avformat_close_input
-    // will automatically perform file cleanup and free everything associated
-    // with the file. Calling free after close will trigger a segfault for for
-    // those using Libav
+    /* An avformat_free_context call is not needed because avformat_close_input
+     * will automatically perform file cleanup and free everything associated
+     * with the file. Calling free after close will trigger a segfault for for
+     * those using Libav */
     avformat_close_input(&format_ctx);
 
-    // create dictionary with video information
-    PyObject *py_info = PyDict_New();
+    av_info->v_stream_exists = v_stream_exists;
+    av_info->a_stream_exists = a_stream_exists;
+    av_info->s_stream_exists = s_stream_exists;
+    av_info->w = w;
+    av_info->h = h;
+    av_info->sar = sar;
+    av_info->dar = dar;
+    av_info->duration = duration;
+    av_info->frames = frames;
+    av_info->rate = rate;
 
-    py_safe_set(py_info, "path", PyString_FromString(path));
-    py_safe_set(py_info, "v_stream_exists", PyBool_FromLong(v_stream_exists));
-    py_safe_set(py_info, "a_stream_exists", PyBool_FromLong(a_stream_exists));
-    py_safe_set(py_info, "s_stream_exists", PyBool_FromLong(s_stream_exists));
-    py_safe_set(py_info, "w", PyInt_FromLong(w));
-    py_safe_set(py_info, "h", PyInt_FromLong(h));
-    py_safe_set(py_info, "sar_n", PyInt_FromLong(sar.num));
-    py_safe_set(py_info, "sar_d", PyInt_FromLong(sar.den));
-    py_safe_set(py_info, "dar_n", PyInt_FromLong(w * sar.num));
-    py_safe_set(py_info, "dar_d", PyInt_FromLong(h * sar.den));
-    py_safe_set(py_info, "duration", PyFloat_FromDouble(duration));
-    py_safe_set(py_info, "rate_n", PyInt_FromLong(rate_n));
-    py_safe_set(py_info, "rate_d", PyInt_FromLong(rate_d));
-    py_safe_set(py_info, "min_rate", PyFloat_FromDouble(min_rate));
-    py_safe_set(py_info, "frames", PyInt_FromLong(frames));
+    return 0;
+}
+
+
+static PyObject*
+print_av_info(PyObject *self, PyObject *arg) {
+    char *file = PyString_AsString(arg);
+    struct AvInfo av_info;
+
+    if (mk_av_info_struct(file, &av_info) < 0) {
+        PyErr_SetString(PyExc_RuntimeError, "could not retreive info");
+        Py_RETURN_FALSE;
+    }
+
+    /* get list of streams */
+    char streams[32] = "";  /* must be initialized for strncat */
+
+    if (av_info.v_stream_exists) {
+        strncat(streams, "video", 5);
+    }
+    if (av_info.a_stream_exists) {
+        strncat(streams, ",audio", 6);
+    }
+    if (av_info.s_stream_exists) {
+        strncat(streams, ",subtitle", 9);
+    }
+
+    /* get friendly time string */
+    int x;
+    int secs;
+    int mins;
+    int hrs;
+
+    x = (float)av_info.duration / 1000.0;
+    secs = x % 60;
+    x /= 60;
+    mins = x % 60;
+    x /= 60;
+    hrs = x % 24;
+
+    printf("Video information:");
+    printf("\n  Streams available  \t: %s"
+           "\n  Resolution         \t: %dx%d, SAR %d:%d DAR %d:%d"
+           "\n  Rate               \t: %.3f fps"
+           "\n  Duration           \t: %02d:%02d:%02d (%.2fs)"
+           "\n  Num of frames      \t: %lu\n",
+        streams,
+        av_info.w,
+        av_info.h,
+        av_info.sar.num,
+        av_info.sar.den,
+        av_info.dar.num,
+        av_info.dar.den,
+        av_info.rate.num * 1.0 / av_info.rate.den,
+        hrs, mins, secs,
+        (float)av_info.duration / 1000.0,
+        av_info.frames);
+
+    Py_RETURN_TRUE;
+}
+
+static PyObject*
+get_av_info(PyObject *self, PyObject *arg) {
+    char *file = PyString_AsString(arg);
+    struct AvInfo av_info;
+    PyObject *py_info;
+
+    if (mk_av_info_struct(file, &av_info) < 0) {
+        PyErr_SetString(PyExc_RuntimeError, "could not retreive info");
+        return (PyObject*)NULL;
+    }
+
+    /* create dictionary with video information */
+    py_info = PyDict_New();
+
+    py_safe_set(py_info, "path", PyString_FromString(file));
+    py_safe_set(py_info, "v_stream_exists", PyBool_FromLong(av_info.v_stream_exists));
+    py_safe_set(py_info, "a_stream_exists", PyBool_FromLong(av_info.a_stream_exists));
+    py_safe_set(py_info, "s_stream_exists", PyBool_FromLong(av_info.s_stream_exists));
+    py_safe_set(py_info, "w", PyInt_FromLong(av_info.w));
+    py_safe_set(py_info, "h", PyInt_FromLong(av_info.h));
+    py_safe_set(py_info, "sar_n", PyInt_FromLong(av_info.sar.num));
+    py_safe_set(py_info, "sar_d", PyInt_FromLong(av_info.sar.den));
+    py_safe_set(py_info, "dar_n", PyInt_FromLong(av_info.dar.num));
+    py_safe_set(py_info, "dar_d", PyInt_FromLong(av_info.dar.den));
+    py_safe_set(py_info, "duration", PyFloat_FromDouble(av_info.duration));
+    py_safe_set(py_info, "rate_n", PyInt_FromLong(av_info.rate.num));
+    py_safe_set(py_info, "rate_d", PyInt_FromLong(av_info.rate.den));
+    py_safe_set(py_info, "frames", PyInt_FromLong(av_info.frames));
 
     return py_info;
 }
 
 static PyMethodDef ModuleMethods[] = {
-    {"get_info", get_info, METH_O, ""},
+    {"get_av_info", get_av_info, METH_O,
+        "Return information on a multimedia file as a dictionary"},
+    {"print_av_info", print_av_info, METH_O,
+        "Prints a multimedia file's information"},
     {NULL, NULL, 0, NULL}
 };
 

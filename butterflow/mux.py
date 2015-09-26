@@ -17,7 +17,7 @@ def extract_audio(video, destination, start, end, spd=1.0):
         msg = 'destination doesn\'t have .{} extension'.format(
                 settings['a_container'])
         raise ValueError(msg)
-    av_info = avinfo.get_info(video)
+    av_info = avinfo.get_av_info(video)
     if not av_info['a_stream_exists']:
         raise RuntimeError('no audio stream found')
     filename = os.path.splitext(os.path.basename(destination))[0]
