@@ -164,7 +164,10 @@ def main():
         return 0
 
     if have_ocl:
-        set_clb_dir(settings.default['clb_dir'])
+        clb_dir = settings.default['clb_dir']
+        if not os.path.exists(clb_dir):
+            os.makedirs(clb_dir)
+        motion.set_cache_path(clb_dir + os.sep)
     else:
         print(NO_OCL_WARNING)
         return 1
@@ -182,7 +185,7 @@ def main():
         vid_info = avinfo.get_av_info(args.video)
     except Exception:
         log.error('Could not get video information:', exc_info=True)
-        return 1   
+        return 1
 
     if args.inspect:
         if args.video:
@@ -197,8 +200,14 @@ def main():
 
     # make subregions
     try:
-        vid_sequence = sequence_from_str(
-            vid_info['duration'], vid_info['frames'], args.sub_regions)
+        vid_sequence = None
+        if args.sub_regions is None:
+            vid_sequence = VideoSequence(vid_info['duration'],
+                                         vid_info['frames'])
+        else:
+            vid_sequence = sequence_from_str(vid_info['duration'],
+                                             vid_info['frames'],
+                                             args.sub_regions)
     except Exception as e:
         log.error('Bad subregion string: %s' % e)
         return 1
@@ -207,7 +216,11 @@ def main():
     src_rate = (vid_info['rate_n'] * 1.0 /
                 vid_info['rate_d'])
     try:
-        rate = rate_from_str(args.playback_rate, src_rate)
+        rate = None
+        if args.playback_rate is None:
+            rate = src_rate
+        else:
+            rate = rate_from_str(args.playback_rate, src_rate)
     except Exception as e:
         log.error('Bad playback rate: %s' % e)
         return 1
@@ -284,6 +297,9 @@ def main():
         ))
         print('Butterflow took {:.3g} minutes, done.'.format(tot_time / 60))
         # sizeit and show the diff
+        sz_in_mb = lambda x: \
+            float(os.path.getsize(x)) / (1 << 20)
+
         new = sz_in_mb(args.output_path)
         old = sz_in_mb(args.video)
         log.debug('out file size: {:.3g} MB ({:+.3g} MB)'.format(new,
@@ -291,22 +307,6 @@ def main():
     except (KeyboardInterrupt, SystemExit):
         log.warning('files were left in the cache')
         return 1
-
-
-def sz_in_mb(file):
-    # file, path to file
-    # get size of file in megabytes
-    sz = float(os.path.getsize(file))
-    sz_mb = sz / (1 << 20)
-    return sz_mb
-
-
-def set_clb_dir(dir):
-    # set the location of the clb dir
-    # make the folder if it doesn't exist
-    if not os.path.exists(dir):
-        os.makedirs(dir)
-    motion.set_cache_path(dir + os.sep)
 
 
 def print_cache_info():
@@ -336,69 +336,77 @@ def rm_cache():
 
 
 def w_h_from_str(string, source_width, source_height):
-    w = source_width
-    h = source_height
-    aspect = w * 1.0 / h
-    if ':' in string:  # using w:h syntax
+    for char in string:
+        if char not in '0123456789:-.':
+            raise ValueError('unknown char in w:h: {}'.format(char))
+    if ':' in string:  # used `w:h` syntax
         w, h = string.split(':')
         w = int(w)
         h = int(h)
+        if w < -1 or h < -1:
+            raise ValueError('unknown negative component')
         # keep aspect ratio if either component is -1
-        if w == -1:
-            w = int(h / aspect)
-        if h == -1:
-            h = int(w / aspect)
-    elif float(string) != 1.0:  # using a factor
-        w = int(math.floor(w * float(string) / 2) * 2)
-        h = int(math.floor(h * float(string) / 2) * 2)
+        if w == -1 and h == -1:  # ffmpeg allows this so we should too
+            return source_width, source_height
+        else:
+            if w == -1:
+                w = int(h * source_width / source_height)
+            elif h == -1:
+                h = int(w * source_height / source_width)
+    elif float(string) != 1.0:  # using a singlular int or float
+        # round to nearest even number
+        even_pixel = lambda x: \
+            int(math.floor(x * float(string) / 2) * 2)
+        w = even_pixel(source_width)
+        h = even_pixel(source_height)
+    else:  # use source w,h by default
+        w = source_width
+        h = source_height
     # w and h must be divisible by 2 for yuv420p outputs
+    # don't auto round when using the `w:h` syntax (with no -1 components)
+    # because the user may not expect the changes
     if math.fmod(w, 2) != 0 or math.fmod(h, 2) != 0:
-        msg = "size {width}x{height}, component not divisible by two".\
+        msg = 'size {width}x{height}, components not divisible by two'.\
             format(width=w, height=h)
         raise ValueError(msg)
     return w, h
 
 
 def rate_from_str(string, source_rate):
-    # allow fractional rates and fractions with non-rational numbers
-    # use original rate if nothing is specified
-    rate = 0
-    if string is None:
-        rate = source_rate
-    else:
-        if '/' in string and '.' in string:  # fraction with non-rational num
-            num, den = rate.split('/')
-            rate = float(num) / float(den)
-        elif 'x' in string:  # used the "multiple of" syntax
-            rate = float(string.replace('x', ''))
-            rate = rate * source_rate
-        else:  # used a singular integer or float
-            rate = float(rate)
+    for char in string:
+        if char not in '0123456789/x.':
+            raise ValueError('unknown char in rate: {}'.format(char))
+    string = str(string)
+    if '/' in string:  # got a fraction
+        # can't create Fraction object then cast to a float because it
+        # doesn't support non-rational numbers
+        n, d = string.split('/')
+        rate = float(n) / float(d)
+    elif 'x' in string:  # used the "multiple of" syntax (e.g. `2x`)
+        rate = float(string.replace('x', ''))
+        rate = rate * source_rate
+    else:  # got a singular integer or float
+        rate = float(string)
+    if rate <= 0:
+        raise ValueError('invalid frame rate value: {}'.format(rate))
     return rate
-
-
-def ms_to_time_str(time_ms):
-    # converts a time in ms to a string in a friendly form
-    # time str will be in form:
-    # [hrs:mins:secs]
-    import time
-    t_str = time.strftime('%H:%M:%S', time.gmtime(time_ms / 1000.0))
-    return t_str
 
 
 def time_str_to_ms(time):
     # converts a time str to milliseconds
     # time str syntax:
     # [hrs:mins:secs.xxx], [mins:secs.xxx], [secs.xxx]
+    for char in time:
+        if char not in '0123456789:.':
+            raise ValueError('unknown char in time: {}'.format(char))
     hr = 0
     minute = 0
     sec = 0
-    valid_char_set = '0123456789:.'
-    if time == '' or time.count(':') > 2:
-        raise ValueError('invalid syntax')
-    for char in time:
-        if char not in valid_char_set:
-            raise ValueError('unknown char in time')
+    time = time.strip()
+    if time == '':
+        raise ValueError('no time specified')
+    if time.count(':') > 2:
+        raise ValueError('invalid time format')
     val = time.split(':')
     val_len = len(val)
     # going backwards in the list
@@ -420,16 +428,10 @@ def time_str_to_ms(time):
 def parse_tval_str(string):
     # extract values from TARGET=VALUE string
     # target can be fps, dur, spd, or btw
-    tgt = string.split('=')[0]
-    val = string.split('=')[1]
+    tgt = string.split('=')[0]  # the `TARGET` portion
+    val = string.split('=')[1]  # the `VALUE` portion
     if tgt == 'fps':
-        if '/' in val:
-            # we can't create a Fraction then cast to a float because Fraction
-            # won't take in non-rational numbers
-            num, den = val.split('/')
-            val = float(num) / float(den)
-        else:
-            val = float(val)
+        val = rate_from_str(val, -1)
     elif tgt == 'dur':
         val = float(val) * 1000  # duration in ms
     elif tgt == 'spd' or tgt == 'btw':
@@ -484,14 +486,31 @@ def sub_from_str_end_key(string, duration):
         raise ValueError('end key not found')
 
 
-def sequence_from_str(duration, frames, strings):
+def sequence_from_str(duration, frames, string):
     # return a vid sequence from -s <subregion>:<subregion>...
+    for char in string:
+        if char not in '0123456789ab,.=/:fpsdbtwurenl':
+            raise ValueError('unknown char in sequence: {}'.format(char))
     seq = VideoSequence(duration, frames)
-    if strings is None:
-        return seq
+    # check for bad separators
+    # if there is a char before `a` that is not `:` like `,`
+    def find_char(str, ch):
+        idxs = []
+        for i, ltr in enumerate(str):
+            if ltr == ch:
+                idxs.append(i)
+        return idxs
+    idxs_of_a = find_char(string, 'a')
+    for i in idxs_of_a:
+        if i == 0:
+            continue
+        else:
+            ch_before_a = string[i - 1]
+            if ch_before_a != ':':
+                raise ValueError('bad separator: {}'.format(ch_before_a))
     # look for `:a` which is the start of a new subregion
     newsubstrs = []
-    substrs = strings.split(':a')
+    substrs = string.split(':a')
     if len(substrs) > 1:
         # replace `a` character that was stripped when split
         for substr in substrs:
