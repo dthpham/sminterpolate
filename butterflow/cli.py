@@ -6,6 +6,7 @@ import sys
 import argparse
 import collections
 import math
+import string
 from cv2 import calcOpticalFlowFarneback as sw_farneback_optical_flow
 from butterflow.__init__ import __version__
 from butterflow import avinfo, motion, ocl, settings
@@ -335,10 +336,28 @@ def rm_cache():
         shutil.rmtree(cache_dir)
 
 
+def validate_chars_in_set(ch_set):
+    # ensures all chars in args that are strings are an allowable char set
+    def wrapper(f):
+        def wrapped_f(*args, **kwargs):
+            strs = []
+            for a in args:
+                if isinstance(a, str):
+                    strs.append(a)
+            for k, v in kwargs:
+                if isinstance(v, str):
+                    strs.append(v)
+            for s in strs:
+                for ch in s.strip():
+                    if ch not in ch_set:
+                        raise ValueError('unknown char `{}`'.format(ch))
+            return f(*args, **kwargs)
+        return wrapped_f
+    return wrapper
+
+
+@validate_chars_in_set(string.digits + ':-.')
 def w_h_from_str(string, source_width, source_height):
-    for char in string:
-        if char not in '0123456789:-.':
-            raise ValueError('unknown char in w:h: {}'.format(char))
     if ':' in string:  # used `w:h` syntax
         w, h = string.split(':')
         w = int(w)
@@ -372,10 +391,8 @@ def w_h_from_str(string, source_width, source_height):
     return w, h
 
 
+@validate_chars_in_set(string.digits + '/x.')
 def rate_from_str(string, source_rate):
-    for char in string:
-        if char not in '0123456789/x.':
-            raise ValueError('unknown char in rate: {}'.format(char))
     string = str(string)
     if '/' in string:  # got a fraction
         # can't create Fraction object then cast to a float because it
@@ -392,13 +409,11 @@ def rate_from_str(string, source_rate):
     return rate
 
 
+@validate_chars_in_set(string.digits + ':.')
 def time_str_to_ms(time):
     # converts a time str to milliseconds
     # time str syntax:
     # [hrs:mins:secs.xxx], [mins:secs.xxx], [secs.xxx]
-    for char in time:
-        if char not in '0123456789:.':
-            raise ValueError('unknown char in time: {}'.format(char))
     hr = 0
     minute = 0
     sec = 0
@@ -486,11 +501,9 @@ def sub_from_str_end_key(string, duration):
         raise ValueError('end key not found')
 
 
+@validate_chars_in_set(string.digits + 'ab,.=/:' + 'spdurfbtwlen')
 def sequence_from_str(duration, frames, string):
     # return a vid sequence from -s <subregion>:<subregion>...
-    for char in string:
-        if char not in '0123456789ab,.=/:fpsdbtwurenl':
-            raise ValueError('unknown char in sequence: {}'.format(char))
     seq = VideoSequence(duration, frames)
     # check for bad separators
     # if there is a char before `a` that is not `:` like `,`
