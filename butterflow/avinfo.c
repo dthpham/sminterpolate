@@ -166,7 +166,7 @@ print_av_info(PyObject *self, PyObject *arg) {
 
     if (mk_av_info_struct(file, &av_info) < 0) {
         PyErr_SetString(PyExc_RuntimeError, "could not retreive info");
-        Py_RETURN_FALSE;
+        Py_RETURN_NONE;
     }
 
     /* get list of streams */
@@ -212,7 +212,7 @@ print_av_info(PyObject *self, PyObject *arg) {
         (float)av_info.duration / 1000.0,
         av_info.frames);
 
-    Py_RETURN_TRUE;
+    Py_RETURN_NONE;
 }
 
 static PyObject*
