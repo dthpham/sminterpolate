@@ -8,8 +8,8 @@
 #include <opencv2/video/tracking.hpp>
 #include "opencv-ndarray-conversion/conversion.h"
 
-#define ocl_inter_frames(A, B, C) cv::ocl::interpolateFrames((A), (B), ocl_fu, \
-ocl_fv, ocl_bu, ocl_bv, ts, (C), ocl_buf)
+#define ocl_inter_frames(A, B, C, D) cv::ocl::interpolateFrames((A), (B), \
+ocl_fu, ocl_fv, ocl_bu, ocl_bv, (D), (C), ocl_buf)
 
 using namespace std;
 using namespace cv;
@@ -97,6 +97,22 @@ ocl_farneback_optical_flow(PyObject *self, PyObject *args) {
 }
 
 static PyObject*
+time_steps_for_int_frames(PyObject *self, PyObject *arg) {
+    int n = PyInt_AsLong(arg);   /* number of int frames */
+    int sub_divisions  = n + 1;  /* splits in region from 0,1 */
+    PyObject *py_steps = PyList_New(n);
+
+    for (int i = 0; i < n; i++) {
+        double time_step = max(0.0, min(1.0,
+                             (1.0 / sub_divisions) * (i + 1)));
+        /* Py_BuildValue +1 refcnt that will be stolen by PyList_SetItem */
+        PyList_SetItem(py_steps, i, Py_BuildValue("d", time_step));
+    }
+
+    return py_steps;
+}
+
+static PyObject*
 ocl_interpolate_flow(PyObject *self, PyObject *args) {
     PyObject *py_fr_1;
     PyObject *py_fr_2;
@@ -158,16 +174,16 @@ ocl_interpolate_flow(PyObject *self, PyObject *args) {
     oclMat ocl_new_bgr;
 
     PyObject *py_frs = PyList_New(0);
-
-    int subdivisions = int_each_go + 1;
+    PyObject *py_time_steps = time_steps_for_int_frames(self, py_int_each_go);
 
     for (int i = 0; i < int_each_go; i++) {
-        float ts = max(0.0, min(1.0,
-                       (1.0 / subdivisions) * (i + 1)));
+        PyObject *py_ts = PyList_GetItem(py_time_steps,
+                                        (Py_ssize_t)i); /* borrowed ref */
+        double ts = PyFloat_AsDouble(py_ts);
 
-        ocl_inter_frames(fr_1_b, fr_2_b, ocl_new_b);
-        ocl_inter_frames(fr_1_g, fr_2_g, ocl_new_g);
-        ocl_inter_frames(fr_1_r, fr_2_r, ocl_new_r);
+        ocl_inter_frames(fr_1_b, fr_2_b, ocl_new_b, ts);
+        ocl_inter_frames(fr_1_g, fr_2_g, ocl_new_g, ts);
+        ocl_inter_frames(fr_1_r, fr_2_r, ocl_new_r, ts);
 
         oclMat channels[] = {ocl_new_b, ocl_new_g, ocl_new_r};
         merge(channels, 3, ocl_new_bgr);
@@ -207,6 +223,8 @@ static PyMethodDef module_methods[] = {
         "Interpolate flow from frames"},
     {"ocl_farneback_optical_flow", ocl_farneback_optical_flow, METH_VARARGS,
         "Calc farneback optical flow"},
+    {"time_steps_for_int_frames", time_steps_for_int_frames, METH_O,
+        "Get time steps for interpolated frames"},
     {"set_cache_path", set_cache_path, METH_O,
         "Sets the path of OpenCL kernel binaries"},
     {"set_num_threads", set_num_threads, METH_O,
