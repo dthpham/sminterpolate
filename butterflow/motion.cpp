@@ -199,6 +199,8 @@ ocl_interpolate_flow(PyObject *self, PyObject *args) {
         Py_DECREF(py_new_fr);
     }
 
+    Py_DECREF(py_time_steps);
+
     return py_frs;
 }
 
