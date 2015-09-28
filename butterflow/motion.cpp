@@ -84,10 +84,12 @@ ocl_farneback_optical_flow(PyObject *self, PyObject *args) {
     PyObject *py_flow_1 = converter.toNDArray(mat_flow_x);
     PyObject *py_flow_2 = converter.toNDArray(mat_flow_y);
 
-    // PyList_SetItem will steal a reference to items that are added to the
-    // list. In other words, the item will be referenced in the list but it's
-    // reference count will not be increased. When the list is deleted, every
-    // element in the list will be decrefed.
+    /* PyList_SetItem will steal a reference to items that are added to
+     * the list. In other words, it now assumes it owns that reference
+     * and the user is no longer responsible for it. The item will be
+     * referenced in the list but it's reference count will not be
+     * increased. When the list is deleted, every element in the list
+     * will be decrefed. */
     PyList_SetItem(py_flows, 0, py_flow_1);
     PyList_SetItem(py_flows, 1, py_flow_2);
 
@@ -104,17 +106,17 @@ ocl_interpolate_flow(PyObject *self, PyObject *args) {
     PyObject *py_bu;
     PyObject *py_bv;
 
-    PyObject *py_inter_each_go;
+    PyObject *py_int_each_go;
 
     if (!PyArg_UnpackTuple(args, "", 7, 7, &py_fr_1, &py_fr_2, &py_fu, &py_fv,
-                           &py_bu, &py_bv, &py_inter_each_go)) {
+                           &py_bu, &py_bv, &py_int_each_go)) {
         PyErr_SetString(PyExc_TypeError, "could not unpack tuple");
         return (PyObject*)NULL;
     }
 
-    int inter_each_go = PyInt_AsLong(py_inter_each_go);
+    int int_each_go = PyInt_AsLong(py_int_each_go);
 
-    if (inter_each_go == 0) {
+    if (int_each_go == 0) {
       return PyList_New(0);
     }
 
@@ -157,9 +159,9 @@ ocl_interpolate_flow(PyObject *self, PyObject *args) {
 
     PyObject *py_frs = PyList_New(0);
 
-    int subdivisions = inter_each_go + 1;
+    int subdivisions = int_each_go + 1;
 
-    for (int i = 0; i < inter_each_go; i++) {
+    for (int i = 0; i < int_each_go; i++) {
         float ts = max(0.0, min(1.0,
                        (1.0 / subdivisions) * (i + 1)));
 
@@ -175,8 +177,9 @@ ocl_interpolate_flow(PyObject *self, PyObject *args) {
         mat_new_bgr.convertTo(mat_new_bgr, CV_8UC3, 255.0);
 
         PyObject *py_new_fr = converter.toNDArray(mat_new_bgr);
+        /* PyList_Append will increment reference count. This behavior
+         * differs from PyList_SetItem which doesn't */
         PyList_Append(py_frs, py_new_fr);
-
         Py_DECREF(py_new_fr);
     }
 
