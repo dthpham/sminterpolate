@@ -76,11 +76,11 @@ int mk_av_info_struct(char *file, struct AvInfo *av_info) {
 
     int w = 0;
     int h = 0;
-    int64_t duration = 0.0;  /* in milliseconds */
-    unsigned long frames  = 0;
-    AVRational sar;   /* sample aspect ratio */
-    AVRational dar;   /* display aspect ratio */
-    AVRational rate;  /* average fps */
+    int64_t duration = 0.0;    /* in milliseconds */
+    unsigned long frames = 0;
+    AVRational sar  = {0, 0};  /* sample aspect ratio */
+    AVRational dar  = {0, 0};  /* display aspect ratio */
+    AVRational rate = {0, 0};  /* average fps */
 
     if (v_stream_exists) {
         AVStream *v_stream = format_ctx->streams[v_stream_idx];
@@ -151,7 +151,6 @@ print_av_info(PyObject *self, PyObject *arg) {
 
     /* get list of streams */
     char streams[32] = "";  /* must be initialized for strncat */
-
     if (av_info.v_stream_exists) {
         strncat(streams, "video", 5);
     }
