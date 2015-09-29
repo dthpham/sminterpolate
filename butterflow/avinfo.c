@@ -114,26 +114,22 @@ int mk_av_info_struct(char *file, struct AvInfo *av_info) {
 
         frames = (rate.num * 1.0 / rate.den) * (duration / 1000.0);
 
-        /* the display aspect ratio can be calculated from the pixel aspect
-         * ratio and sample aspect ratio: PAR * SAR = DAR */
         sar = format_ctx->streams[v_stream_idx]->sample_aspect_ratio;
-        dar = format_ctx->streams[v_stream_idx]->display_aspect_ratio;
 
         /* if sar is unknown assume it is 1:1 */
         if (sar.num == 0) {
             sar.num = 1;
             sar.den = 1;
         }
-        /* calculate dar by hand if it is unknown. it should be reduced to
-         * it's simplest terms */
-        if (dar.num == 0) {
-            int dar_n = w * sar.num;
-            int dar_d = h * sar.den;
-            int g = gcd(dar_n, dar_d);
 
-            dar.num = dar_n / g;
-            dar.den = dar_d / g;
-        }
+        /* the display aspect ratio can be calculated from the pixel aspect
+         * ratio and sample aspect ratio: PAR * SAR = DAR.*/
+        int dar_n = w * sar.num;
+        int dar_d = h * sar.den;
+
+        int g = gcd(dar_n, dar_d);  /* use gcd to reduce to simplest terms */
+        dar.num = dar_n / g;
+        dar.den = dar_d / g;
     }
 
     av_log_set_level(initial_level);
