@@ -44,6 +44,7 @@ class Renderer(object):
         self.flow_kwargs      = flow_kwargs   # will pass to draw_debug_text
         self.mux              = mux           # mux?
         self.render_pipe      = None
+        self.source           = None          # the frame source
         # keep track of progress
         self.tot_frs_wrt      = 0             # total frames written
         self.tot_tgt_frs      = 0
@@ -136,7 +137,7 @@ class Renderer(object):
         except Exception:
             log.error('Writing frame to pipe failed:', exc_info=True)
 
-    def render_subregion(self, frame_src, subregion):
+    def render_subregion(self, subregion):
         log.debug('Working on subregion: %s', self.curr_sub_idx + 1)
 
         fa = subregion.fa
@@ -254,10 +255,10 @@ class Renderer(object):
         fa_idx = fa - 1   # seek pos of the frame in the video
 
         fr_1 = None
-        frame_src.seek_to_frame(fa_idx)
-        # log.debug('seek: %s', frame_src.idx + 1)  # seek pos of first frame
-        # log.debug('read: %s', frame_src.idx + 1)  # next frame to be read
-        fr_2 = frame_src.read()       # first frame in the region
+        self.source.seek_to_frame(fa_idx)
+        # log.debug('seek: %s', self.source.idx + 1)  # seek pos of first frame
+        # log.debug('read: %s', self.source.idx + 1)  # next frame to be read
+        fr_2 = self.source.read()       # first frame in the region
 
         # scale down now but wait after drawing on the frame before scaling up
         if self.scaler == settings['scaler_dn']:
@@ -272,8 +273,8 @@ class Renderer(object):
             # at least one frame pair is available. num of runs is equal to the
             # the total number of frames in the region - 1. range will run
             # from [0,runs)
-            frame_src.seek_to_frame(fa_idx + 1)  # seek to the next frame
-            # log.debug('seek: %s', frame_src.idx + 1)
+            self.source.seek_to_frame(fa_idx + 1)  # seek to the next frame
+            # log.debug('seek: %s', self.source.idx + 1)
             runs = reg_len
 
         log.debug('wrt_one: %s', fin_run)  # only write 1 frame
@@ -298,8 +299,8 @@ class Renderer(object):
                 # begin interpolating frames between pairs
                 # the frame being read should always be valid otherwise break
                 try:
-                    # log.debug('read: %s', frame_src.idx + 1)
-                    fr_2 = frame_src.read()
+                    # log.debug('read: %s', self.source.idx + 1)
+                    fr_2 = self.source.read()
                     src_gen += 1
                 except Exception:
                     log.error('Could not read frame:', exc_info=True)
@@ -584,7 +585,8 @@ class Renderer(object):
 
         # prep for rendering
         self.render_pipe = self.make_pipe(tmp_path, self.playback_rate)
-        frame_src = FrameSource(src_path)
+        self.source = FrameSource(src_path)
+        self.source.open()
         renderable_seq = self.get_renderable_sequence()
 
         log.debug('Rendering sequence:')
@@ -609,9 +611,10 @@ class Renderer(object):
                 # the region is being trimmed and shouldn't be rendered
                 continue
             else:
-                self.render_subregion(frame_src, s)
+                self.render_subregion(s)
 
         # cleanup
+        self.source.close()
         if self.show_preview:
             cv2.destroyAllWindows()
         self.close_pipe(self.render_pipe)
