@@ -39,8 +39,8 @@ class FrameSource(object):
         if idx < 0 or idx > self.frames - 1:
             msg = 'seeked out of frame range [0,%s]'.format(self.frames - 1)
             raise IndexError(msg)
-        # do seek and updat the position
-        self.src.set(cv2.cv.CV_CAP_PROP_POS_FRAMES, idx)
+        # do seek and update the position
+        self.idx = idx
 
     def read(self):
         # reads frame at `self.idx` and returns it
