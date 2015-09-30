@@ -54,8 +54,12 @@ class VideoSequence(object):
 
 class Subregion(object):
     def __init__(self, ta, tb):
-        # ta should be <  0
-        # ta should be >= tb
+        # ta should be >= 0
+        # ta should be <= tb
+        if ta < 0:
+            raise ValueError('ta={} < 0'.format(ta))
+        if ta > tb:
+            raise ValueError('ta={} >= tb={}'.format(ta, tb))
         # start and end time, frame, relative position:
         self.ta = ta
         self.tb = tb
