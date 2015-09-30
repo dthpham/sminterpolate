@@ -50,7 +50,7 @@ class FrameSource(object):
             return None
         rc, fr = self.src.read()
         if rc is not True:
-            msg = 'unable to read frame at idx %s'.format(self.idx)
+            msg = 'unable to read frame at idx=%s'.format(self.idx)
             raise RuntimeError(msg)
         return fr
 

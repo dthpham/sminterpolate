@@ -15,7 +15,7 @@ from butterflow.sequence import VideoSequence, RenderSubregion
 
 NO_OCL_WARNING = 'No compatible OCL devices detected. Check your OpenCL '\
                  'installation.'
-NO_VIDEO_SPECIFIED_WARNING = 'No input video specified'
+NO_VIDEO_SPECIFIED = 'Error: no input video specified'
 
 
 def main():
@@ -37,7 +37,7 @@ def main():
 
     gen.add_argument('-h', '--help', action='help',
                      help='Show this help message and exit')
-    gen.add_argument('-V', '--version', action='store_true',
+    gen.add_argument('--version', action='store_true',
                      help='Show program\'s version number and exit')
     gen.add_argument('-i', '--inspect', action='store_true',
                      help='Show video information and exit')
@@ -153,7 +153,7 @@ def main():
 
     if args.rm_cache:
         rm_cache()
-        print('cache cleared')
+        print('Cache cleared')
         return 0
 
     have_ocl = ocl.ocl_device_available()
@@ -175,28 +175,28 @@ def main():
 
     src_path = args.video
     if src_path is None:
-        print(NO_VIDEO_SPECIFIED_WARNING)
+        print(NO_VIDEO_SPECIFIED)
         return 1
 
     if not os.path.exists(args.video):
-        print('Video does not exist at path')
+        print('Error: video does not exist at path')
         return 1
 
     try:
         vid_info = avinfo.get_av_info(args.video)
-    except Exception:
-        log.error('Could not get video information:', exc_info=True)
+    except Exception as e:
+        print('Error: %s' % e)
         return 1
 
     if args.inspect:
         if args.video:
             avinfo.print_av_info(args.video)
         else:
-            print(NO_VIDEO_SPECIFIED_WARNING)
+            print(NO_VIDEO_SPECIFIED)
         return 0
 
     if not vid_info['v_stream_exists']:
-        log.error('No video stream detected')
+        print('Error: no video stream detected')
         return 1
 
     # make subregions
@@ -210,7 +210,7 @@ def main():
                                              vid_info['frames'],
                                              args.sub_regions)
     except Exception as e:
-        log.error('Bad subregion string: %s' % e)
+        print('Bad subregion string: %s' % e)
         return 1
 
     # set playback rate
@@ -223,7 +223,7 @@ def main():
         else:
             rate = rate_from_str(args.playback_rate, src_rate)
     except Exception as e:
-        log.error('Bad playback rate: %s' % e)
+        print('Bad playback rate: %s' % e)
         return 1
     if rate != src_rate:
         log.warning('rate : src_rate=%s rate=%s', src_rate, rate)
@@ -232,7 +232,7 @@ def main():
     try:
         w, h = w_h_from_str(args.video_scale, vid_info['w'], vid_info['h'])
     except Exception as e:
-        log.error('Bad video scale: %s' % e)
+        print('Bad video scale: %s' % e)
         return 1
 
     # make functions that will generate flows and interpolate frames
@@ -348,9 +348,10 @@ def validate_chars_in_set(ch_set):
                 if isinstance(v, str):
                     strs.append(v)
             for s in strs:
-                for ch in s.strip():
+                for i, ch in enumerate(s):
                     if ch not in ch_set:
-                        raise ValueError('unknown char `{}`'.format(ch))
+                        msg = 'unknown char `{}` at idx={}'.format(ch, i)
+                        raise ValueError(msg)
             return f(*args, **kwargs)
         return wrapped_f
     return wrapper
@@ -385,9 +386,7 @@ def w_h_from_str(string, source_width, source_height):
     # don't auto round when using the `w:h` syntax (with no -1 components)
     # because the user may not expect the changes
     if math.fmod(w, 2) != 0 or math.fmod(h, 2) != 0:
-        msg = 'size {width}x{height}, components not divisible by two'.\
-            format(width=w, height=h)
-        raise ValueError(msg)
+        raise ValueError('components not divisible by two')
     return w, h
 
 
@@ -405,7 +404,7 @@ def rate_from_str(string, source_rate):
     else:  # got a singular integer or float
         rate = float(string)
     if rate <= 0:
-        raise ValueError('invalid frame rate value: {}'.format(rate))
+        raise ValueError('invalid frame rate value')
     return rate
 
 
@@ -440,6 +439,7 @@ def time_str_to_ms(time):
     return (hr * 3600 + minute * 60 + sec) * 1000.0
 
 
+@validate_chars_in_set(string.digits + '=./' + 'spdurfbtw')
 def parse_tval_str(string):
     # extract values from TARGET=VALUE string
     # target can be fps, dur, spd, or btw
@@ -456,6 +456,7 @@ def parse_tval_str(string):
     return tgt, val
 
 
+@validate_chars_in_set(string.digits + 'ab,=./:' + 'spdurfbtw')
 def sub_from_str(string):
     # returns a subregion from string
     # input syntax:
@@ -471,6 +472,7 @@ def sub_from_str(string):
     return sub
 
 
+@validate_chars_in_set(string.digits + ',=./' + 'spdurfbtwl')
 def sub_from_str_full_key(string, duration):
     # returns a subregion from string with the `full` keyword
     # input syntax:
@@ -483,9 +485,10 @@ def sub_from_str_full_key(string, duration):
         setattr(sub, tgt, val)
         return sub
     else:
-        raise ValueError('full key not found')
+        raise ValueError('`full` key not found')
 
 
+@validate_chars_in_set(string.digits + 'ab,=./:' + 'spdurfbtwen')
 def sub_from_str_end_key(string, duration):
     # returns a subregion from string with the `end` keyword
     # input syntax:
@@ -498,10 +501,10 @@ def sub_from_str_end_key(string, duration):
         string = string.replace('end', str(duration / 1000.0))
         return sub_from_str(string)
     else:
-        raise ValueError('end key not found')
+        raise ValueError('`end` key not found')
 
 
-@validate_chars_in_set(string.digits + 'ab,.=/:' + 'spdurfbtwlen')
+@validate_chars_in_set(string.digits + 'ab,=./:' + 'spdurfbtwlen')
 def sequence_from_str(duration, frames, string):
     # return a vid sequence from -s <subregion>:<subregion>...
     seq = VideoSequence(duration, frames)
@@ -520,7 +523,8 @@ def sequence_from_str(duration, frames, string):
         else:
             ch_before_a = string[i - 1]
             if ch_before_a != ':':
-                raise ValueError('bad separator: {}'.format(ch_before_a))
+                msg = 'invalid separator `{}` at idx={}'.format(ch_before_a, i)
+                raise ValueError(msg)
     # look for `:a` which is the start of a new subregion
     newsubstrs = []
     substrs = string.split(':a')

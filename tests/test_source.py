@@ -16,9 +16,6 @@ from butterflow.source import FrameSource
 def mk_sample_video(dst_path, duration, w, h, rate):
     if os.path.exists(dst_path):
         return
-    if rate is not None:
-        if not isinstance(rate, fractions.Fraction):
-            raise ValueError
     call = [
         settings['avutil'],
         '-loglevel', 'error',
@@ -43,8 +40,7 @@ def av_frame_at_idx(video, dst_path, idx):
         '-vframes', '1',
         dst_path])
     if get_fr_proc == 1:
-        raise RuntimeError(
-            'failed to extract frame at idx {}'.format(idx))
+        raise RuntimeError('failed to extract frame at idx={}'.format(idx))
     return cv2.imread(dst_path)
 
 

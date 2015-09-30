@@ -36,7 +36,7 @@ get_av_info(PyObject *self, PyObject *arg) {
 
     int rc = avformat_open_input(&format_ctx, path, NULL, NULL);
     if (rc != 0) {
-        PyErr_SetString(PyExc_RuntimeError, "could not retreive info");
+        PyErr_SetString(PyExc_RuntimeError, "could not open file");
         return (PyObject*)NULL;
     }
 

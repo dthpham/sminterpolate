@@ -41,14 +41,12 @@ class VideoSequence(object):
             x.ta >= 0 and x.tb <= self.duration and \
             x.fa >= 0 and x.fb <= self.frames
         if not in_bounds(s):
-            msg = 'subregion not in bounds t[0,{}],f[0,{}]'.format(self.duration,
-                                                                   self.frames)
-            raise RuntimeError(msg)
+            raise RuntimeError('not in time bounds')
         for x in self.subregions:
             if x is s:
                 continue
             elif s.intersects(x):
-                raise RuntimeError('subregion intersects existing region')
+                raise RuntimeError('regions overlap')
         return True
 
 
@@ -57,9 +55,9 @@ class Subregion(object):
         # ta should be >= 0
         # ta should be <= tb
         if ta < 0:
-            raise ValueError('ta={} < 0'.format(ta))
+            raise ValueError('a < 0')
         if ta > tb:
-            raise ValueError('ta={} >= tb={}'.format(ta, tb))
+            raise ValueError('a > b')
         # start and end time, frame, relative position:
         self.ta = ta
         self.tb = tb

@@ -120,7 +120,7 @@ class Renderer(object):
             stdin=subprocess.PIPE
         )
         if pipe == 1:
-            raise RuntimeError('could not create pipe')
+            raise RuntimeError('render failed')
         return pipe
 
     def close_pipe(self, pipe):

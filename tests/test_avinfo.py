@@ -14,8 +14,6 @@ from butterflow import avinfo
 def mk_sample_wav_file(dst_path, duration):
     if os.path.exists(dst_path):
         return
-    if not dst_path.lower().endswith('.wav'):
-        raise ValueError
 
     import struct
     import wave
@@ -36,10 +34,6 @@ def mk_sample_wav_file(dst_path, duration):
 def mk_sample_video(dst_path, duration, w, h, rate, sar=None, dar=None):
     if os.path.exists(dst_path):
         return
-    for arg in [rate, sar, dar]:
-        if arg is not None:
-            if not isinstance(arg, fractions.Fraction):
-                raise ValueError
     call = [
         settings['avutil'],
         '-loglevel', 'error',

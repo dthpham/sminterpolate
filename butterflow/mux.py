@@ -13,10 +13,6 @@ ATEMPO_MAX = 2.0
 
 
 def extract_audio(video, destination, start, end, spd=1.0):
-    if not destination.endswith(settings['a_container']):
-        msg = 'destination doesn\'t have .{} extension'.format(
-                settings['a_container'])
-        raise ValueError(msg)
     av_info = avinfo.get_av_info(video)
     if not av_info['a_stream_exists']:
         raise RuntimeError('no audio stream found')
@@ -46,7 +42,7 @@ def extract_audio(video, destination, start, end, spd=1.0):
     ])
     proc = subprocess.call(call)
     if proc == 1:
-        raise RuntimeError('extract failed')
+        raise RuntimeError('extraction failed')
     # change tempo
     tempfile2 = '~{filename}.{spd}x.{ext}'.format(
         filename=filename,
@@ -94,15 +90,11 @@ def concat_files(destination, files):
     ]
     proc = subprocess.call(call)
     if proc == 1:
-        raise RuntimeError('merge failed')
+        raise RuntimeError('merge files failed')
     os.remove(listfile)
 
 
 def mux(video, audio, destination):
-    if not destination.endswith(settings['v_container']):
-        msg = 'doesn\'t have .{} extension'.format(
-                settings['v_container'])
-        raise ValueError(msg)
     tempfile = '~{vidname}+{audname}.{ext}'.format(
             vidname=os.path.splitext(os.path.basename(video))[0],
             audname=os.path.splitext(os.path.basename(audio))[0],
