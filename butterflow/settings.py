@@ -93,16 +93,28 @@ default = {
 # default loglevel is `info` for both encoders
 # options: none, error, warning, info, debug, plus `full` for x265
 if sys.platform.startswith('linux'):
-    # considered an unstable encoder?
+    # considered a work in progress and is under heavy development
+    # 50-75% more compression efficiency than x264
+    # retains same visual quality
     # for x265 options: http://x265.readthedocs.org/en/default/cli.html
     default['cv'] = 'libx265'
 else:
+    # uses gpu for some lookahead ops but does not mean the algos are optimized
+    # and encoding will be faster
     default['cv'] = 'libx264'
 default['enc_loglevel'] = 'error'
 
 # define location of files and directories
 default['out_path'] = os.path.join(os.getcwd(), 'output.mp4')
 
+# since value of `tempfile.tempdir` is `None` python will search std list of
+# dirs and will select the first one that the user can create a file in
+# See: https://docs.python.org/2/library/tempfile.html#tempfile.tempdir
+#
+# butterflow will write renders to a temp file in `tempdir` and will move it
+# to it's destination path when completed using `shutil.move()`. if the dst
+# is on the current filesystem then `os.rename()` is used, otherwise the file
+# is copied with `shutil.copy2` then removed
 tempdir = tempfile.gettempdir()
 default['tmp_dir'] = os.path.join(tempdir, 'butterflow-{}'.format(__version__))
 default['clb_dir'] = os.path.join(default['tmp_dir'], 'clb')

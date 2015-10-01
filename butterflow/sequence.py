@@ -6,37 +6,39 @@ class VideoSequence(object):
     def __init__(self, duration, frames):
         self.duration = float(duration)  # in milliseconds
         self.frames = frames             # total frames in the video
-        self.subregions = []
+        self.subregions = []  # only explicitly defined regions
 
     def add_subregion(self, s):
         # set relative position from 0 to 1 based on time
         s.ra = self.get_rel_position(s.ta)
         s.rb = self.get_rel_position(s.tb)
-        # set frame position
+        # set fr positions
         s.fa = self.get_nearest_frame(s.ta)
         s.fb = self.get_nearest_frame(s.tb)
-        # validate it with other subregions in the sequence
-        # append and sort based on the relative position
+        # validate it with other subregions in the sequence then append and
+        # sort based on rel position
         self.validate(s)
         self.subregions.append(s)
         self.subregions.sort(key=lambda x: (x.rb, x.ra),
                              reverse=False)
 
     def get_rel_position(self, t):
-        # returns a float, the relative position in the video from [0, 1]
+        # returns relative position in video from [0,1] given a time, it's a
+        # fraction of `duration`
         rel_pos = float(t) / self.duration
         return max(0.0, min(rel_pos, 1.0))
 
     def get_nearest_frame(self, t):
-        # index of frame, non-zero indexed so it starts at 1
+        # returns nearest frame from [1,self.frames-1] given a time. frs are
+        # non-zero indexed so it starts at 1
         fr_idx = int(self.get_rel_position(t) * self.frames + 0.5)
         return max(1, min(fr_idx, self.frames))
 
     def validate(self, s):
         # a subregion, x, is valid if and only if x's time is within bounds
         # [0, duration] and x's frame positions are within bounds [0, frames-1]
-        # and x doesn't already exist in the collection or intersect any other
-        # subregion.
+        # and x doesn't already exist in the collection of subregions or
+        # intersect any other subregion
         in_bounds = lambda x: \
             x.ta >= 0 and x.tb <= self.duration and \
             x.fa >= 0 and x.fb <= self.frames
@@ -52,13 +54,12 @@ class VideoSequence(object):
 
 class Subregion(object):
     def __init__(self, ta, tb):
-        # ta should be >= 0
-        # ta should be <= tb
-        if ta < 0:
+        if ta < 0:   # time can't be negative
             raise ValueError('a < 0')
-        if ta > tb:
+        if ta > tb:  # start time can't be greater than the end
             raise ValueError('a > b')
-        # start and end time, frame, relative position:
+        # start and end time, frame, relative position. values aren't bounded
+        # by anything since dur and fr cnt are unknown at this point
         self.ta = ta
         self.tb = tb
         self.fa = 0.0
