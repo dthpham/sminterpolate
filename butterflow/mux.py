@@ -51,7 +51,7 @@ def extract_audio(video, destination, start, end, spd=1.0):
     )
     tempfile2 = os.path.join(settings['tmp_dir'], tempfile2)
     atempo_chain = []
-    for f in get_atempo_factors(spd):
+    for f in atempo_factors_for_spd(spd):
         atempo_chain.append('atempo={}'.format(f))
     call = [
         settings['avutil'],
@@ -115,24 +115,18 @@ def mux(video, audio, destination):
     shutil.move(tempfile, destination)
 
 
-def get_atempo_factors(spd):
-    factors = []
-    if spd < ATEMPO_MIN:
-        d, _ = divmod(ATEMPO_MIN, spd)
-        d = int(d)
-        for x in range(d):
-            factors.append(ATEMPO_MIN)
-        x = math.pow(ATEMPO_MIN, d)
-        y = spd / x
-        factors.append(y)
-    elif spd > ATEMPO_MAX:
-        d, _ = divmod(spd, ATEMPO_MAX)
-        d = int(d)
-        for x in range(d):
-            factors.append(ATEMPO_MAX)
-        x = math.pow(ATEMPO_MAX, d)
-        y = spd / x
-        factors.append(y)
-    else:
-        factors.append(spd)
-    return factors
+def atempo_factors_for_spd(s):
+    def solve(s, limit):
+        facs = []
+        # apply log rule to solve for exponent
+        x = int(math.log(s) / math.log(limit))
+        for i in range(x):
+            facs.append(limit)
+        y = s * 1.0 / math.pow(limit, x)
+        facs.append(y)
+        return facs
+    if s < ATEMPO_MIN:
+        return solve(s, ATEMPO_MIN)
+    elif s > ATEMPO_MAX:
+        return solve(s, ATEMPO_MAX)
+    return [s]
