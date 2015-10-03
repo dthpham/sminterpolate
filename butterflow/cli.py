@@ -235,16 +235,6 @@ def main():
                          args.iters, args.poly_n, args.poly_s, args.fast_pyr,
                          flags)
 
-    # to pass to butterflow.draw.draw_debug_text
-    flow_kwargs = collections.OrderedDict([
-        ('Pyr', args.pyr_scale),
-        ('L', args.levels),
-        ('W', args.winsize),
-        ('I', args.iters),
-        ('PolyN', args.poly_n),
-        ('PolyS', args.poly_s),
-        ('Filt', flags)])
-
     renderer = Renderer(
         args.output_path,
         vid_info,
@@ -259,7 +249,6 @@ def main():
         args.no_preview,
         args.add_info,
         args.text_type,
-        flow_kwargs,
         args.mux)
 
     # set the number of threads and run

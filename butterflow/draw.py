@@ -60,7 +60,7 @@ def draw_progress_bar(img, p):
         draw_rect(bar_v1, bar_v2)
 
 
-def draw_debug_text(img, text_type, rate, flow_kwargs, tot_frs_wrt, pair_a,
+def draw_debug_text(img, text_type, rate, tot_frs_wrt, pair_a,
                     pair_b, btw_idx, fr_type, is_dup, tgt_frs, frs_wrt,
                     sub, sub_idx, subs_to_render, drp_every,
                     dup_every, src_seen, frs_int, frs_drp, frs_dup):
@@ -93,18 +93,6 @@ def draw_debug_text(img, text_type, rate, flow_kwargs, tot_frs_wrt, pair_a,
           "Res: {},{}\n"\
           "Playback Rate: {:.2f} fps\n"
     txt = txt.format(__version__, sys.platform, w, h, rate)
-    # add flow args text
-    if flow_kwargs is not None:
-        flow_format = ''
-        i = 0
-        for k, v in flow_kwargs.items():
-            flow_format += "{}: {}".format(k, v)
-            if i == len(flow_kwargs) - 1:
-                flow_format += '\n\n'
-            else:
-                flow_format += ', '
-            i += 1
-        txt += flow_format
     # text at the bottom left
     txt += "Frame: {}\n"\
            "Pair Index: {}, {}, {}\n"\

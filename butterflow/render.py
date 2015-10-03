@@ -25,8 +25,7 @@ class Renderer(object):
         flow_func=settings['flow_func'],
         interpolate_func=settings['interpolate_func'],
         w=None, h=None, lossless=False, trim=False, show_preview=True,
-        add_info=False, text_type=settings['text_type'],
-        flow_kwargs=None, mux=False):
+        add_info=False, text_type=settings['text_type'], mux=False):
         # user args
         self.dst_path         = dst_path      # path to write the render
         self.vid_info         = vid_info      # information from avinfo
@@ -41,7 +40,6 @@ class Renderer(object):
         self.show_preview     = show_preview  # show preview window?
         self.add_info         = add_info      # embed debug info?
         self.text_type        = text_type     # overlay text type
-        self.flow_kwargs      = flow_kwargs   # will pass to draw_debug_text
         self.mux              = mux           # mux?
         self.render_pipe      = None
         self.source           = None          # the frame source
@@ -419,7 +417,6 @@ class Renderer(object):
                         draw_debug_text(fr,
                                         self.text_type,
                                         self.playback_rate,
-                                        self.flow_kwargs,
                                         self.tot_frs_wrt,
                                         pair_a,
                                         pair_b,
