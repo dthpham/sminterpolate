@@ -49,21 +49,13 @@ class Renderer(object):
         self.tot_frs_drp      = 0
         self.subs_to_render   = 0
         self.curr_sub_idx     = 0             # region being worked on
-        # choose the best scaler
-        new_res = w * h
-        src_res = vid_info['w'] * vid_info['h']
-        if new_res == src_res:
-            self.scaler = None
-        elif new_res < src_res:
-            self.scaler = settings['scaler_dn']
-        else:
-            self.scaler = settings['scaler_up']
         # set the window title
         filename = os.path.basename(vid_info['path'])
         self.window_title = '{} - Butterflow'.format(filename)
         self.sequence = sequence
         self.flow_function = flow_function
         self.interpolate_function = interpolate_function
+        self.scaler = settings['scaler_dn']
 
     def make_pipe(self, dst_path, rate):
         vf = []
