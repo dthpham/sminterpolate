@@ -209,7 +209,7 @@ set_cache_path(PyObject *self, PyObject *arg) {
     char *cache_path = PyString_AsString(arg);
     setBinaryPath(cache_path);
 
-    return PyBool_FromLong(0);
+    Py_RETURN_NONE;
 }
 
 static PyObject*

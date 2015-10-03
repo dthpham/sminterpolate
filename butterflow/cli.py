@@ -168,8 +168,7 @@ def main():
         print(NO_OCL_WARNING)
         return 1
 
-    src_path = args.video
-    if src_path is None:
+    if args.video is None:
         print(NO_VIDEO_SPECIFIED)
         return 1
 
@@ -177,18 +176,21 @@ def main():
         print('Error: video does not exist at path')
         return 1
 
+    if args.inspect:
+        if args.video:
+            try:
+                avinfo.print_av_info(args.video)
+            except Exception as e:
+                print('Error: %s' % e)
+        else:
+            print(NO_VIDEO_SPECIFIED)
+        return 0
+
     try:
         vid_info = avinfo.get_av_info(args.video)
     except Exception as e:
         print('Error: %s' % e)
         return 1
-
-    if args.inspect:
-        if args.video:
-            avinfo.print_av_info(args.video)
-        else:
-            print(NO_VIDEO_SPECIFIED)
-        return 0
 
     if not vid_info['v_stream_exists']:
         print('Error: no video stream detected')
@@ -196,14 +198,8 @@ def main():
 
     # set subregions
     try:
-        vid_sequence = None
-        if args.sub_regions is None:
-            vid_sequence = VideoSequence(vid_info['duration'],
-                                         vid_info['frames'])
-        else:
-            vid_sequence = sequence_from_str(vid_info['duration'],
-                                             vid_info['frames'],
-                                             args.sub_regions)
+        vid_sequence = sequence_from_str(vid_info['duration'],
+                                         vid_info['frames'], args.sub_regions)
     except Exception as e:
         print('Bad subregion string: %s' % e)
         return 1
@@ -212,11 +208,7 @@ def main():
     src_rate = (vid_info['rate_n'] * 1.0 /
                 vid_info['rate_d'])
     try:
-        rate = None
-        if args.playback_rate is None:
-            rate = src_rate
-        else:
-            rate = rate_from_str(args.playback_rate, src_rate)
+        rate = rate_from_str(args.playback_rate, src_rate)
     except Exception as e:
         print('Bad playback rate: %s' % e)
         return 1
@@ -384,7 +376,8 @@ def w_h_from_str(string, source_width, source_height):
 
 @validate_chars_in_set(string.digits + '/x.')
 def rate_from_str(string, source_rate):
-    string = str(string)
+    if string is None:
+        return source_rate
     if '/' in string:  # got a fraction
         # can't create Fraction object then cast to a float because it
         # doesn't support non-rational numbers
@@ -500,6 +493,8 @@ def sub_from_str_end_key(string, duration):
 def sequence_from_str(duration, frames, string):
     # return a vid sequence from -s <subregion>:<subregion>...
     seq = VideoSequence(duration, frames)
+    if string is None:
+        return seq
     # check for bad separators
     # if there is a char before `a` that is not `:` like `,`
     def find_char(str, ch):

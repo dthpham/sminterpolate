@@ -60,6 +60,9 @@ class CliTestCase(unittest.TestCase):
         with self.assertRaises(ValueError):
             w_h_from_str('-2:360', 640, 360)
 
+    def test_rate_from_str_is_none(self):
+        self.assertEqual(rate_from_str(None, 30), 30)
+
     def test_rate_from_str_integer_or_float(self):
         self.assertEqual(rate_from_str('24', 30), 24)
         self.assertEqual(rate_from_str('25.0', 30), 25)
@@ -257,6 +260,10 @@ class CliTestCase(unittest.TestCase):
             vs = sequence_from_str(5*1000,5*24,
                 'full,fps=400:'
                 'full,spd=0.5')
+
+    def test_sequence_from_str_is_none(self):
+        vs = sequence_from_str(1,30,None)
+        self.assertEqual(len(vs.subregions), 0)
 
     def test_sequence_from_str_general(self):
         vs = sequence_from_str(5*1000,5*24,
