@@ -164,12 +164,7 @@ def main():
             print(NO_OCL_WARNING)
         return 0
 
-    if have_ocl:
-        clb_dir = settings.default['clb_dir']
-        if not os.path.exists(clb_dir):
-            os.makedirs(clb_dir)
-        motion.set_cache_path(clb_dir + os.sep)
-    else:
+    if not have_ocl:
         print(NO_OCL_WARNING)
         return 1
 
