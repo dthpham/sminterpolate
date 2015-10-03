@@ -56,7 +56,7 @@ default = {
     'fast_pyr':       False,
     'flow_filter':    'box',
     # -1 is max threads and it's the opencv default
-    'ocv_threads':    1*-1,
+    'ocv_threads':    -1,  # 0 will disable threading optimizations
     # milliseconds to display image in preview window
     'imshow_ms':      1,
     # debug text settings

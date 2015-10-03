@@ -4,25 +4,18 @@
 import os
 import sys
 import argparse
-import collections
 import math
 import string
-from cv2 import calcOpticalFlowFarneback as sw_farneback_optical_flow
-from butterflow.__init__ import __version__
 from butterflow import avinfo, motion, ocl, settings
 from butterflow.render import Renderer
 from butterflow.sequence import VideoSequence, RenderSubregion
 
-NO_OCL_WARNING = 'No compatible OCL devices detected. Check your OpenCL '\
-                 'installation.'
+NO_OCL_WARNING = 'Error: No compatible OCL devices detected. Check your '\
+                 'OpenCL installation.'
 NO_VIDEO_SPECIFIED = 'Error: no input video specified'
 
 
 def main():
-    import logging
-    logging.basicConfig(level=settings.default['loglevel_a'],
-                        format='%(levelname)-7s: %(message)s')
-
     par = argparse.ArgumentParser(usage='butterflow [options] [video]',
                                   add_help=False)
     req = par.add_argument_group('Required arguments')
@@ -131,19 +124,25 @@ def main():
                      help='Specify which filter to use for optical flow '
                      'estimation, (default: %(default)s)')
 
-    # make args that start with a negative number valid
-    # needed for the -vs option
+    # add a space to args that start with a `-` char to avoid an unexpected
+    # argument error. needed for the `--video-scale` option
     for i, arg in enumerate(sys.argv):
         if (arg[0] == '-') and arg[1].isdigit():
             sys.argv[i] = ' ' + arg
 
     args = par.parse_args()
 
+    # setup app wide logger
+    import logging
+    logging.basicConfig(level=settings.default['loglevel_a'],
+                        format='%(levelname)-7s: %(message)s')
+
     log = logging.getLogger('butterflow')
     if args.verbose:
         log.setLevel(settings.default['loglevel_b'])
 
     if args.version:
+        from butterflow.__init__ import __version__
         print(__version__)
         return 0
 
@@ -157,6 +156,7 @@ def main():
         return 0
 
     have_ocl = ocl.ocl_device_available()
+
     if args.devices:
         if have_ocl:
             ocl.print_ocl_devices()
@@ -199,7 +199,7 @@ def main():
         print('Error: no video stream detected')
         return 1
 
-    # make subregions
+    # set subregions
     try:
         vid_sequence = None
         if args.sub_regions is None:
@@ -225,8 +225,8 @@ def main():
     except Exception as e:
         print('Bad playback rate: %s' % e)
         return 1
-    if rate != src_rate:
-        log.warning('rate : src_rate=%s rate=%s', src_rate, rate)
+    if rate < src_rate:
+        log.warning('rate=%s < src_rate=%s', rate, src_rate)
 
     # set video size
     try:
@@ -236,8 +236,9 @@ def main():
         return 1
 
     # make functions that will generate flows and interpolate frames
+    from cv2 import calcOpticalFlowFarneback  # sw version
     farneback_method = motion.ocl_farneback_optical_flow if have_ocl \
-        else sw_farneback_optical_flow
+        else calcOpticalFlowFarneback
     flags = 0
     if args.flow_filter == 'gaussian':
         import cv2
@@ -289,18 +290,15 @@ def main():
             renderer.tot_src_frs,
             renderer.tot_frs_int,
             renderer.tot_frs_dup,
-            renderer.tot_frs_drp
-        ))
+            renderer.tot_frs_drp))
         print('Write ratio: {}/{}, ({:.2f}%)'.format(
             renderer.tot_frs_wrt,
             renderer.tot_tgt_frs,
-            renderer.tot_frs_wrt * 100.0 / renderer.tot_tgt_frs,
-        ))
+            renderer.tot_frs_wrt * 100.0 / renderer.tot_tgt_frs))
         print('Butterflow took {:.3g} minutes, done.'.format(tot_time / 60))
-        # sizeit and show the diff
+        # get new size and show the diff
         sz_in_mb = lambda x: \
             float(os.path.getsize(x)) / (1 << 20)
-
         new = sz_in_mb(args.output_path)
         old = sz_in_mb(args.video)
         log.debug('out file size: {:.3g} MB ({:+.3g} MB)'.format(new,
@@ -311,7 +309,6 @@ def main():
 
 
 def print_cache_info():
-    # print cache info
     # clb_dir exists inside the tmp_dir
     cache_dir = settings.default['tmp_dir']
     num_files = 0
@@ -329,7 +326,7 @@ def print_cache_info():
 
 
 def rm_cache():
-    # delete contents of cache, including the clb_dir
+    # delete contents of the cache, including the clb_dir
     cache_dir = settings.default['tmp_dir']
     if os.path.exists(cache_dir):
         import shutil
@@ -337,7 +334,7 @@ def rm_cache():
 
 
 def validate_chars_in_set(ch_set):
-    # ensures all chars in args that are strings are an allowable char set
+    # decorator, ensures all chars in string args are in a char set
     def wrapper(f):
         def wrapped_f(*args, **kwargs):
             strs = []
@@ -422,18 +419,18 @@ def time_str_to_ms(time):
     if time.count(':') > 2:
         raise ValueError('invalid time format')
     val = time.split(':')
-    val_len = len(val)
+    n = len(val)
     # going backwards in the list
     # get secs.xxx portion
-    if val_len >= 1:
+    if n >= 1:
         if val[-1] != '':
             sec = float(val[-1])
     # get mins portion
-    if val_len >= 2:
+    if n >= 2:
         if val[-2] != '':
             minute = float(val[-2])
     # get hrs portion
-    if val_len == 3:
+    if n == 3:
         if val[-3] != '':
             hr = float(val[-3])
     return (hr * 3600 + minute * 60 + sec) * 1000.0
