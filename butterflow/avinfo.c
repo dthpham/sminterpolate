@@ -158,7 +158,7 @@ print_av_info(PyObject *self, PyObject *arg) {
     PyObject *py_info = get_av_info(self, arg);
 
     if (py_info == NULL) {  /* something bad happened */
-        Py_RETURN_NONE;
+        return (PyObject*)NULL;
     }
 
     /* get list of streams as a string */
