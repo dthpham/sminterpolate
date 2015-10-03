@@ -576,8 +576,8 @@ class Renderer(object):
 
         log.debug('Rendering sequence:')
         for s in renderable_seq.subregions:
-            ra = renderable_seq.get_rel_position(s.ta)
-            rb = renderable_seq.get_rel_position(s.tb)
+            ra = renderable_seq.relative_position(s.ta)
+            rb = renderable_seq.relative_position(s.tb)
             log.debug(
                 'subregion: {},{},{} {:.3g},{:.3g},{:.3g} {:.3g},{:.3g},{:.3g}'.
                 format(s.fa,

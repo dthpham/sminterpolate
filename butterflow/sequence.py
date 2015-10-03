@@ -10,23 +10,23 @@ class VideoSequence(object):
 
     def add_subregion(self, s):
         # append to collection of subregions, sort based on frame position
-        s.fa = self.get_nearest_frame(s.ta)
-        s.fb = self.get_nearest_frame(s.tb)
+        s.fa = self.nearest_frame(s.ta)
+        s.fb = self.nearest_frame(s.tb)
         self.validate(s)
         self.subregions.append(s)
         self.subregions.sort(key=lambda x: (x.fb, x.fa),
                              reverse=False)
 
-    def get_rel_position(self, t):
-        # returns relative position in video from [0,1] given a time, it's a
+    def relative_position(self, t):
+        # returns the relative position in video from [0,1] given a time; a
         # fraction of `duration`
         rel_pos = float(t) / self.duration
         return max(0.0, min(rel_pos, 1.0))
 
-    def get_nearest_frame(self, t):
+    def nearest_frame(self, t):
         # returns the nearest zero-indexed frame, rounded upwards, from
         # [0, frames-1] given a time
-        fr_idx = int(self.get_rel_position(t) * self.frames + 0.5) - 1
+        fr_idx = int(self.relative_position(t) * self.frames + 0.5) - 1
         return max(0, min(fr_idx, self.frames - 1))
 
     def validate(self, s):
