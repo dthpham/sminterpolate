@@ -249,13 +249,10 @@ class Renderer(object):
         frs_fin_dup = 0  # num of frames duped on the final run
         runs = 0  # num of runs through the loop
 
-        # frames are zero based indexed
-        fa_idx = fa - 1   # seek pos of the frame in the video
-
         fr_1 = None
-        self.source.seek_to_frame(fa_idx)
-        # log.debug('seek: %s', self.source.idx + 1)  # seek pos of first frame
-        # log.debug('read: %s', self.source.idx + 1)  # next frame to be read
+        self.source.seek_to_frame(fa)
+        # log.debug('seek: %s', self.source.idx)  # seek pos of first frame
+        # log.debug('read: %s', self.source.idx)  # next frame to be read
         fr_2 = self.source.read()       # first frame in the region
 
         # scale down now but wait after drawing on the frame before scaling up
@@ -271,8 +268,8 @@ class Renderer(object):
             # at least one frame pair is available. num of runs is equal to the
             # the total number of frames in the region - 1. range will run
             # from [0,runs)
-            self.source.seek_to_frame(fa_idx + 1)  # seek to the next frame
-            # log.debug('seek: %s', self.source.idx + 1)
+            self.source.seek_to_frame(fa + 1)  # seek to the next frame
+            # log.debug('seek: %s', self.source.idx)
             runs = reg_len
 
         log.debug('wrt_one: %s', fin_run)  # only write 1 frame
@@ -280,7 +277,7 @@ class Renderer(object):
 
         for run_idx in range(0, runs):
             # which frame in the video is being worked on
-            pair_a = fa_idx + run_idx + 1
+            pair_a = fa + run_idx
             pair_b = pair_a + 1 if run_idx + 1 < runs else pair_a
 
             # if working on the last frame, write it out because we cant
@@ -297,7 +294,7 @@ class Renderer(object):
                 # begin interpolating frames between pairs
                 # the frame being read should always be valid otherwise break
                 try:
-                    # log.debug('read: %s', self.source.idx + 1)
+                    # log.debug('read: %s', self.source.idx)
                     fr_2 = self.source.read()
                     src_gen += 1
                 except Exception:
@@ -368,9 +365,9 @@ class Renderer(object):
                                     len(int_frs), cmp_int_each_go)
 
                     frs_int += len(int_frs)
-                    frs_to_wrt.append((fr_1, 'source', 1))
+                    frs_to_wrt.append((fr_1, 'source', 0))
                     for x, fr in enumerate(int_frs):
-                        frs_to_wrt.append((fr, 'interpolated', x + 2))
+                        frs_to_wrt.append((fr, 'interpolated', x + 1))
 
             for (fr, fr_type, btw_idx) in frs_to_wrt:
                 wrk_idx += 1
@@ -497,7 +494,7 @@ class Renderer(object):
             # make a subregion from 0 to vid duration if there are no regions
             # in the video sequence. only the framerate could be changing
             fa, ta = (0, 0)
-            fb, tb = (frs, dur)
+            fb, tb = (frs - 1, dur)
             s = RenderSubregion(ta, tb)
             s.fa = fa
             s.fb = fb
@@ -515,8 +512,8 @@ class Renderer(object):
             cut_points = set([])
             # add start and end of video cutting points
             # (fr index, dur in milliseconds)
-            cut_points.add((1, 0))      # frame 0 and time 0
-            cut_points.add((frs, dur))  # last frame and end time
+            cut_points.add((0, 0))      # frame 0 and time 0
+            cut_points.add((frs - 1, dur))  # last frame and end time
 
             # add current subregions
             for s in self.vid_seq.subregions:
@@ -588,6 +585,8 @@ class Renderer(object):
 
         log.debug('Rendering sequence:')
         for s in renderable_seq.subregions:
+            ra = renderable_seq.get_rel_position(s.ta)
+            rb = renderable_seq.get_rel_position(s.tb)
             log.debug(
                 'subregion: {},{},{} {:.3g},{:.3g},{:.3g} {:.3g},{:.3g},{:.3g}'.
                 format(s.fa,
@@ -596,9 +595,9 @@ class Renderer(object):
                        s.ta / 1000,0,
                        s.tb / 1000.0,
                        (s.tb - s.ta) / 1000.0,
-                       s.ra,
-                       s.rb,
-                       s.rb - s.ra))
+                       ra,
+                       rb,
+                       rb - ra))
 
         # start rendering subregions
         self.subs_to_render = len(renderable_seq.subregions)

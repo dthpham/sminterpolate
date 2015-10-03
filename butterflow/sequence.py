@@ -29,10 +29,10 @@ class VideoSequence(object):
         return max(0.0, min(rel_pos, 1.0))
 
     def get_nearest_frame(self, t):
-        # returns nearest frame from [1,self.frames-1] given a time. frs are
-        # non-zero indexed so it starts at 1
-        fr_idx = int(self.get_rel_position(t) * self.frames + 0.5)
-        return max(1, min(fr_idx, self.frames))
+        # returns the nearest zero-indexed frame, rounded upwards, from
+        # [0, frames-1] given a time
+        fr_idx = int(self.get_rel_position(t) * self.frames + 0.5) - 1
+        return max(0, min(fr_idx, self.frames - 1))
 
     def validate(self, s):
         # a subregion, x, is valid if and only if x's time is within bounds
@@ -41,7 +41,7 @@ class VideoSequence(object):
         # intersect any other subregion
         in_bounds = lambda x: \
             x.ta >= 0 and x.tb <= self.duration and \
-            x.fa >= 0 and x.fb <= self.frames
+            x.fa >= 0 and x.fb <= self.frames - 1
         if not in_bounds(s):
             raise RuntimeError('not in time bounds')
         for x in self.subregions:
