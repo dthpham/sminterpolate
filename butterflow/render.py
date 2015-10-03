@@ -49,9 +49,6 @@ class Renderer(object):
         self.tot_frs_drp      = 0
         self.subs_to_render   = 0
         self.curr_sub_idx     = 0             # region being worked on
-        # set the window title
-        filename = os.path.basename(vid_info['path'])
-        self.window_title = '{} - Butterflow'.format(filename)
         self.sequence = sequence
         self.flow_function = flow_function
         self.interpolate_function = interpolate_function
@@ -556,6 +553,7 @@ class Renderer(object):
         if self.show_preview:
             # to get opengl on osx you have to build opencv --with-opengl
             # TODO: butterflow.rb and wiki needs to be updated for this
+            self.window_title = '{} - Butterflow'.format(src_name)
             flag = cv2.WINDOW_OPENGL
             cv2.namedWindow(self.window_title, flag)
             cv2.resizeWindow(self.window_title, self.w, self.h)
