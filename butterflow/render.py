@@ -56,11 +56,6 @@ class Renderer(object):
     def make_pipe(self, dst_path, rate):
         vf = []
         vf.append('format=yuv420p')
-        # keep the original display aspect ratio
-        # see: https://ffmpeg.org/ffmpeg-filters.html#setdar_002c-setsar
-        if self.scaler is None:
-            vf.append('setdar={}:{}'.format(self.vid_info['dar_n'],
-                                            self.vid_info['dar_d']))
         call = [
             settings['avutil'],
             '-loglevel', settings['av_loglevel'],
