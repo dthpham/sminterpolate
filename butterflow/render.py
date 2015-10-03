@@ -26,32 +26,31 @@ class Renderer(object):
         interpolate_function=settings['interpolate_function'],
         w=None, h=None, lossless=False, trim=False, show_preview=True,
         add_info=False, text_type=settings['text_type'], mux=False):
-        # user args
-        self.dst_path         = dst_path      # path to write the render
-        self.vid_info         = vid_info      # information from avinfo
-        self.playback_rate    = float(playback_rate)
-        self.w                = w
-        self.h                = h
-        self.lossless         = lossless      # encode losslessly?
-        self.trim             = trim          # trim extra subregion?
-        self.show_preview     = show_preview  # show preview window?
-        self.add_info         = add_info      # embed debug info?
-        self.text_type        = text_type     # overlay text type
-        self.mux              = mux           # mux?
-        self.render_pipe      = None
-        self.source           = None          # the frame source
-        # keep track of progress
-        self.tot_frs_wrt      = 0             # total frames written
-        self.tot_tgt_frs      = 0
-        self.tot_src_frs      = 0             # total source frames read
-        self.tot_frs_int      = 0             # total interpolated
-        self.tot_frs_dup      = 0
-        self.tot_frs_drp      = 0
-        self.subs_to_render   = 0
-        self.curr_sub_idx     = 0             # region being worked on
+
+        self.dst_path = dst_path
+        self.vid_info = vid_info
         self.sequence = sequence
+        self.playback_rate = float(playback_rate)
         self.flow_function = flow_function
         self.interpolate_function = interpolate_function
+        self.w = w
+        self.h = h
+        self.lossless = lossless
+        self.trim = trim
+        self.show_preview = show_preview
+        self.add_info = add_info
+        self.text_type = text_type
+        self.mux = mux
+        self.render_pipe = None
+        self.source = None
+        self.tot_frs_wrt = 0
+        self.tot_tgt_frs = 0
+        self.tot_src_frs = 0
+        self.tot_frs_int = 0
+        self.tot_frs_dup = 0
+        self.tot_frs_drp = 0
+        self.subs_to_render = 0
+        self.curr_sub_idx = 0
         self.scaler = settings['scaler_dn']
 
     def make_pipe(self, dst_path, rate):
