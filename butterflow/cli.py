@@ -197,8 +197,8 @@ def main():
 
     # set subregions
     try:
-        vid_sequence = sequence_from_str(vid_info['duration'],
-                                         vid_info['frames'], args.sub_regions)
+        sequence = sequence_from_str(vid_info['duration'],
+                                     vid_info['frames'], args.sub_regions)
     except Exception as e:
         print('Bad subregion string: %s' % e)
         return 1
@@ -237,7 +237,7 @@ def main():
     renderer = Renderer(
         args.output_path,
         vid_info,
-        vid_sequence,
+        sequence,
         rate,
         flow_function,
         motion.ocl_interpolate_flow,

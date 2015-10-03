@@ -21,7 +21,7 @@ log = logging.getLogger('butterflow')
 
 class Renderer(object):
     def __init__(
-        self, dst_path, vid_info, vid_seq, playback_rate,
+        self, dst_path, vid_info, sequence, playback_rate,
         flow_function=settings['flow_function'],
         interpolate_function=settings['interpolate_function'],
         w=None, h=None, lossless=False, trim=False, show_preview=True,
@@ -29,7 +29,6 @@ class Renderer(object):
         # user args
         self.dst_path         = dst_path      # path to write the render
         self.vid_info         = vid_info      # information from avinfo
-        self.vid_seq          = vid_seq       # passed using `-s`
         self.playback_rate    = float(playback_rate)
         self.w                = w
         self.h                = h
@@ -62,6 +61,7 @@ class Renderer(object):
         # set the window title
         filename = os.path.basename(vid_info['path'])
         self.window_title = '{} - Butterflow'.format(filename)
+        self.sequence = sequence
         self.flow_function = flow_function
         self.interpolate_function = interpolate_function
 
@@ -486,8 +486,8 @@ class Renderer(object):
         frs = self.vid_info['frames']
         new_subregions = []
 
-        if self.vid_seq.subregions is None or \
-                len(self.vid_seq.subregions) == 0:
+        if self.sequence.subregions is None or \
+                len(self.sequence.subregions) == 0:
             # make a subregion from 0 to vid duration if there are no regions
             # in the video sequence. only the framerate could be changing
             fa, ta = (0, 0)
@@ -510,7 +510,7 @@ class Renderer(object):
             cut_points.add((frs - 1, dur))  # last frame and end time
 
             # add current subregions
-            for s in self.vid_seq.subregions:
+            for s in self.sequence.subregions:
                 cut_points.add((s.fa, s.ta))
                 cut_points.add((s.fb, s.tb))
 
@@ -527,7 +527,7 @@ class Renderer(object):
                 fb, tb = cut_points[x + 1]  # get end
                 sub_for_range = None        # matching subregion in range
                 # look for matching subregion
-                for s in self.vid_seq.subregions:
+                for s in self.sequence.subregions:
                     if s.fa == fa and s.fb == fb:
                         sub_for_range = s
                         setattr(s, 'trim', False)  # found it, won't trim it
