@@ -9,17 +9,12 @@ class VideoSequence(object):
         self.subregions = []  # only explicitly defined regions
 
     def add_subregion(self, s):
-        # set relative position from 0 to 1 based on time
-        s.ra = self.get_rel_position(s.ta)
-        s.rb = self.get_rel_position(s.tb)
-        # set fr positions
+        # append to collection of subregions, sort based on frame position
         s.fa = self.get_nearest_frame(s.ta)
         s.fb = self.get_nearest_frame(s.tb)
-        # validate it with other subregions in the sequence then append and
-        # sort based on rel position
         self.validate(s)
         self.subregions.append(s)
-        self.subregions.sort(key=lambda x: (x.rb, x.ra),
+        self.subregions.sort(key=lambda x: (x.fb, x.fa),
                              reverse=False)
 
     def get_rel_position(self, t):
@@ -59,8 +54,6 @@ class Subregion(object):
         self.tb = tb
         self.fa = 0.0
         self.fb = 0.0
-        self.ra = 0.0
-        self.rb = 1.0
 
     def intersects(self, o):
         # a region intersects with another if either ends, in terms of time and
