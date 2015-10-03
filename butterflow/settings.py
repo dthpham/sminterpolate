@@ -121,12 +121,12 @@ default['clb_dir'] = os.path.join(default['tmp_dir'], 'clb')
 
 
 # define interpolation and flow functions
-default['flow_func'] = lambda x, y: \
+default['flow_function'] = lambda x, y: \
     motion.ocl_farneback_optical_flow(
         x, y, default['pyr_scale'], default['levels'], default['winsize'],
         default['iters'], default['poly_n'], default['poly_s'],
         default['fast_pyr'], 0)
-default['interpolate_func'] = motion.ocl_interpolate_flow
+default['interpolate_function'] = motion.ocl_interpolate_flow
 
 
 # override default settings with development settings

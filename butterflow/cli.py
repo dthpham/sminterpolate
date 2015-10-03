@@ -229,7 +229,7 @@ def main():
     if args.flow_filter == 'gaussian':
         import cv2
         flags = cv2.OPTFLOW_FARNEBACK_GAUSSIAN
-    opt_flow_function = lambda x, y: \
+    flow_function = lambda x, y: \
         farneback_method(x, y, args.pyr_scale, args.levels, args.winsize,
                          args.iters, args.poly_n, args.poly_s, args.fast_pyr,
                          flags)
@@ -239,7 +239,7 @@ def main():
         vid_info,
         vid_sequence,
         rate,
-        opt_flow_function,
+        flow_function,
         motion.ocl_interpolate_flow,
         w,
         h,

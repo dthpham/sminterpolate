@@ -22,8 +22,8 @@ log = logging.getLogger('butterflow')
 class Renderer(object):
     def __init__(
         self, dst_path, vid_info, vid_seq, playback_rate,
-        flow_func=settings['flow_func'],
-        interpolate_func=settings['interpolate_func'],
+        flow_function=settings['flow_function'],
+        interpolate_function=settings['interpolate_function'],
         w=None, h=None, lossless=False, trim=False, show_preview=True,
         add_info=False, text_type=settings['text_type'], mux=False):
         # user args
@@ -31,8 +31,6 @@ class Renderer(object):
         self.vid_info         = vid_info      # information from avinfo
         self.vid_seq          = vid_seq       # passed using `-s`
         self.playback_rate    = float(playback_rate)
-        self.flow_func        = flow_func
-        self.interpolate_func = interpolate_func
         self.w                = w
         self.h                = h
         self.lossless         = lossless      # encode losslessly?
@@ -64,6 +62,8 @@ class Renderer(object):
         # set the window title
         filename = os.path.basename(vid_info['path'])
         self.window_title = '{} - Butterflow'.format(filename)
+        self.flow_function = flow_function
+        self.interpolate_function = interpolate_function
 
     def make_pipe(self, dst_path, rate):
         vf = []
@@ -306,8 +306,8 @@ class Renderer(object):
                 fr_1_gr = cv2.cvtColor(fr_1, cv2.COLOR_BGR2GRAY)
                 fr_2_gr = cv2.cvtColor(fr_2, cv2.COLOR_BGR2GRAY)
 
-                fu, fv = self.flow_func(fr_1_gr, fr_2_gr)
-                bu, bv = self.flow_func(fr_2_gr, fr_1_gr)
+                fu, fv = self.flow_function(fr_1_gr, fr_2_gr)
+                bu, bv = self.flow_function(fr_2_gr, fr_1_gr)
 
                 fr_1_32 = np.float32(fr_1) * 1/255.0
                 fr_2_32 = np.float32(fr_2) * 1/255.0
@@ -353,7 +353,7 @@ class Renderer(object):
                         self.tot_frs_drp += 1
 
                 if will_wrt:
-                    int_frs = self.interpolate_func(
+                    int_frs = self.interpolate_function(
                         fr_1_32, fr_2_32, fu, fv, bu, bv, cmp_int_each_go)
 
                     if len(int_frs) != cmp_int_each_go:
