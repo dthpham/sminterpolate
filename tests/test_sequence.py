@@ -141,14 +141,6 @@ class SubregionTestCase(unittest.TestCase):
         self.assertIsInstance(Subregion(1,1), Subregion)
         self.assertIsInstance(Subregion(1,2), Subregion)
 
-    def test_init_fails(self):
-        with self.assertRaises(ValueError):
-            Subregion(-1,0)
-        with self.assertRaises(ValueError):
-            Subregion(0,-1)
-        with self.assertRaises(ValueError):
-            Subregion(2,1)
-
     def x_intersects(self, x, s1_a, s1_b, s2_a, s2_b):
         s1 = Subregion(0,0)
         s2 = Subregion(0,0)

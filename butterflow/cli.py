@@ -438,8 +438,11 @@ def sub_from_str(string):
     a = val[0].split('=')[1]  # the `a=` portion
     b = val[1].split('=')[1]  # the `b=` portion
     c = val[2]  # the `TARGET=VALUE` portion
-    sub = RenderSubregion(time_str_to_ms(a),
-                          time_str_to_ms(b))
+    ta = time_str_to_ms(a)
+    tb = time_str_to_ms(b)
+    if ta > tb:
+        raise ValueError('a > b')  # start time > end time
+    sub = RenderSubregion(ta, tb)
     tgt, val = parse_tval_str(c)
     setattr(sub, tgt, val)
     return sub

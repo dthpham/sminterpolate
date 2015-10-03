@@ -54,12 +54,7 @@ class VideoSequence(object):
 
 class Subregion(object):
     def __init__(self, ta, tb):
-        if ta < 0:   # time can't be negative
-            raise ValueError('a < 0')
-        if ta > tb:  # start time can't be greater than the end
-            raise ValueError('a > b')
-        # start and end time, frame, relative position. values aren't bounded
-        # by anything since dur and fr cnt are unknown at this point
+        # values aren't bounded by anything
         self.ta = ta
         self.tb = tb
         self.fa = 0.0
