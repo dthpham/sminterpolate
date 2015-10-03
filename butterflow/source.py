@@ -3,52 +3,45 @@
 
 import cv2
 
-
 class FrameSource(object):
     def __init__(self, path):
-        # use opencv api as a frame source
-        # i'd prefer if libav was the frame source and this was written in c
-        # but this is simple and convienent enough, plus it's proven to work
+        # uses opencv video api as a frame source
         self.path = path
-        self.src = None  # the videocapture object
-        # the num of frames should be equal to the whatever
-        # `avinfo.get_av_info` returns since several calculations in
-        # `render.py` are based upon it
-        self.frames = 0  # total num of frames
+        self.src = None  # the `videocapture` object
+        self.frames = 0
 
     def open(self):
-        self.src = cv2.VideoCapture(self.path)  # open the file
+        self.src = cv2.VideoCapture(self.path)
         if not self.src.isOpened():
             raise RuntimeError('unable to open file')
+        # the num of frames should be equal to `avinfo.get_av_info.frames`
+        # because several calculations in `render.py` are based upon it
         self.frames = int(self.src.get(cv2.cv.CV_CAP_PROP_FRAME_COUNT))
 
     def close(self):
         if self.src is not None:
-            self.src.release()  # closes video file or capturing device
+            self.src.release()  # will close the video file
         self.src = None
 
     @property
     def idx(self):
         # zero-based index of the frame to be read next
-        # videocapture will keep track of `idx` for us
-        # return whatever it reports
         return self.src.get(cv2.cv.CV_CAP_PROP_POS_FRAMES)
 
     def seek_to_frame(self, idx):
-        # seek to frame that will be read next
         if idx < 0 or idx > self.frames - 1:
             msg = 'seeked out of frame range [0,%s]'.format(self.frames - 1)
             raise IndexError(msg)
-        # do seek, position will update automatically
+        # do seek, position will +1 automatically
         rc = self.src.set(cv2.cv.CV_CAP_PROP_POS_FRAMES, idx)
         if rc is not True:
             msg = 'unable to seek to frame at idx={}'.format(idx)
             raise RuntimeError(msg)
 
     def read(self):
-        # reads frame at `self.idx` and returns it
-        # returns `None` if there are no longer any frames to be read
-        # seek position will +1 automatically after a successful read
+        # reads frame at `self.idx` and returns it. returns `None` if there are
+        # no frames available. seek position will +1 automatically after a
+        # successful read
         if self.idx < 0 or self.idx > self.frames - 1:
             return None
         rc, fr = self.src.read()
@@ -58,6 +51,6 @@ class FrameSource(object):
         return fr
 
     def __del__(self):
-        # clean up in case the frame source was left open
-        # this could happen if the user does `ctr+c` when rendering
+        # clean up in case the frame source was left open. this could happen if
+        # the user does `ctr+c` when rendering
         self.close()

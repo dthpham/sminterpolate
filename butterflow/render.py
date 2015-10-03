@@ -76,7 +76,7 @@ class Renderer(object):
             '-preset', settings['preset']]
         if settings['cv'] == 'libx264':
             quality = ['-crf', str(settings['crf'])]
-            # -qp 0 is recommended over -crf for lossless
+            # `-qp 0` is recommended over `-crf` for lossless
             # See: https://trac.ffmpeg.org/wiki/Encode/H.264#LosslessH.264
             if self.lossless:
                 quality = ['-qp', '0']
@@ -88,7 +88,7 @@ class Renderer(object):
         if settings['cv'] == 'libx265':
             quality = 'crf={}'.format(settings['crf'])
             if self.lossless:
-                # ffmpeg doesn't pass -x265-params to x265 correctly, must
+                # ffmpeg doesn't pass `-x265-params` to x265 correctly, must
                 # provide keys for every single value until fixed
                 # See: https://trac.ffmpeg.org/ticket/4284
                 quality = 'lossless=1'
@@ -105,8 +105,8 @@ class Renderer(object):
         return pipe
 
     def close_pipe(self, pipe):
-        # flush does not necessarily write the file's data to disk. Use
-        # flush followed by os.fsync to ensure this behavior
+        # `flush()` does not necessarily write the file's data to disk. Use
+        # `flush()` followed by `os.fsync()` to ensure this behavior
         if pipe is not None and not pipe.stdin.closed:
             pipe.stdin.flush()
             pipe.stdin.close()
@@ -201,7 +201,7 @@ class Renderer(object):
             log.debug('ts: %s..%s', ts[0], ts[-1])
 
         log.debug('int_each_go: %s', int_each_go)
-        log.debug('wr_per_pair: %s', int_each_go + 1)  # +1 because of fr_1
+        log.debug('wr_per_pair: %s', int_each_go + 1)  # +1 because of `fr_1`
         log.debug('pairs: %s', pairs)
         log.debug('will_make: %s', will_make)
         log.debug('extra_frs: %s', extra_frs)
@@ -299,7 +299,7 @@ class Renderer(object):
 
                 # look ahead to see if frames will be dropped
                 # compensate by lowering the num of frames to be interpolated
-                cmp_int_each_go = int_each_go    # compensated int_each_go
+                cmp_int_each_go = int_each_go    # compensated `int_each_go`
                 w_drp = []                       # frames that would be dropped
                 tmp_wrk_idx = wrk_idx - 1        # zero indexed
                 for x in range(1 + int_each_go):  # 1 real + interpolated frame
@@ -411,7 +411,6 @@ class Renderer(object):
                                         frs_int,
                                         frs_drp,
                                         frs_dup)
-                    # show the frame on the screen
                     if self.show_preview:
                         fr_to_show = fr.copy()
                         draw_progress_bar(fr_to_show, float(frs_wrt) / tgt_frs)
@@ -420,7 +419,6 @@ class Renderer(object):
                         # display the image for x milliseconds, otherwise it
                         # won't display the image
                         cv2.waitKey(settings['imshow_ms'])
-                    # send the frame to the pipe
                     self.write_frame_to_pipe(self.render_pipe, fr)
                     # log.debug('wrt: %s,%s,%s (%s)', pair_a, pair_b, btw_idx,
                     #           self.tot_frs_wrt)
@@ -489,7 +487,7 @@ class Renderer(object):
             cut_points = set([])
             # add start and end of video cutting points
             # (fr index, dur in milliseconds)
-            cut_points.add((0, 0))      # frame 0 and time 0
+            cut_points.add((0, 0))  # frame 0 and time 0
             cut_points.add((frs - 1, dur))  # last frame and end time
 
             # add current subregions
@@ -538,12 +536,10 @@ class Renderer(object):
         src_path = self.vid_info['path']
         src_name = os.path.splitext(os.path.basename(src_path))[0]
 
-        # where we're going to put the tmp file
         tmp_name = '~{filename}.{ext}'.format(filename=src_name,
                                               ext=settings['v_container']).lower()
         tmp_path = os.path.join(settings['tmp_dir'], tmp_name)
 
-        # make a resizable window
         if self.show_preview:
             # to get opengl on osx you have to build opencv --with-opengl
             # TODO: butterflow.rb and wiki needs to be updated for this
@@ -552,7 +548,6 @@ class Renderer(object):
             cv2.namedWindow(self.window_title, flag)
             cv2.resizeWindow(self.window_title, self.w, self.h)
 
-        # prep for rendering
         self.render_pipe = self.make_pipe(tmp_path, self.playback_rate)
         self.source = FrameSource(src_path)
         self.source.open()
@@ -574,7 +569,6 @@ class Renderer(object):
                        rb,
                        rb - ra))
 
-        # start rendering subregions
         self.subs_to_render = len(renderable_seq.subregions)
         for x, s in enumerate(renderable_seq.subregions):
             self.curr_sub_idx = x
@@ -584,7 +578,6 @@ class Renderer(object):
             else:
                 self.render_subregion(s)
 
-        # cleanup
         self.source.close()
         if self.show_preview:
             cv2.destroyAllWindows()

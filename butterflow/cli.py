@@ -131,7 +131,6 @@ def main():
 
     args = par.parse_args()
 
-    # setup app wide logger
     import logging
     logging.basicConfig(level=settings.default['loglevel_a'],
                         format='%(levelname)-7s: %(message)s')
@@ -195,7 +194,6 @@ def main():
         print('Error: no video stream detected')
         return 1
 
-    # set subregions
     try:
         sequence = sequence_from_str(vid_info['duration'],
                                      vid_info['frames'], args.sub_regions)
@@ -203,7 +201,6 @@ def main():
         print('Bad subregion string: %s' % e)
         return 1
 
-    # set playback rate
     src_rate = (vid_info['rate_n'] * 1.0 /
                 vid_info['rate_d'])
     try:
@@ -214,7 +211,6 @@ def main():
     if rate < src_rate:
         log.warning('rate=%s < src_rate=%s', rate, src_rate)
 
-    # set video size
     try:
         w, h = w_h_from_str(args.video_scale, vid_info['w'], vid_info['h'])
     except Exception as e:
@@ -250,13 +246,11 @@ def main():
         args.text_type,
         args.mux)
 
-    # set the number of threads and run
     motion.set_num_threads(settings.default['ocv_threads'])
 
     try:
-        # time how long it takes to render
-        # timeit will turn off gc, must turn it back on to maximize performance
-        # re-nable it in the setup function
+        # time how long it takes to render. timeit will turn off gc, must turn
+        # it back on to maximize performance re-nable it in the setup function
         import timeit
         tot_time = timeit.timeit(renderer.render,
                                  setup='import gc;gc.enable()',
@@ -271,7 +265,7 @@ def main():
             renderer.tot_tgt_frs,
             renderer.tot_frs_wrt * 100.0 / renderer.tot_tgt_frs))
         print('Butterflow took {:.3g} minutes, done.'.format(tot_time / 60))
-        # get new size and show the diff
+
         sz_in_mb = lambda x: \
             float(os.path.getsize(x)) / (1 << 20)
         new = sz_in_mb(args.output_path)

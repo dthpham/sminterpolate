@@ -5,8 +5,8 @@
 class VideoSequence(object):
     def __init__(self, duration, frames):
         self.duration = float(duration)  # in milliseconds
-        self.frames = frames             # total frames in the video
-        self.subregions = []  # only explicitly defined regions
+        self.frames = frames
+        self.subregions = []
 
     def add_subregion(self, s):
         # append to collection of subregions, sort based on frame position
@@ -57,8 +57,8 @@ class Subregion(object):
 
     def intersects(self, o):
         # a region intersects with another if either ends, in terms of time and
-        # frame, fall within each others ranges or when one region covers or is
-        # enveloped by another.
+        # frame, fall within each others ranges or when one region covers, or
+        # is enveloped, by another.
         return self.time_intersects(o) or self.time_intersects(o)
 
     def time_intersects(self, o):
