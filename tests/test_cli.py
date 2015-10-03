@@ -13,8 +13,7 @@ class CliTestCase(unittest.TestCase):
         self.t_val_targets = [
             'spd',
             'dur',
-            'fps',
-            'btw']
+            'fps']
 
     def test_w_h_from_str_diff_w_and_h(self):
         w, h = w_h_from_str('854:480', 640, 360)
@@ -216,13 +215,10 @@ class CliTestCase(unittest.TestCase):
         self.assertEqual(s.tb,2*1000)
         self.assertEqual(s.spd,0.5)
 
-    def test_sub_from_str_btw(self):
-        s = sub_from_str(
-            'a=00:00:00.5,b=00:00:01.0,btw=2')
-        self.assertIsInstance(s, RenderSubregion)
-        self.assertEqual(s.ta,0.5*1000)
-        self.assertEqual(s.tb,1*1000)
-        self.assertEqual(s.btw,2)
+    def test_sub_from_str_time_a_greater_than_time_b_fails(self):
+        with self.assertRaises(ValueError):
+            s = sub_from_str(
+                'a=00:00:02.0,b=00:00:01.0,spd=2')
 
     def test_sub_from_str_full_key(self):
         s = sub_from_str_full_key(
@@ -271,9 +267,8 @@ class CliTestCase(unittest.TestCase):
             'a=00:00:01.3,b=00:00:01.5,fps=60/1.001:'
             'a=00:00:02.3,b=00:00:03.3,fps=24000/1001:'
             'a=00:00:03.3,b=00:00:04.3,spd=0.25:'
-            'a=00:00:04.3,b=00:00:04.7,btw=2:'
-            'a=00:00:04.7,b=00:00:04.999,dur=5')
-        self.assertEqual(len(vs.subregions), 6)
+            'a=00:00:04.3,b=00:00:04.999,dur=5')
+        self.assertEqual(len(vs.subregions), 5)
         vs = sequence_from_str(5*1000,5*24,
             'a=00:00:01.0,b=end,fps=400')
         self.assertEqual(len(vs.subregions), 1)

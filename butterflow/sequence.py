@@ -95,10 +95,9 @@ class Subregion(object):
 
 
 class RenderSubregion(Subregion):
-    def __init__(self, ta, tb, fps=None, dur=None, spd=None, btw=None):
+    def __init__(self, ta, tb, fps=None, dur=None, spd=None):
         super(RenderSubregion, self).__init__(ta, tb)
         # what's being targeted?
         self.fps = fps
         self.dur = dur
         self.spd = spd
-        self.btw = btw

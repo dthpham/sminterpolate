@@ -91,7 +91,7 @@ def draw_debug_text(img, text_type, rate, tot_frs_wrt, pair_a,
     # draw text at the top left corner
     txt = "butterflow {} ({})\n"\
           "Res: {},{}\n"\
-          "Playback Rate: {:.2f} fps\n"
+          "Playback Rate: {:.2f} fps\n\n"
     txt = txt.format(__version__, sys.platform, w, h, rate)
     # text at the bottom left
     txt += "Frame: {}\n"\
@@ -132,12 +132,11 @@ def draw_debug_text(img, text_type, rate, tot_frs_wrt, pair_a,
         if v is None:
             return s['txt_placeh']
         return f.format(v)
-    txt += "Target Spd: {} Dur: {} Fps: {} Btw: {}\n"
+    txt += "Target Spd: {} Dur: {} Fps: {}\n"
     txt = txt.format(fsorp('{:.2f}', sub.spd),
                      fsorp('{:.2f}s', sub.dur / 1000.0) if sub.dur
                            else s['txt_placeh'],
-                     fsorp('{}', sub.fps),
-                     fsorp('{:.2f}', sub.btw))
+                     fsorp('{}', sub.fps))
     txt += "Out Len F: {}, Dur: {:.2f}s\n"\
            "Drp every {:.1f}, Dup every {:.1f}\n"\
            "Src seen: {}, Int: {}, Drp: {}, Dup: {}\n"\

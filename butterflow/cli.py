@@ -67,13 +67,12 @@ def main():
     vid.add_argument('-s', '--sub-regions', type=str,
                      help='Specify rendering subregions in the form: '
                      '"a=TIME,b=TIME,TARGET=VALUE" where TARGET is either '
-                     '`fps`, `dur`, `spd`, `btw`. Valid TIME syntaxes are '
-                     '[hr:m:s], [m:s], [s], [s.xxx], or `end`, which '
-                     'signifies to the end the video. You can specify '
-                     'multiple subregions by separating them with a colon '
-                     '`:`. A special region format that conveniently '
-                     'describes the entire clip is available in the form: '
-                     '"full,TARGET=VALUE".')
+                     '`fps`, `dur`, `spd`. Valid TIME syntaxes are [hr:m:s], '
+                     '[m:s], [s], [s.xxx], or `end`, which signifies to the '
+                     'end the video. You can specify multiple subregions by '
+                     'separating them with a colon `:`. A special region '
+                     'format that conveniently describes the entire clip is '
+                     'available in the form: "full,TARGET=VALUE".')
     vid.add_argument('-t', '--trim-regions', action='store_true',
                      help='Set to trim subregions that are not explicitly '
                           'specified')
@@ -413,24 +412,24 @@ def time_str_to_ms(time):
     return (hr * 3600 + minute * 60 + sec) * 1000.0
 
 
-@validate_chars_in_set(string.digits + '=./' + 'spdurfbtw')
+@validate_chars_in_set(string.digits + '=./' + 'spdurf')
 def parse_tval_str(string):
     # extract values from TARGET=VALUE string
-    # target can be fps, dur, spd, or btw
+    # target can be fps, dur, spd
     tgt = string.split('=')[0]  # the `TARGET` portion
     val = string.split('=')[1]  # the `VALUE` portion
     if tgt == 'fps':
         val = rate_from_str(val, -1)
     elif tgt == 'dur':
         val = float(val) * 1000  # duration in ms
-    elif tgt == 'spd' or tgt == 'btw':
+    elif tgt == 'spd':
         val = float(val)
     else:
         raise ValueError('invalid target')
     return tgt, val
 
 
-@validate_chars_in_set(string.digits + 'ab,=./:' + 'spdurfbtw')
+@validate_chars_in_set(string.digits + 'ab,=./:' + 'spdurf')
 def sub_from_str(string):
     # returns a subregion from string
     # input syntax:
@@ -446,7 +445,7 @@ def sub_from_str(string):
     return sub
 
 
-@validate_chars_in_set(string.digits + ',=./' + 'spdurfbtwl')
+@validate_chars_in_set(string.digits + ',=./' + 'spdurfl')
 def sub_from_str_full_key(string, duration):
     # returns a subregion from string with the `full` keyword
     # input syntax:
@@ -462,7 +461,7 @@ def sub_from_str_full_key(string, duration):
         raise ValueError('`full` key not found')
 
 
-@validate_chars_in_set(string.digits + 'ab,=./:' + 'spdurfbtwen')
+@validate_chars_in_set(string.digits + 'ab,=./:' + 'spdurfen')
 def sub_from_str_end_key(string, duration):
     # returns a subregion from string with the `end` keyword
     # input syntax:
@@ -478,7 +477,7 @@ def sub_from_str_end_key(string, duration):
         raise ValueError('`end` key not found')
 
 
-@validate_chars_in_set(string.digits + 'ab,=./:' + 'spdurfbtwlen')
+@validate_chars_in_set(string.digits + 'ab,=./:' + 'spdurflen')
 def sequence_from_str(duration, frames, string):
     # return a vid sequence from -s <subregion>:<subregion>...
     seq = VideoSequence(duration, frames)

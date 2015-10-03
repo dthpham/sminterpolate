@@ -157,8 +157,6 @@ class Renderer(object):
         elif subregion.spd:
             tgt_frs = int(self.playback_rate * reg_dur *
                           (1 / subregion.spd))
-        elif subregion.btw:
-            tgt_frs = int(reg_len + ((reg_len - 1) * subregion.btw))
 
         tgt_frs = max(0, tgt_frs)
         # the make factor or inverse time step
@@ -209,7 +207,6 @@ class Renderer(object):
                 s = 0
             log.debug('tgt_spd: %s %.2gx', subregion.spd,
                       np.divide(1, s))
-        log.debug('tgt_btw: %s', subregion.btw)
         log.debug('tgt_frs: %s', tgt_frs)
         sub_div = int_each_go + 1
         ts = []
@@ -501,9 +498,6 @@ class Renderer(object):
             s.fps = self.playback_rate
             s.dur = tb - ta
             s.spd = 1.0
-            tgt_frs = int(self.playback_rate * (dur / 1000.0))
-            # use max to avoid division by zero error
-            s.btw = (tgt_frs - frs) * 1.0 / max(1, frs - 1)
             setattr(s, 'trim', False)
             new_subregions.append(s)
         else:
@@ -546,9 +540,6 @@ class Renderer(object):
                     s.fps = self.playback_rate
                     s.dur = tb - ta
                     s.spd = 1.0
-                    reg_frs = (s.fb - s.fa) + 1
-                    tgt_frs = int(s.fps * ((s.dur + 1) / 1000.0))
-                    s.btw = (tgt_frs - reg_frs) * 1.0 / (reg_frs - 1)
                     sub_for_range = s
                     setattr(s, 'trim', self.trim)
                 new_subregions.append(sub_for_range)
