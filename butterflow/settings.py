@@ -90,18 +90,18 @@ default = {
     'bar_strk_color': cv2.cv.RGB(192, 192, 192),
 }
 
-# default loglevel is `info` for both encoders
-# options: none, error, warning, info, debug, plus `full` for x265
-if sys.platform.startswith('linux'):
-    # considered a work in progress and is under heavy development
-    # 50-75% more compression efficiency than x264
-    # retains same visual quality
-    # for x265 options: http://x265.readthedocs.org/en/default/cli.html
-    default['cv'] = 'libx265'
-else:
-    # uses gpu for some lookahead ops but does not mean the algos are optimized
-    # and encoding will be faster
-    default['cv'] = 'libx264'
+# x265 is considered a work in progress and is under heavy development
+# + 50-75% more compression efficiency than x264
+# + retains same visual quality
+# - veryslow preset encoding speed is noticeably slower than x264
+# for x265 options, See: http://x265.readthedocs.org/en/default/cli.html
+#
+# x264 is stable and used in many popular video conversion tools
+# + uses gpu for some lookahead ops but does not mean the algos are optimized
+# + well tuned for high quality encodings
+default['cv'] = 'libx264'
+# default loglevel is `info` for x264 and x265
+# options: `none`, `error`, `warning`, `info`, `debug`, plus `full` for x265
 default['enc_loglevel'] = 'error'
 
 # define location of files and directories
