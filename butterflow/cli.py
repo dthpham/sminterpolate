@@ -10,9 +10,8 @@ from butterflow import avinfo, motion, ocl, settings
 from butterflow.render import Renderer
 from butterflow.sequence import VideoSequence, RenderSubregion
 
-NO_OCL_WARNING = 'Error: No compatible OCL devices detected. Check your '\
-                 'OpenCL installation.'
-NO_VIDEO_SPECIFIED = 'Error: no input video specified'
+NO_OCL_WARNING = 'Error: no compatible opencl devices detected'
+NO_VIDEO_SPECIFIED = 'Error: no input file specified'
 
 
 def main():
@@ -141,7 +140,7 @@ def main():
 
     if args.version:
         from butterflow.__init__ import __version__
-        print(__version__)
+        print('butterflow version %s' % __version__)
         return 0
 
     if args.cache:
@@ -150,7 +149,7 @@ def main():
 
     if args.rm_cache:
         rm_cache()
-        print('Cache cleared')
+        print('cache deleted, done.')
         return 0
 
     have_ocl = ocl.ocl_device_available()
@@ -171,7 +170,7 @@ def main():
         return 1
 
     if not os.path.exists(args.video):
-        print('Error: video does not exist at path')
+        print('Error: file does not exist at path')
         return 1
 
     if args.probe:
@@ -255,26 +254,38 @@ def main():
         tot_time = timeit.timeit(renderer.render,
                                  setup='import gc;gc.enable()',
                                  number=1)  # only run once
-        print('Frames: src: {} int: {} dup: {} drp: {}'.format(
+        tot_time /= 60  # time in minutes
+
+        new_sz = human_sz(float(os.path.getsize(args.output_path)))
+
+        print('Frames written:')
+        print(' {} real, {} interpolated, {} duped, {} dropped'.format(
             renderer.tot_src_frs,
             renderer.tot_frs_int,
             renderer.tot_frs_dup,
             renderer.tot_frs_drp))
-        print('Write ratio: {}/{}, ({:.2f}%)'.format(
+        print(' write ratio: {}/{}, ({:.2f}%)'.format(
             renderer.tot_frs_wrt,
             renderer.tot_tgt_frs,
             renderer.tot_frs_wrt * 100.0 / renderer.tot_tgt_frs))
-        print('Butterflow took {:.3g} minutes, done.'.format(tot_time / 60))
-
-        sz_in_mb = lambda x: \
-            float(os.path.getsize(x)) / (1 << 20)
-        new = sz_in_mb(args.output_path)
-        old = sz_in_mb(args.video)
-        log.debug('out file size: {:.3g} MB ({:+.3g} MB)'.format(new,
-                                                                 new - old))
+        print(' out size: {}'.format(new_sz))
+        print('butterflow took {:.3g} minutes, done.'.format(tot_time))
     except (KeyboardInterrupt, SystemExit):
-        log.warning('files were left in the cache')
+        log.warning('stopped early, files were left in the cache')
+        log.warning('recoverable @ {}'.format(settings.default['tmp_dir']))
         return 1
+
+
+def human_sz(nbytes):
+    suffixes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB']
+    if nbytes == 0:
+        return '0 B'
+    i = 0
+    while nbytes >= 1024 and i < len(suffixes) - 1:
+        nbytes /= 1024.
+        i += 1
+    f = ('{:.2f}'.format(nbytes)).rstrip('0').rstrip('.')
+    return '%s %s' % (f, suffixes[i])
 
 
 def print_cache_info():
@@ -290,8 +301,9 @@ def print_cache_info():
             num_files += 1
             fp = os.path.join(dirpath, f)
             sz += os.path.getsize(fp)
-    sz_mb = float(sz) / (1 << 20)  # size in megabytes
-    print('{} files, {:.2g} MB'.format(num_files, sz_mb))
+    sz = human_sz(float(sz))
+    print('{} files, {}'.format(num_files, sz))
+    print('cache @ %s' % cache_dir)
 
 
 def rm_cache():
