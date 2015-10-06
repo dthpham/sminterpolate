@@ -23,10 +23,9 @@ class Renderer(object):
     def __init__(
         self, dst_path, vid_info, sequence, playback_rate,
         flow_function=settings['flow_function'],
-        interpolate_function=settings['interpolate_function'],
-        w=None, h=None, lossless=False, trim=False, show_preview=True,
-        add_info=False, text_type=settings['text_type'], mux=False):
-
+        interpolate_function=settings['interpolate_function'], w=None, h=None,
+        lossless=False, trim=False, show_preview=True, add_info=False,
+        text_type=settings['text_type'], mux=False):
         self.dst_path = dst_path
         self.vid_info = vid_info
         self.sequence = sequence
@@ -41,7 +40,7 @@ class Renderer(object):
         self.add_info = add_info
         self.text_type = text_type
         self.mux = mux
-        self.render_pipe = None
+        self.pipe = None
         self.source = None
         self.tot_frs_wrt = 0
         self.tot_tgt_frs = 0
@@ -96,25 +95,24 @@ class Renderer(object):
         if len(params) > 0:
             call.extend([':'.join(params)])
         call.extend([dst_path])
-        pipe = subprocess.Popen(
+        self.pipe = subprocess.Popen(
             call,
             stdin=subprocess.PIPE
         )
-        if pipe == 1:
+        if self.pipe == 1:
             raise RuntimeError('render failed')
-        return pipe
 
-    def close_pipe(self, pipe):
+    def close_pipe(self):
         # `flush()` does not necessarily write the file's data to disk. Use
         # `flush()` followed by `os.fsync()` to ensure this behavior
-        if pipe is not None and not pipe.stdin.closed:
-            pipe.stdin.flush()
-            pipe.stdin.close()
-            pipe.wait()
+        if self.pipe is not None and not self.pipe.stdin.closed:
+            self.pipe.stdin.flush()
+            self.pipe.stdin.close()
+            self.pipe.wait()
 
-    def write_frame_to_pipe(self, pipe, frame):
+    def write_frame_to_pipe(self, frame):
         try:
-            pipe.stdin.write(bytes(frame.data))
+            self.pipe.stdin.write(bytes(frame.data))
         except Exception:
             log.error('Writing frame to pipe failed:', exc_info=True)
 
@@ -419,7 +417,7 @@ class Renderer(object):
                         # display the image for x milliseconds, otherwise it
                         # won't display the image
                         cv2.waitKey(settings['imshow_ms'])
-                    self.write_frame_to_pipe(self.render_pipe, fr)
+                    self.write_frame_to_pipe(fr)
                     # log.debug('wrt: %s,%s,%s (%s)', pair_a, pair_b, btw_idx,
                     #           self.tot_frs_wrt)
 
@@ -548,7 +546,7 @@ class Renderer(object):
             cv2.namedWindow(self.window_title, flag)
             cv2.resizeWindow(self.window_title, self.w, self.h)
 
-        self.render_pipe = self.make_pipe(tmp_path, self.playback_rate)
+        self.make_pipe(tmp_path, self.playback_rate)
         self.source = FrameSource(src_path)
         self.source.open()
         renderable_seq = self.get_renderable_sequence()
@@ -581,7 +579,7 @@ class Renderer(object):
         self.source.close()
         if self.show_preview:
             cv2.destroyAllWindows()
-        self.close_pipe(self.render_pipe)
+        self.close_pipe()
 
         if self.mux:
             log.debug('muxing ...')
@@ -614,4 +612,4 @@ class Renderer(object):
         # close the pipe if it was inadvertently left open. this could happen
         # if the user does ctr+c while rendering. this would leave temporary
         # files in the cache
-        self.close_pipe(self.render_pipe)
+        self.close_pipe()
