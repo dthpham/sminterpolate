@@ -3,6 +3,8 @@
 
 import cv2
 import sys
+import collections
+import inspect
 from butterflow.settings import default as s
 from butterflow.__init__ import __version__
 
@@ -56,14 +58,13 @@ def draw_progress_bar(img, p):
         draw_rect(bar_v1, bar_v2)
 
 
-def draw_debug_text(img, text_type, rate, tot_frs_wrt, pair_a,
+def draw_debug_text(img, text_type, rate, flow_function, tot_frs_wrt, pair_a,
                     pair_b, btw_idx, fr_type, is_dup, tgt_frs, frs_wrt,
                     sub, sub_idx, subs_to_render, drp_every,
                     dup_every, src_seen, frs_int, frs_drp, frs_dup):
     h = img.shape[0]
     w = img.shape[1]
 
-    # figure out how much to scale the text
     scale = min(min(float(w) / s['h_fits'], 1.0),
                 min(float(h) / s['v_fits'], 1.0))
     if scale < s['txt_min_scale']:
@@ -81,11 +82,32 @@ def draw_debug_text(img, text_type, rate, tot_frs_wrt, pair_a,
         cv2.putText(img, x, y, s['font_face'], scale, color,
                     s['txt_thick'], s['font_type'])
 
-    # draw text on the left
     txt = "butterflow {} ({})\n"\
           "Res: {},{}\n"\
-          "Playback Rate: {:.2f} fps\n\n"
+          "Playback Rate: {:.2f} fps\n"
     txt = txt.format(__version__, sys.platform, w, h, rate)
+
+    argspec = inspect.getargspec(flow_function)
+    defaults = list(argspec.defaults)
+    args = argspec.args[-len(defaults):]
+
+    flow_kwargs = collections.OrderedDict(zip(args, defaults))
+
+    if flow_kwargs is not None:
+        flow_format = ''
+        i = 0
+        for k, v in flow_kwargs.items():
+            value_format = "{}"
+            if isinstance(v, bool):
+                value_format = "{:1}"
+            flow_format += ("{}: " + value_format).format(k.capitalize(), v)
+            if i == len(flow_kwargs) - 1:
+                flow_format += '\n\n'
+            else:
+                flow_format += ', '
+            i += 1
+        txt += flow_format
+
     txt += "Frame: {}\n"\
            "Pair Index: {}, {}, {}\n"\
            "Type Src: {}, Int: {}, Dup: {}\n"\
@@ -98,6 +120,7 @@ def draw_debug_text(img, text_type, rate, tot_frs_wrt, pair_a,
                      'Y' if fr_type == 'interpolated' else 'N',
                      'Y' if is_dup > 0 else 'N',
                      hex(id(img)))
+
     for line_idx, line in enumerate(txt.split('\n')):
         line_sz, _ = cv2.getTextSize(line, s['font_face'], scale,
                                      s['txt_thick'])
@@ -108,7 +131,6 @@ def draw_debug_text(img, text_type, rate, tot_frs_wrt, pair_a,
             draw_strk(line, origin)
         draw_text(line, origin)
 
-    # text the right
     txt = "Region {}/{} F: [{}, {}] T: [{:.2f}s, {:.2f}s]\n"\
           "Len F: {}, T: {:.2f}s\n"
     txt = txt.format(sub_idx + 1,
@@ -120,7 +142,6 @@ def draw_debug_text(img, text_type, rate, tot_frs_wrt, pair_a,
                      (sub.fb - sub.fa) + 1,
                      (sub.tb - sub.ta) / 1000.0)
 
-    # use formatted string or placeholder
     def fsorp(f, v):
         if v is None:
             return s['txt_placeh']
@@ -131,6 +152,7 @@ def draw_debug_text(img, text_type, rate, tot_frs_wrt, pair_a,
                      fsorp('{:.2f}s', sub.dur / 1000.0) if sub.dur
                            else s['txt_placeh'],
                      fsorp('{}', sub.fps))
+
     txt += "Out Len F: {}, Dur: {:.2f}s\n"\
            "Drp every {:.1f}, Dup every {:.1f}\n"\
            "Src seen: {}, Int: {}, Drp: {}, Dup: {}\n"\
@@ -146,6 +168,7 @@ def draw_debug_text(img, text_type, rate, tot_frs_wrt, pair_a,
                      frs_wrt,
                      tgt_frs,
                      frs_wrt * 100.0 / tgt_frs)
+
     for line_idx, line in enumerate(txt.split('\n')):
         line_sz, _ = cv2.getTextSize(line, s['font_face'], scale,
                                      s['txt_thick'])

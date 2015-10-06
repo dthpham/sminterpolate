@@ -392,6 +392,7 @@ class Renderer(object):
                         draw_debug_text(fr,
                                         self.text_type,
                                         self.playback_rate,
+                                        self.flow_function,
                                         self.tot_frs_wrt,
                                         pair_a,
                                         pair_b,

@@ -224,10 +224,13 @@ def main():
     if args.flow_filter == 'gaussian':
         import cv2
         flags = cv2.OPTFLOW_FARNEBACK_GAUSSIAN
-    flow_function = lambda x, y: \
-        farneback_method(x, y, args.pyr_scale, args.levels, args.winsize,
-                         args.iters, args.poly_n, args.poly_s, args.fast_pyr,
-                         flags)
+
+    # don't make the function with `lambda` because `draw_debug_text` will need
+    # to retrieve kwargs with the `inspect` module
+    def flow_function(x, y, pyr=args.pyr_scale, l=args.levels, w=args.winsize,
+                      i=args.iters, polyn=args.poly_n, polys=args.poly_s,
+                      fast=args.fast_pyr, filt=flags):
+        return farneback_method(x, y, pyr, l, w, i, polyn, polys, fast, filt)
 
     renderer = Renderer(
         args.output_path,
