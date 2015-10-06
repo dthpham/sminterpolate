@@ -40,6 +40,7 @@ class Renderer(object):
         self.add_info = add_info
         self.text_type = text_type
         self.mux = mux
+        self.scaler = None
         self.pipe = None
         self.source = None
         self.tot_frs_wrt = 0
@@ -50,7 +51,6 @@ class Renderer(object):
         self.tot_frs_drp = 0
         self.subs_to_render = 0
         self.curr_sub_idx = 0
-        self.scaler = settings['scaler_dn']
 
     def make_pipe(self, dst_path, rate):
         vf = []
@@ -561,12 +561,21 @@ class Renderer(object):
                 format(s.fa,
                        s.fb,
                        (s.fb - s.fa + 1),
-                       s.ta / 1000,0,
+                       s.ta / 1000.0,
                        s.tb / 1000.0,
                        (s.tb - s.ta) / 1000.0,
                        ra,
                        rb,
                        rb - ra))
+
+        new_res = self.w * self.h
+        src_res = self.vid_info['w'] * self.vid_info['h']
+        if new_res == src_res:
+            self.scaler = None
+        elif new_res < src_res:
+            self.scaler = settings['scaler_dn']
+        else:
+            self.scaler = settings['scaler_up']
 
         self.subs_to_render = len(renderable_seq.subregions)
         for x, s in enumerate(renderable_seq.subregions):
