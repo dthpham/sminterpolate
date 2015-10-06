@@ -32,14 +32,14 @@ def main():
                      help='Show this help message and exit')
     gen.add_argument('--version', action='store_true',
                      help='Show program\'s version number and exit')
-    gen.add_argument('-i', '--inspect', action='store_true',
-                     help='Show video information and exit')
     gen.add_argument('-d', '--devices', action='store_true',
                      help='Show detected OpenCL devices and exit')
     gen.add_argument('-c', '--cache', action='store_true',
                      help='Show cache information and exit')
     gen.add_argument('--rm-cache', action='store_true',
                      help='Set to clear the cache and exit')
+    gen.add_argument('-prb', '--probe', action='store_true',
+                     help='Show media file information and exit')
     gen.add_argument('-v', '--verbose', action='store_true',
                      help='Set to increase output verbosity')
 
@@ -174,7 +174,7 @@ def main():
         print('Error: video does not exist at path')
         return 1
 
-    if args.inspect:
+    if args.probe:
         if args.video:
             try:
                 avinfo.print_av_info(args.video)
