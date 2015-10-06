@@ -577,13 +577,18 @@ class Renderer(object):
         else:
             self.scaler = settings['scaler_up']
 
-        self.subs_to_render = len(renderable_seq.subregions)
+        self.subs_to_render = 0
+        for s in renderable_seq.subregions:
+            if not s.trim:
+                self.subs_to_render += 1
+
+        self.curr_sub_idx = 0
         for x, s in enumerate(renderable_seq.subregions):
-            self.curr_sub_idx = x
             if s.trim:
                 # the region is being trimmed and shouldn't be rendered
                 continue
             else:
+                self.curr_sub_idx += 1
                 self.render_subregion(s)
 
         self.source.close()

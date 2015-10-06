@@ -133,7 +133,7 @@ def draw_debug_text(img, text_type, rate, flow_function, tot_frs_wrt, pair_a,
 
     txt = "Region {}/{} F: [{}, {}] T: [{:.2f}s, {:.2f}s]\n"\
           "Len F: {}, T: {:.2f}s\n"
-    txt = txt.format(sub_idx + 1,
+    txt = txt.format(sub_idx,
                      subs_to_render,
                      sub.fa,
                      sub.fb,
@@ -151,7 +151,7 @@ def draw_debug_text(img, text_type, rate, flow_function, tot_frs_wrt, pair_a,
     txt = txt.format(fsorp('{:.2f}', sub.spd),
                      fsorp('{:.2f}s', sub.dur / 1000.0) if sub.dur
                            else s['txt_placeh'],
-                     fsorp('{}', sub.fps))
+                     fsorp('{:.2f}', sub.fps))
 
     txt += "Out Len F: {}, Dur: {:.2f}s\n"\
            "Drp every {:.1f}, Dup every {:.1f}\n"\
