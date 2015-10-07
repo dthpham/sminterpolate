@@ -197,8 +197,12 @@ class AvInfoTestCase(unittest.TestCase):
             avinfo.get_av_info('does_not_exist.mp4')
 
     def test_get_av_info_non_multimedia_file_fails(self):
+        testfile = os.path.join(settings['tmp_dir'],
+                                '~test_get_av_info_non_multimedia_file_fails')
+        with open(testfile, 'w'):
+            pass
         with self.assertRaises(RuntimeError):
-            avinfo.get_av_info(avinfo.__file__)
+            avinfo.get_av_info(testfile)
 
 
 if __name__ == '__main__':

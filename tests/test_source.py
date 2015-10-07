@@ -148,12 +148,6 @@ class FrameSourceTestCase(unittest.TestCase):
         self.src_1.close()
         self.assertIsNone(self.src_1.src)
 
-    @unittest.skip('warning?')
-    def test_open_non_multimedia_file_fails(self):
-        with self.assertRaises(RuntimeError):
-            src = FrameSource(avinfo.__file__)
-            src.open()
-
 
 if __name__ == '__main__':
     unittest.main()
