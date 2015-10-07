@@ -91,8 +91,8 @@ class OpticalFlowTestCase(unittest.TestCase):
                              '~test_farneback_optical_flow_hires_1.jpg')
         img_2 = os.path.join(settings['tmp_dir'],
                              '~test_farneback_optical_flow_hires_2.jpg')
-        mk_sample_image(img_1, 1920, 1080, 3)
-        mk_sample_image(img_2, 1920, 1080, 3)
+        mk_sample_image(img_1, 4096, 2160, 3)
+        mk_sample_image(img_2, 4096, 2160, 3)
         fr_1 = cv2.imread(img_1)
         fr_2 = cv2.imread(img_2)
         fr_1_gr = cv2.cvtColor(fr_1, cv2.COLOR_BGR2GRAY)
@@ -147,8 +147,8 @@ class InterpolateFlowTestCase(unittest.TestCase):
                              '~test_ocl_interpolate_flow_hires_1.jpg')
         img_2 = os.path.join(settings['tmp_dir'],
                              '~test_ocl_interpolate_flow_hires_2.jpg')
-        mk_sample_image(img_1, 1920, 1080, 3)
-        mk_sample_image(img_2, 1920, 1080, 3)
+        mk_sample_image(img_1, 4096, 2160, 3)
+        mk_sample_image(img_2, 4096, 2160, 3)
         fr_1 = cv2.imread(img_1)
         fr_2 = cv2.imread(img_2)
         fr_1_gr = cv2.cvtColor(fr_1, cv2.COLOR_BGR2GRAY)
