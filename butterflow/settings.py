@@ -51,8 +51,8 @@ default = {
     'winsize':        25,
     'iters':          3,
     'poly_n_choices': [5, 7],
-    'poly_n':         7,
-    'poly_s':         1.5,
+    'poly_n':         5,
+    'poly_s':         0.1,
     'fast_pyr':       False,
     'flow_filter':    'box',
     # -1 is max threads and it's the opencv default
