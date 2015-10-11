@@ -546,7 +546,8 @@ class Renderer(object):
         if self.show_preview:
             # to get opengl on osx you have to build opencv --with-opengl
             # TODO: butterflow.rb and wiki needs to be updated for this
-            self.window_title = '{} - Butterflow'.format(src_name)
+            self.window_title = '{} - Butterflow'.format(
+                os.path.basename(src_path))
             flag = cv2.WINDOW_OPENGL
             cv2.namedWindow(self.window_title, flag)
             cv2.resizeWindow(self.window_title, self.w, self.h)
