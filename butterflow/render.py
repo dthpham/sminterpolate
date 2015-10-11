@@ -376,6 +376,7 @@ class Renderer(object):
                             continue
 
                 for wrt_idx in range(wrts_needed):
+                    fr_to_write = fr
                     frs_wrt += 1
                     if wrt_idx == 0:
                         if fr_type == 'source':
@@ -388,8 +389,11 @@ class Renderer(object):
                     if self.scaler == settings['scaler_up']:
                         fr = cv2.resize(fr, (self.w, self.h),
                                         interpolation=self.scaler)
+
                     if self.add_info:
-                        draw_debug_text(fr,
+                        if wrts_needed > 1:
+                            fr_to_write = fr.copy()
+                        draw_debug_text(fr_to_write,
                                         self.text_type,
                                         self.playback_rate,
                                         self.flow_function,
@@ -418,7 +422,7 @@ class Renderer(object):
                         # display the image for x milliseconds, otherwise it
                         # won't display the image
                         cv2.waitKey(settings['imshow_ms'])
-                    self.write_frame_to_pipe(fr)
+                    self.write_frame_to_pipe(fr_to_write)
                     # log.debug('wrt: %s,%s,%s (%s)', pair_a, pair_b, btw_idx,
                     #           self.tot_frs_wrt)
 
