@@ -32,6 +32,8 @@ def main():
                      help='Show program\'s version number and exit')
     gen.add_argument('-d', '--devices', action='store_true',
                      help='Show detected OpenCL devices and exit')
+    gen.add_argument('-sw', action='store_true',
+                     help='Set to force software rendering')
     gen.add_argument('-c', '--cache', action='store_true',
                      help='Show cache information and exit')
     gen.add_argument('--rm-cache', action='store_true',
@@ -155,14 +157,6 @@ def main():
         ocl.print_ocl_devices()
         return 0
 
-    have_ocl = ocl.compat_ocl_device_available()
-
-    if not have_ocl:
-        print('Error: no compatible OpenCL devices detected. A FULL_PROFILE '
-              'device that supports OpenCL 1.2 or higher is required to use '
-              'this app.')
-        return 1
-
     if args.video is None:
         print(NO_VIDEO_SPECIFIED)
         return 1
@@ -214,10 +208,16 @@ def main():
         print('Bad video scale: %s' % e)
         return 1
 
+    have_ocl = ocl.compat_ocl_device_available()
+    use_sw = args.sw or not have_ocl
+
+    if use_sw:
+        log.warning('not using opencl accelerated methods')
+
     # make functions that will generate flows and interpolate frames
-    from cv2 import calcOpticalFlowFarneback  # sw version
-    farneback_method = motion.ocl_farneback_optical_flow if have_ocl \
-        else calcOpticalFlowFarneback
+    from cv2 import calcOpticalFlowFarneback as sw_optical_flow
+    farneback_method = sw_optical_flow if use_sw else \
+        motion.ocl_farneback_optical_flow
     flags = 0
     if args.flow_filter == 'gaussian':
         import cv2
@@ -228,7 +228,14 @@ def main():
     def flow_function(x, y, pyr=args.pyr_scale, l=args.levels, w=args.winsize,
                       i=args.iters, polyn=args.poly_n, polys=args.poly_s,
                       fast=args.fast_pyr, filt=flags):
-        return farneback_method(x, y, pyr, l, w, i, polyn, polys, fast, filt)
+        if farneback_method == motion.ocl_farneback_optical_flow:
+            return farneback_method(x, y, pyr, l, w, i, polyn, polys, fast, filt)
+        else:
+            return farneback_method(x, y, pyr, l, w, i, polyn, polys, filt)
+
+    from butterflow.interpolate import sw_interpolate_flow
+    interpolate_function = sw_interpolate_flow if use_sw else \
+        motion.ocl_interpolate_flow
 
     renderer = Renderer(
         args.output_path,
@@ -236,7 +243,7 @@ def main():
         sequence,
         rate,
         flow_function,
-        motion.ocl_interpolate_flow,
+        interpolate_function,
         w,
         h,
         args.lossless,
@@ -274,6 +281,8 @@ def main():
     except (KeyboardInterrupt, SystemExit):
         log.warning('stopped early, files were left in the cache')
         log.warning('recoverable @ {}'.format(settings.default['tmp_dir']))
+        return 1
+    except Exception:
         return 1
 
 

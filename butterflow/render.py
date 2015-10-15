@@ -287,8 +287,17 @@ class Renderer(object):
                 fr_1_gr = cv2.cvtColor(fr_1, cv2.COLOR_BGR2GRAY)
                 fr_2_gr = cv2.cvtColor(fr_2, cv2.COLOR_BGR2GRAY)
 
-                fu, fv = self.flow_function(fr_1_gr, fr_2_gr)
-                bu, bv = self.flow_function(fr_2_gr, fr_1_gr)
+                fuv = self.flow_function(fr_1_gr, fr_2_gr)
+                buv = self.flow_function(fr_2_gr, fr_1_gr)
+
+                if isinstance(fuv, np.ndarray):
+                    fu = fuv[:,:,0]
+                    fv = fuv[:,:,1]
+                    bu = buv[:,:,0]
+                    bv = buv[:,:,1]
+                else:
+                    fu, fv = fuv
+                    bu, bv = buv
 
                 fr_1_32 = np.float32(fr_1) * 1/255.0
                 fr_2_32 = np.float32(fr_2) * 1/255.0
