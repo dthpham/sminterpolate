@@ -10,7 +10,6 @@ from butterflow import avinfo, motion, ocl, settings
 from butterflow.render import Renderer
 from butterflow.sequence import VideoSequence, RenderSubregion
 
-NO_OCL_WARNING = 'Error: no compatible opencl devices detected'
 NO_VIDEO_SPECIFIED = 'Error: no input file specified'
 
 
@@ -152,17 +151,16 @@ def main():
         print('cache deleted, done.')
         return 0
 
-    have_ocl = ocl.ocl_device_available()
-
     if args.devices:
-        if have_ocl:
-            ocl.print_ocl_devices()
-        else:
-            print(NO_OCL_WARNING)
+        ocl.print_ocl_devices()
         return 0
 
+    have_ocl = ocl.compat_ocl_device_available()
+
     if not have_ocl:
-        print(NO_OCL_WARNING)
+        print('Error: no compatible OpenCL devices detected. A FULL_PROFILE '
+              'device that supports OpenCL 1.2 or higher is required to use '
+              'this app.')
         return 1
 
     if args.video is None:
