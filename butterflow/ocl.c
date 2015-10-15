@@ -23,9 +23,11 @@ print_ocl_devices(PyObject *self, PyObject *noargs) {
     char p_name[1024];
     char p_vend[1024];
     char p_vers[1024];
+    char p_prof[1024];
     char d_name[1024];
     char d_vers[1024];
     char d_dver[1024];
+    char d_prof[1024];
 
     cl_safe(clGetPlatformIDs(32, platforms, &n_platforms));
 
@@ -42,9 +44,11 @@ print_ocl_devices(PyObject *self, PyObject *noargs) {
         cl_safe(clGetPlatformInfo(p, CL_PLATFORM_NAME, 1024, p_name, NULL));
         cl_safe(clGetPlatformInfo(p, CL_PLATFORM_VENDOR,  1024, p_vend, NULL));
         cl_safe(clGetPlatformInfo(p, CL_PLATFORM_VERSION, 1024, p_vers, NULL));
+        cl_safe(clGetPlatformInfo(p, CL_PLATFORM_PROFILE, 1024, p_prof, NULL));
         printf("\n  Platform          \t: %s"
                "\n  Platform Vendor   \t: %s"
-               "\n  Platform Version  \t: %s", p_name, p_vend, p_vers);
+               "\n  Platform Version  \t: %s"
+               "\n  Platform Profile  \t: %s", p_name, p_vend, p_vers, p_prof);
 
         cl_safe(clGetDeviceIDs(platforms[i], CL_DEVICE_TYPE_ALL, 0, NULL,
                                &n_devices));
@@ -58,9 +62,11 @@ print_ocl_devices(PyObject *self, PyObject *noargs) {
             cl_safe(clGetDeviceInfo(d, CL_DEVICE_NAME, 1024, d_name, NULL));
             cl_safe(clGetDeviceInfo(d, CL_DEVICE_VERSION, 1024, d_vers, NULL));
             cl_safe(clGetDeviceInfo(d, CL_DRIVER_VERSION, 1024, d_dver, NULL));
+            cl_safe(clGetDeviceInfo(d, CL_DEVICE_PROFILE, 1024, d_prof, NULL));
             printf("\n    Device    \t\t: %s"
                    "\n      Version \t\t: %s"
-                   "\n      Version \t\t: %s", d_name, d_vers, d_dver);
+                   "\n      Version \t\t: %s"
+                   "\n      Profile \t\t: %s", d_name, d_vers, d_dver, d_prof);
         }
         free(devices);
     }
