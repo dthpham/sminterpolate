@@ -48,7 +48,9 @@ def sw_interpolate_flow(prev_fr, next_fr, fu, fv, bu, bv, int_each_go):
                 for n, p in pairwise(results):
                     def alpha_blend(a, b, alpha):
                         return (1-alpha)*a + alpha*b
-                    bfr = alpha_blend(n[2], p[2], n[0])
+                    prv = p[2]
+                    nxt = n[2]
+                    bfr = alpha_blend(prv, nxt, n[0])
                     bfr = (bfr*255.0).astype(np.uint8)
                     frs.append(bfr)
             task_list = []
