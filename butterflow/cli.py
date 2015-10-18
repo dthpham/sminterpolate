@@ -358,9 +358,9 @@ def w_h_from_str(string, source_width, source_height):
             return source_width, source_height
         else:
             if w == -1:
-                w = int(h * source_width / source_height)
+                w = int(h * source_width / source_height) & ~1  # round to even
             elif h == -1:
-                h = int(w * source_height / source_width)
+                h = int(w * source_height / source_width) & ~1
     elif float(string) != 1.0:  # using a singlular int or float
         # round to nearest even number
         even_pixel = lambda x: \

@@ -20,6 +20,8 @@ class CliTestCase(unittest.TestCase):
         self.assertTupleEqual((w, h), (854, 480))
 
     def test_w_h_from_str_w_by_h_keep_aspect(self):
+        w, h = w_h_from_str('640:-1', 960, 518)
+        self.assertTupleEqual((w, h), (640, 344))
         w, h = w_h_from_str('640:-1', 640, 360)
         self.assertTupleEqual((w, h), (640, 360))
         w, h = w_h_from_str('-1:360', 640, 360)
