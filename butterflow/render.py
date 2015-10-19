@@ -9,7 +9,7 @@ import shutil
 import subprocess
 import cv2
 import numpy as np
-from butterflow.draw import draw_progress_bar, draw_debug_text
+import butterflow.draw as draw
 from butterflow.settings import default as settings
 from butterflow.source import FrameSource
 from butterflow.sequence import VideoSequence, RenderSubregion
@@ -25,7 +25,7 @@ class Renderer(object):
         flow_function=settings['flow_function'],
         interpolate_function=settings['interpolate_function'], w=None, h=None,
         lossless=False, trim=False, show_preview=True, add_info=False,
-        text_type=settings['text_type'], mux=False):
+        text_type=settings['text_type'], mark=False, mux=False):
         self.dst_path = dst_path
         self.vid_info = vid_info
         self.sequence = sequence
@@ -39,6 +39,7 @@ class Renderer(object):
         self.show_preview = show_preview
         self.add_info = add_info
         self.text_type = text_type
+        self.mark = mark
         self.mux = mux
         self.scaler = None
         self.pipe = None
@@ -399,10 +400,13 @@ class Renderer(object):
                         fr = cv2.resize(fr, (self.w, self.h),
                                         interpolation=self.scaler)
 
+                    if self.mark:
+                        draw.marker(fr, fr_type == 'interpolated')
+
                     if self.add_info:
                         if wrts_needed > 1:
                             fr_to_write = fr.copy()
-                        draw_debug_text(fr_to_write,
+                        draw.debug_text(fr_to_write,
                                         self.text_type,
                                         self.playback_rate,
                                         self.flow_function,
@@ -425,7 +429,7 @@ class Renderer(object):
                                         frs_dup)
                     if self.show_preview:
                         fr_to_show = fr.copy()
-                        draw_progress_bar(fr_to_show, float(frs_wrt) / tgt_frs)
+                        draw.progress_bar(fr_to_show, float(frs_wrt) / tgt_frs)
                         cv2.imshow(self.window_title, np.asarray(fr_to_show))
                         # every imshow call should be followed by waitKey to
                         # display the image for x milliseconds, otherwise it

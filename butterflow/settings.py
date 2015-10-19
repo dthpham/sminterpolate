@@ -2,7 +2,6 @@
 # Copyright 2015
 
 import os
-import sys
 import logging
 import tempfile
 import cv2
@@ -68,11 +67,12 @@ default = {
     # scaled up and down based on this reference point
     'font_face':      cv2.cv.CV_FONT_HERSHEY_PLAIN,
     'font_type':      cv2.cv.CV_AA,
+    'txt_max_scale':  1.0,
     'txt_thick':      1,
     'strk_thick':     2,
     'h_fits':         768,
     'v_fits':         216,
-    'txt_t_pad':      20,
+    'txt_t_pad':      30,
     'txt_l_pad':      20,
     'txt_r_pad':      20,
     'txt_ln_b_pad':   10,    # spacing between lines
@@ -88,6 +88,17 @@ default = {
     'bar_thick':      15,    # thickness of the inner bar
     'bar_color':      cv2.cv.RGB(255, 255, 255),
     'bar_strk_color': cv2.cv.RGB(192, 192, 192),
+    # frame marker settings
+    'mrk_d_pad':      20,
+    'mrk_r_pad':      20,
+    'mrk_out_thick':  -1,    # -1, a filled circle
+    'mrk_out_radius': 7,
+    'mrk_in_thick':   -1,
+    'mrk_in_radius':  4,
+    'mrk_line_type':  cv2.cv.CV_AA,
+    'mrk_out_color':  cv2.cv.RGB(255, 255, 255),
+    'mrk_def_color':  cv2.cv.RGB(128, 128, 128),
+    'mrk_fill_color': cv2.cv.RGB(255, 0, 0)
 }
 
 # x265 is considered a work in progress and is under heavy development

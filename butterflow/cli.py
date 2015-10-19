@@ -53,6 +53,8 @@ def main():
                      default=settings.default['text_type'],
                      help='Specify text type for debugging info, '
                      '(default: %(default)s)')
+    dsp.add_argument('-mrk', '--mark-frames', action='store_true',
+                     help='Set to mark interpolated frames')
 
     vid.add_argument('-o', '--output-path', type=str,
                      default=settings.default['out_path'],
@@ -251,6 +253,7 @@ def main():
         args.no_preview,
         args.add_info,
         args.text_type,
+        args.mark_frames,
         args.mux)
 
     motion.set_num_threads(settings.default['ocv_threads'])
