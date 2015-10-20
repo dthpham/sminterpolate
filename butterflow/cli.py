@@ -87,6 +87,10 @@ def main():
                      '(default: %(default)s)')
     vid.add_argument('-l', '--lossless', action='store_true',
                      help='Set to use lossless encoding settings')
+    vid.add_argument('-sm', '--smooth-motion', action='store_true',
+                     help='Set to tune for smooth motion. This mode favors '
+                     'accuracy and artifact-less frames above all and will '
+                     'emphasize blending over warping points.')
 
     mux.add_argument('-mux', action='store_true',
                      help='Set to mux the source audio with the output '
@@ -224,6 +228,9 @@ def main():
     if args.flow_filter == 'gaussian':
         import cv2
         flags = cv2.OPTFLOW_FARNEBACK_GAUSSIAN
+
+    if args.smooth_motion:
+        args.poly_s = 0.1
 
     # don't make the function with `lambda` because `draw_debug_text` will need
     # to retrieve kwargs with the `inspect` module
