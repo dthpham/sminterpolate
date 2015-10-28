@@ -1,5 +1,4 @@
-// Author: Duong Pham
-// Copyright 2015
+// methods to get optical flows and interpolate them
 
 #include <Python.h>
 #include <opencv2/core/core.hpp>

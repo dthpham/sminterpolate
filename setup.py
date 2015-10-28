@@ -239,7 +239,7 @@ else:
 # shared arguments
 setup_kwargs = {
     'name': 'butterflow',
-    'packages': find_packages(),
+    'packages': find_packages(exclude=['tests']),
     'ext_modules': [avinfo_ext, ocl_ext, motion_ext],
     'version': version,
     'author': 'Duong Pham',

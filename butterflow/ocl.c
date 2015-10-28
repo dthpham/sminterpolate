@@ -1,5 +1,4 @@
-// Author: Duong Pham
-// Copyright 2015
+// returns information on the opencl environment
 
 #include <Python.h>
 #include <stdio.h>

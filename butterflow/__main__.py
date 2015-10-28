@@ -1,5 +1,5 @@
-# Author: Duong Pham
-# Copyright 2015
+#!/usr/bin/env python2
+# console scripts entry point into butterflow
 
 import sys
 

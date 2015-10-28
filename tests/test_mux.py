@@ -1,10 +1,6 @@
-# Author: Duong Pham
-# Copyright 2015
-
 import unittest
 import numpy as np
 from butterflow.mux import atempo_factors_for_spd, ATEMPO_MIN, ATEMPO_MAX
-
 
 class MuxTestCase(unittest.TestCase):
     def validate_factors_for_spd(self, s):

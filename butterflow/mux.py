@@ -1,5 +1,4 @@
-# Author: Duong Pham
-# Copyright 2015
+# extracts audio, alters speed, and muxes it with a video
 
 import os
 import shutil
@@ -7,11 +6,6 @@ import subprocess
 import math
 from butterflow import avinfo
 from butterflow.settings import default as settings
-
-# `atempo` filter values are bounded
-ATEMPO_MIN = 0.5  # slow down to no less than half the original speed
-ATEMPO_MAX = 2.0  # speed up to no more than double
-
 
 def extract_audio(video, destination, start, end, spd=1.0):
     av_info = avinfo.get_av_info(video)
@@ -123,6 +117,9 @@ def mux(video, audio, destination):
         raise RuntimeError('mux failed')
     shutil.move(tempfile, destination)
 
+ATEMPO_MIN = 0.5
+ATEMPO_MAX = 2.0
+
 
 def atempo_factors_for_spd(s):
     # returns a list of `atempo` values between `ATEMPO_MIN` and `ATEMPO_MAX`
@@ -132,7 +129,6 @@ def atempo_factors_for_spd(s):
         x = int(math.log(s) / math.log(limit))  # apply log rule for exponents
         for i in range(x):
             facs.append(limit)
-        # get the final value
         y = s * 1.0 / math.pow(limit, x)
         facs.append(y)
         return facs

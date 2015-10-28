@@ -1,5 +1,4 @@
-# Author: Duong Pham
-# Copyright 2015
+# command line interface to butterflow
 
 import os
 import sys
@@ -89,13 +88,11 @@ def main():
                      help='Set to use lossless encoding settings')
     vid.add_argument('-sm', '--smooth-motion', action='store_true',
                      help='Set to tune for smooth motion. This mode favors '
-                     'accuracy and artifact-less frames above all and will '
-                     'emphasize blending over warping points.')
+                     'accurate and artifact-less frames above all and will '
+                     'emphasize blending frames over warping pixels.')
 
     mux.add_argument('-mux', action='store_true',
-                     help='Set to mux the source audio with the output '
-                     'video. Audio may not be in sync with the final video if '
-                     'speed has been altered during the rendering process.')
+                     help='Set to mux the source audio with the output video')
 
     fgr.add_argument('--fast-pyr', action='store_true',
                      help='Set to use fast pyramids')
@@ -109,7 +106,7 @@ def main():
                      '(default: %(default)s)')
     fgr.add_argument('--winsize', type=int,
                      default=settings.default['winsize'],
-                     help='Specify average window size, '
+                     help='Specify averaging window size, '
                      '(default: %(default)s)')
     fgr.add_argument('--iters', type=int,
                      default=settings.default['iters'],
@@ -230,7 +227,7 @@ def main():
         flags = cv2.OPTFLOW_FARNEBACK_GAUSSIAN
 
     if args.smooth_motion:
-        args.poly_s = 0.1
+        args.poly_s = 0.01
 
     # don't make the function with `lambda` because `draw_debug_text` will need
     # to retrieve kwargs with the `inspect` module
@@ -276,17 +273,16 @@ def main():
 
         new_sz = human_sz(float(os.path.getsize(args.output_path)))
 
-        print('Frames written:')
-        print(' {} real, {} interpolated, {} duped, {} dropped'.format(
+        print('{} real, {} interpolated, {} duped, {} dropped'.format(
             renderer.tot_src_frs,
             renderer.tot_frs_int,
             renderer.tot_frs_dup,
             renderer.tot_frs_drp))
-        print(' write ratio: {}/{}, ({:.2f}%)'.format(
+        print('write ratio: {}/{}, ({:.2f}%) {}'.format(
             renderer.tot_frs_wrt,
             renderer.tot_tgt_frs,
-            renderer.tot_frs_wrt * 100.0 / renderer.tot_tgt_frs))
-        print(' out size: {}'.format(new_sz))
+            renderer.tot_frs_wrt * 100.0 / renderer.tot_tgt_frs,
+            new_sz))
         print('butterflow took {:.3g} minutes, done.'.format(tot_time))
     except (KeyboardInterrupt, SystemExit):
         log.warning('stopped early, files were left in the cache')
@@ -304,7 +300,7 @@ def human_sz(nbytes):
     while nbytes >= 1024 and i < len(suffixes) - 1:
         nbytes /= 1024.
         i += 1
-    f = ('{:.2f}'.format(nbytes)).rstrip('0').rstrip('.')
+    f = ('{:+.2f}'.format(nbytes)).rstrip('0').rstrip('.')
     return '%s %s' % (f, suffixes[i])
 
 

@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
-
-# Author: Duong Pham
-# Copyright 2015
+# renders the output video with interpolated frames
 
 import os
 import math
@@ -331,12 +329,12 @@ class Renderer(object):
                         # will have to drop the source frame. nothing will be
                         # written
                         will_wrt = False
-                    log_msg('w_drp: %3s,%3s,%2s %s,-%s',
-                            pair_a,
-                            pair_b,
-                            ','.join([str(x) for x in w_drp]),
-                            cmp_int_each_go,
-                            n_drp)
+                    # log_msg('w_drp: %3s,%3s,%2s %s,-%s',
+                    #         pair_a,
+                    #         pair_b,
+                    #         ','.join([str(x) for x in w_drp]),
+                    #         cmp_int_each_go,
+                    #         n_drp)
                     if not will_wrt:
                         # nothing will be written this go
                         wrk_idx += 1  # still have to increment the work index

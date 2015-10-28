@@ -1,5 +1,4 @@
-# Author: Duong Pham
-# Copyright 2015
+# centralized, app-wide settings
 
 import os
 import logging

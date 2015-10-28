@@ -9,32 +9,31 @@ given two existing frames `A` and `B`, this program can generate frames `C.1`,
 [motion interpolation](http://en.wikipedia.org/wiki/Motion_interpolation),
 increases frame rates and can give the perception of smoother motion and more
 fluid animation, an effect most people know as the "soap opera effect".
-`butterflow` takes advantage of this increase in frame rates to make high speed
+Butterflow takes advantage of this increase in frame rates to make high speed
 and slow motion videos with minimal judder.
 
-![](http://srv.dthpham.me/video/blow_sm.gif)
+![](http://srv.dthpham.me/static/ink.gif)
 
-In this example, `butterflow` slowed down a `1s` video down by `10x`. An
-additional `208` frames were interpolated from `30` original source frames
-giving the video a smooth feel during playback. The same video was slowed
-down with `ffmpeg`, but because it dupes frames and can't interpolate new ones
-the video has a noticeable stutter.
+In this example, Butterflow slowed down a `1s` video down by `10x`. An
+additional `270` frames were interpolated from `30` original source frames
+giving the video a smooth feel during playback. The same video was slowed down
+with FFmpeg, but because it dupes frames and can't interpolate new ones the
+video has a noticeable stutter.
 
-![](http://srv.dthpham.me/video/ink_sm.gif)
+![](http://srv.dthpham.me/static/blow.gif)
 
-Here is another example where the frame rate has been increased from `30fps` to
-`60fps` with `butterflow`. The video has been slowed down to make the
-interpolated frame (marked `Src: N`) between original source frames more
-apparent. Playing it back in full speed would produce a "soap opera effect".
+Here is another example of the same concept. Interpolated frames between
+real frames are marked `Int: Y`. Opening the output video and frame stepping
+through it would make them more obvious.
 
 See the [In Action](https://github.com/dthpham/butterflow/wiki/In-Action) page
 for more demonstrations.
 
-## Installation
+# Installation
 
 ### OS X:
 
-With [`homebrew`](http://brew.sh/):
+With [Homebrew](http://brew.sh/):
 
 ```
 brew install homebrew/science/butterflow
@@ -47,26 +46,20 @@ A package is available in the AUR under
 
 ### From Source:
 
-Refer to the [Install From Source Guide](https://github.com/dthpham/butterflow/wiki/Install-From-Source-Guide)
+Refer to the
+[Install From Source Guide](https://github.com/dthpham/butterflow/wiki/Install-From-Source-Guide)
 on the wiki.
 
-## Setup
+# Setup
 
-After installing the package, you still need to install at least one
-vendor-specific implementation of OpenCL that supports your hardware. No setup
-is necessary on OS X because support is provided by default. See
-[Suggested OpenCL Packages](https://github.com/dthpham/butterflow/wiki/Suggested-OpenCL-Packages)
-for some options.
+Butterflow requires no additional setup to use, however it's recommended that
+you set up a functional OpenCL environment on your machine to take advantage of
+hardware accelerated methods that will make rendering significantly faster.
 
-When finished, you can run `butterflow -d` to print a list of all detected
-devices.
+See [Setting up OpenCL](https://github.com/dthpham/butterflow/wiki/Setting-up-OpenCL)
+for details on how to do this.
 
-For additional information on how to satisfy the OpenCL requirements, please
-read [How to set up OpenCL in Linux](http://wiki.tiker.net/OpenCLHowTo). If
-you're on Arch Linux, have a look at their
-[GPGPU wiki page](https://wiki.archlinux.org/index.php/GPGPU).
-
-## Usage
+# Usage
 
 Run `butterflow -h` for a full list of options and their default values.
 

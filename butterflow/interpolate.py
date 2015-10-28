@@ -1,4 +1,3 @@
-# Author: Duong Pham
 # a parallel, naive implementation of software frame interpolation using
 # provided optical flows (displacement fields)
 
@@ -15,7 +14,7 @@ def time_steps_for_int_frames(n):  # python version
         time_steps.append(ts)
     return time_steps
 
-def fr_at_time_step(target_fr, u, v, ts, name=''):
+def fr_at_time_step(target_fr, u, v, ts):
     shape = target_fr.shape
     fr = np.zeros(shape, dtype=np.float32)
     for idx in np.ndindex(shape):
@@ -24,7 +23,7 @@ def fr_at_time_step(target_fr, u, v, ts, name=''):
         ch = idx[2]
         fr[idx] = target_fr[np.clip(np.rint(py), 0, shape[0]-1),
                             np.clip(np.rint(px), 0, shape[1]-1), ch]
-    return ts, name, fr
+    return ts, fr
 
 def fr_at_time_step_wrp(args):   # to pass multiple args for Pool.map
     return fr_at_time_step(*args)
@@ -48,9 +47,9 @@ def sw_interpolate_flow(prev_fr, next_fr, fu, fv, bu, bv, int_each_go):
                 for n, p in pairwise(results):
                     def alpha_blend(a, b, alpha):
                         return (1-alpha)*a + alpha*b
-                    prv = p[2]
-                    nxt = n[2]
-                    bfr = alpha_blend(prv, nxt, n[0])
+                    prv = p[1]
+                    nxt = n[1]
+                    bfr = alpha_blend(prv, nxt, n[0])  # n[0] is the step
                     bfr = (bfr*255.0).astype(np.uint8)
                     frs.append(bfr)
             task_list = []
@@ -58,8 +57,8 @@ def sw_interpolate_flow(prev_fr, next_fr, fu, fv, bu, bv, int_each_go):
                 if i+j > len(time_steps)-1:
                     continue
                 ts = time_steps[i+j]
-                task_list.extend([(next_fr, fu, fv, ts, 'next_fr'),
-                                  (prev_fr, bu, bv, ts, 'prev_fr')])
+                task_list.extend([(next_fr, fu, fv, ts),
+                                  (prev_fr, bu, bv, ts)])
             r = pool.map_async(fr_at_time_step_wrp, task_list,
                                callback=blend_results)
             r.wait()  # block on results, will return them in order

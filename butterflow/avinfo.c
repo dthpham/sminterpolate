@@ -1,5 +1,4 @@
-// Author: Duong Pham
-// Copyright 2015
+// retrieves media file information
 
 #include <Python.h>
 #include <stdio.h>

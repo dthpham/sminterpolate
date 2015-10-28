@@ -1,6 +1,3 @@
-# Author: Duong Pham
-# Copyright 2015
-
 import unittest
 import subprocess
 import os
@@ -137,7 +134,7 @@ class AvInfoTestCase(unittest.TestCase):
         self.assertEqual(av['sar_n'], sar.numerator)
         self.assertEqual(av['sar_d'], sar.denominator)
         dar = fractions.Fraction(714*32, 458*27)  # use fractions.Fraction to
-        # reduce the fraction, if needed
+        # simplify the fraction, if needed
         self.assertEqual(av['dar_n'], dar.numerator)
         self.assertEqual(av['dar_d'], dar.denominator)
 

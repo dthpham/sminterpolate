@@ -1,6 +1,3 @@
-# Author: Duong Pham
-# Copyright 2015
-
 import unittest
 from butterflow.cli import w_h_from_str, rate_from_str, time_str_to_ms, \
     parse_tval_str, sub_from_str, sub_from_str_full_key, \

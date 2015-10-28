@@ -1,8 +1,12 @@
-recursive-exclude share *
-recursive-exclude tests *
-recursive-exclude vendor *
+recursive-exclude share/*
+recursive-include tests/*
+recursive-exclude vendor/*
 recursive-include vendor/opencv-ndarray-conversion *
+include butterflow/avinfo.c
+include butterflow/ocl.c
+include butterflow/motion.cpp
+exclude butterflow/dev_settings.py
+exclude setup.cfg
 exclude .git*
 include LICENSE
 include README.md
-exclude setup.cfg

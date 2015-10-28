@@ -1,6 +1,3 @@
-# Author: Duong Pham
-# Copyright 2015
-
 import unittest
 import os
 import subprocess
@@ -29,8 +26,7 @@ def mk_sample_video(dst_path, duration, w, h, rate):
         raise RuntimeError
 
 def av_frame_at_idx(video, dst_path, idx):
-    # extract image using avutil
-    # return a cvimage
+    # extract image using avutil and return a cvimage
     get_fr_proc = subprocess.call([
         settings['avutil'],
         '-loglevel', 'fatal',

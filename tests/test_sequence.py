@@ -1,6 +1,3 @@
-# Author: Duong Pham
-# Copyright 2015
-
 import unittest
 from butterflow.sequence import VideoSequence, Subregion
 

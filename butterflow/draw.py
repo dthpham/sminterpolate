@@ -1,5 +1,4 @@
-# Author: Duong Pham
-# Copyright 2015
+# draws debugging information on frames
 
 import cv2
 import sys

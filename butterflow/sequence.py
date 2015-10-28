@@ -1,10 +1,8 @@
-# Author: Duong Pham
-# Copyright 2015
-
+# a delineated description of a video sequence
 
 class VideoSequence(object):
     def __init__(self, duration, frames):
-        self.duration = float(duration)  # in milliseconds
+        self.duration = float(duration)
         self.frames = frames
         self.subregions = []
 

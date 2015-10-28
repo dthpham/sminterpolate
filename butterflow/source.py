@@ -1,13 +1,11 @@
-# Author: Duong Pham
-# Copyright 2015
+# uses the opencv video api to provide frames from a video
 
 import cv2
 
 class FrameSource(object):
     def __init__(self, path):
-        # uses opencv video api as a frame source
         self.path = path
-        self.src = None  # the `videocapture` object
+        self.src = None
         self.frames = 0
 
     def open(self):
@@ -20,7 +18,7 @@ class FrameSource(object):
 
     def close(self):
         if self.src is not None:
-            self.src.release()  # will close the video file
+            self.src.release()
         self.src = None
 
     @property
