@@ -6,23 +6,11 @@ OS X 10.11 (El Capitan), Windows 10, Ubuntu 15.04 (Vivid Vervet), Debian 8.2
 (Jessie), and Arch Linux. Getting Butterflow to work on other Linux
 distributions may be possible but expect support to be limited.
 
-## When finished installing
-When you're finished installing, refer to the [Setting up OpenCL](Setting-up-OpenCL.md)
-wiki page for details on how to take advantage of hardware acceleration through
-OpenCL. This step isn't mandatory but it's one you are expected to take.
-
-You can run a suite of tests against Butterflow to ensure everything is set
-up properly with `python setup.py test` or just `nosetests` if you have [
-nose](https://nose.readthedocs.org/en/latest/) installed. OpenCL is required,
-or else tests will fail.
-
-To install Butterflow outside of a virtual environment, first exit your
-virtualenv if you are in one with `deactivate` and then run
-`python setup.py install`. To uninstall run `pip uninstall butterflow`.
-
-## OS X (El Capitan)
+## Instructions
+### OS X (El Capitan)
 These instructions will show you how to compile and build a development version
-of Butterflow using OS X's pre-installed Python.
+of Butterflow using OS X's pre-installed Python. At minimum, you will need to
+have OS X Mavericks installed.
 
 To begin, install dependencies with [Homebrew](http://brew.sh/).
 
@@ -48,25 +36,27 @@ source bin/activate
 # Pick up the cv2.so module
 echo "$(brew --prefix)/lib/python2.7/site-packages" > lib/python2.7/site-packages/butterflow.pth
 # Alternatively, you can add Homebrew's Python site-packages to your
-# PYTHONPATH. Adding an expoert to your ~/.profile will save you the trouble
-# of having to set this every time you activate the virtual environment:
+# PYTHONPATH. Adding an expoert to your ~/.profile will save you the trouble of
+# having to set this every time you activate the virtual environment:
 # export PYTHONPATH=$PYTHONPATH:$(brew --prefix)/lib/python2.7/site-packages
 python setup.py develop
 ```
 
+#### Search paths
 You may have to manually add /usr/local/lib and /usr/local/include to your
-search paths. If you have Xcode, clang will only search OS X SDK paths. You
-should install the Xcode Command Line tools with `xcode-select --install` to
-get a version that searches /usr/local by default.
+search paths to pick up some headers and libraries. If you're using Xcode's
+clang, it will only search OS X SDK paths. You should install the Xcode Command
+Line tools with `xcode-select --install` to get a version that searches
+/usr/local by default.
 
-## Ubuntu (Vivid Vervet)
-These instructions will show you how to get Butterflow working in Ubuntu
-15.04 (Vivid Vervet). This version of Ubuntu brings back support for FFmpeg.
-Installing Butterflow will be more difficult on older versions of Ubuntu
-because that package is not readily available.
+### Ubuntu (Vivid Vervet)
+These instructions will show you how to get Butterflow working in Ubuntu 15.04
+(Vivid Vervet). This version of Ubuntu brings back support for FFmpeg.
+Installing Butterflow is more difficult on older versions of Ubuntu because
+FFmpeg is not readily available.
 
-Begin by installing tools, development files, and a generic OpenCL library
-and headers.
+Begin by installing tools, development files, and a generic OpenCL library and
+headers.
 
 ```
 sudo apt-get install git virtualenv python-dev ocl-icd-opencl-dev libopencv-dev python-opencv ffmpeg
@@ -85,7 +75,7 @@ echo "/usr/lib/python2.7/dist-packages" > lib/python2.7/site-packages/butterflow
 python setup.py develop
 ```
 
-## Debian (Jessie)
+### Debian (Jessie)
 Begin by installing FFmpeg. These instructions are adapted from this [guide](https://www.assetbank.co.uk/support/documentation/install/ffmpeg-debian-squeeze/ffmpeg-debian-jessie/).
 This [gist](https://gist.github.com/holms/7009218) is a tad more comprehensive
 and will show you how to make a package that you can manage with `apt-get`.
@@ -138,7 +128,7 @@ echo "/usr/lib/python2.7/dist-packages" > lib/python2.7/site-packages/butterflow
 python setup.py develop
 ```
 
-## Arch Linux
+### Arch Linux
 Install dependencies:
 
 ```
@@ -155,3 +145,20 @@ source bin/activate
 echo "/usr/lib/python2.7/site-packages/" > lib/python2.7/site-packages/butterflow.pth
 python setup.py develop
 ```
+
+## What to do afterwards
+### Enabling OpenCL acceleration
+Refer to [Setting up OpenCL](Setting-up-OpenCL.md) for details on how to take
+advantage of hardware acceleration through OpenCL. This step isn't mandatory but
+it's one you are expected to take.
+
+### Testing
+You can run a suite of tests against Butterflow to ensure everything is set up
+properly with `python setup.py test` or just `nosetests` or `nosetests2` if you
+have [nose](https://nose.readthedocs.org/en/latest/) installed. Tests will fail
+if you don't have OpenCL set up.
+
+### Installing outside of a virtualenv
+To install Butterflow outside of a virtual environment, first exit your
+virtualenv if you are in one with `deactivate` and then run
+`python setup.py install`. To uninstall run `pip uninstall butterflow`.
