@@ -1,10 +1,12 @@
 # Install From Source Guide
 
 ## Supported platforms
-Butterflow has been successfully built and tested on several platforms including
-OS X 10.11 (El Capitan), Windows 10, Ubuntu 15.04 (Vivid Vervet), Debian 8.2
-(Jessie), and Arch Linux. Getting Butterflow to work on other Linux
-distributions may be possible but expect support to be limited.
+Butterflow has been successfully built and tested on several platforms,
+including OS X 10.11 (El Capitan), Windows 10, Ubuntu 15.04 (Vivid Vervet),
+Debian 8.2 (Jessie), and Arch Linux.
+
+Getting Butterflow to work on other Linux distributions may be possible, but
+expect support to be limited.
 
 ## Instructions
 ### OS X (El Capitan)
@@ -26,7 +28,7 @@ sudo easy_install pip
 pip install virtualenv
 ```
 
-Finally build and install a development version of Butterflow.
+Finally, build and install a development version of Butterflow.
 
 ```
 git clone https://github.com/dthpham/butterflow.git
@@ -36,7 +38,7 @@ source bin/activate
 # Pick up the cv2.so module
 echo "$(brew --prefix)/lib/python2.7/site-packages" > lib/python2.7/site-packages/butterflow.pth
 # Alternatively, you can add Homebrew's Python site-packages to your
-# PYTHONPATH. Adding an expoert to your ~/.profile will save you the trouble of
+# PYTHONPATH. Adding an exxport to your ~/.profile will save you the trouble of
 # having to set this every time you activate the virtual environment:
 # export PYTHONPATH=$PYTHONPATH:$(brew --prefix)/lib/python2.7/site-packages
 python setup.py develop
@@ -51,9 +53,9 @@ Line tools with `xcode-select --install` to get a version that searches
 
 ### Ubuntu (Vivid Vervet)
 These instructions will show you how to get Butterflow working in Ubuntu 15.04
-(Vivid Vervet). This version of Ubuntu brings back support for FFmpeg.
-Installing Butterflow is more difficult on older versions of Ubuntu because
-FFmpeg is not readily available.
+(Vivid Vervet). This version of Ubuntu brings back support for FFmpeg,
+installing Butterflow is more difficult on older versions of Ubuntu because
+it's not readily available.
 
 Begin by installing tools, development files, and a generic OpenCL library and
 headers.
@@ -69,15 +71,13 @@ git clone https://github.com/dthpham/butterflow.git
 virtualenv -p /usr/bin/python2 butterflow
 cd butterflow
 source bin/activate
-# dist-packages is a Debian-specific convention that is present in
-# derivative distros
+# dist-packages is a Debian-specific convention that is present in derivative distros
 echo "/usr/lib/python2.7/dist-packages" > lib/python2.7/site-packages/butterflow.pth
 python setup.py develop
 ```
 
 ### Debian (Jessie)
-Begin by installing FFmpeg. These instructions are adapted from this [guide](https://www.assetbank.co.uk/support/documentation/install/ffmpeg-debian-squeeze/ffmpeg-debian-jessie/).
-This [gist](https://gist.github.com/holms/7009218) is a tad more comprehensive
+Begin by installing FFmpeg. Note: these instructions are adapted from this [guide](https://www.assetbank.co.uk/support/documentation/install/ffmpeg-debian-squeeze/ffmpeg-debian-jessie/). This [gist](https://gist.github.com/holms/7009218) is a tad more comprehensive
 and will show you how to make a package that you can manage with `apt-get`.
 
 First add the multimedia source to the bottom of `/etc/apt/sources.list`.
@@ -105,7 +105,7 @@ Download the latest package of FFmpeg from their [releases](http://ffmpeg.org/re
 page. Extract it to a folder, `cd` into it and run:
 
 ```
-# This is going to install it into /usr/local
+# This is going to install into /usr/local
 ./configure --enable-gpl --enable-postproc --enable-swscale --enable-avfilter --enable-libmp3lame --enable-libvorbis --enable-libtheora --enable-libx264 --enable-libspeex --enable-shared --enable-pthreads --enable-libopenjpeg --enable-libfaac --enable-nonfree
 make
 sudo make install
@@ -149,16 +149,16 @@ python setup.py develop
 ## What to do afterwards
 ### Enabling OpenCL acceleration
 Refer to [Setting up OpenCL](Setting-up-OpenCL.md) for details on how to take
-advantage of hardware acceleration through OpenCL. This step isn't mandatory but
-it's one you are expected to take.
+advantage of hardware acceleration through OpenCL. This step isn't mandatory,
+but it's one you are expected to take.
 
 ### Testing
 You can run a suite of tests against Butterflow to ensure everything is set up
-properly with `python setup.py test` or just `nosetests` or `nosetests2` if you
+properly with `python setup.py test`, or just `nosetests` or `nosetests2`, if you
 have [nose](https://nose.readthedocs.org/en/latest/) installed. Tests will fail
 if you don't have OpenCL set up.
 
 ### Installing outside of a virtualenv
 To install Butterflow outside of a virtual environment, first exit your
-virtualenv if you are in one with `deactivate` and then run
-`python setup.py install`. To uninstall run `pip uninstall butterflow`.
+virtualenv if you are in one with `deactivate`, then run
+`python setup.py install`. To uninstall, run `pip uninstall butterflow`.

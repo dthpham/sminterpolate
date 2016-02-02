@@ -23,7 +23,7 @@ If you encounter an error that you suspect is related to OpenCL, it may be
 because you don't have a compatible graphics device. Double check to see if your
 Mac is listed on Apple's [Mac computers that use OpenCL and OpenGL graphics](https://support.apple.com/en-us/HT202823)
 support page and verify that it meets the minimum requirements outlined in the
-[Requirements](#Requirements) section.
+[Requirements](#general-requirements) section.
 
 ### Ubuntu (Vivid Vervet)
 #### Nvidia
@@ -46,7 +46,7 @@ To do this, download the driver from the [AMD website](http://support.amd.com/en
 We're going to use version 15.9 as an example
 (`amd-catalyst-15.9-linux-installer-15.201.1151-x86.x86_64.zip`).
 
-Extract the driver package to a folder. Launch a terminal and `cd` into it and
+Extract the driver package to a folder. Launch a terminal, `cd` into it, and
 run:
 
 ```
@@ -112,9 +112,9 @@ Just install a client driver:
 ```
 
 ## When you're done
-When you're done setting up OpenCL you can run `butterflow -d` to print a list
+When you're done setting up OpenCL, you can run `butterflow -d` to print a list
 of detected devices.
 
 Butterflow will always pick the fastest rendering method possible (it will
-automatically switch to OpenCL if it detects you have a compatible device) but
+automatically switch to OpenCL if it detects you have a compatible device), but
 you can still force it to use software rendering with the `-sw` flag.
