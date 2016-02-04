@@ -1,16 +1,15 @@
-# command line interface to butterflow
+# cli to butterflow
 
 import os
 import sys
 import argparse
-import math
-import string
-from butterflow import avinfo, motion, ocl, settings
+import logging
+import datetime
+import cv2
+from butterflow.settings import default as settings
+from butterflow import ocl, avinfo, motion
 from butterflow.render import Renderer
-from butterflow.sequence import VideoSequence, RenderSubregion
-
-NO_VIDEO_SPECIFIED = 'Error: no input file specified'
-
+from butterflow.sequence import VideoSequence, Subregion
 
 def main():
     par = argparse.ArgumentParser(usage='butterflow [options] [video]',
@@ -45,18 +44,17 @@ def main():
     dsp.add_argument('-np', '--no-preview', action='store_false',
                      help='Set to disable video preview')
     dsp.add_argument('-a', '--add-info', action='store_true',
-                     help='Set to embed debugging info into the output '
-                          'video')
+                     help='Set to embed debugging info into the output video')
     dsp.add_argument('-tt', '--text-type',
                      choices=['light', 'dark', 'stroke'],
-                     default=settings.default['text_type'],
+                     default=settings['text_type'],
                      help='Specify text type for debugging info, '
                      '(default: %(default)s)')
     dsp.add_argument('-mrk', '--mark-frames', action='store_true',
                      help='Set to mark interpolated frames')
 
     vid.add_argument('-o', '--output-path', type=str,
-                     default=settings.default['out_path'],
+                     default=settings['out_path'],
                      help='Specify path to the output video')
     vid.add_argument('-r', '--playback-rate', type=str,
                      help='Specify the playback rate as an integer or a '
@@ -65,20 +63,20 @@ def main():
                      'with `x`, e.g., "2x" will double the frame rate. The '
                      'original rate will be used by default if nothing is '
                      'specified.')
-    vid.add_argument('-s', '--sub-regions', type=str,
+    vid.add_argument('-s', '--subregions', type=str,
                      help='Specify rendering subregions in the form: '
                      '"a=TIME,b=TIME,TARGET=VALUE" where TARGET is either '
                      '`fps`, `dur`, `spd`. Valid TIME syntaxes are [hr:m:s], '
                      '[m:s], [s], [s.xxx], or `end`, which signifies to the '
                      'end the video. You can specify multiple subregions by '
-                     'separating them with a colon `:`. A special region '
+                     'separating them with a colon `:`. A special subregion '
                      'format that conveniently describes the entire clip is '
                      'available in the form: "full,TARGET=VALUE".')
-    vid.add_argument('-t', '--trim-regions', action='store_true',
+    vid.add_argument('-t', '--trim-subregions', action='store_true',
                      help='Set to trim subregions that are not explicitly '
                           'specified')
     vid.add_argument('-vs', '--video-scale', type=str,
-                     default=str(settings.default['video_scale']),
+                     default=str(settings['video_scale']),
                      help='Specify output video size in the form: '
                      '"WIDTH:HEIGHT" or by using a factor. To keep the '
                      'aspect ratio only specify one component, either width '
@@ -97,62 +95,71 @@ def main():
     fgr.add_argument('--fast-pyr', action='store_true',
                      help='Set to use fast pyramids')
     fgr.add_argument('--pyr-scale', type=float,
-                     default=settings.default['pyr_scale'],
+                     default=settings['pyr_scale'],
                      help='Specify pyramid scale factor, '
                      '(default: %(default)s)')
     fgr.add_argument('--levels', type=int,
-                     default=settings.default['levels'],
+                     default=settings['levels'],
                      help='Specify number of pyramid layers, '
                      '(default: %(default)s)')
     fgr.add_argument('--winsize', type=int,
-                     default=settings.default['winsize'],
+                     default=settings['winsize'],
                      help='Specify averaging window size, '
                      '(default: %(default)s)')
     fgr.add_argument('--iters', type=int,
-                     default=settings.default['iters'],
+                     default=settings['iters'],
                      help='Specify number of iterations at each pyramid '
                      'level, (default: %(default)s)')
     fgr.add_argument('--poly-n', type=int,
-                     choices=settings.default['poly_n_choices'],
-                     default=settings.default['poly_n'],
+                     choices=settings['poly_n_choices'],
+                     default=settings['poly_n'],
                      help='Specify size of pixel neighborhood, '
                      '(default: %(default)s)')
     fgr.add_argument('--poly-s', type=float,
-                     default=settings.default['poly_s'],
+                     default=settings['poly_s'],
                      help='Specify standard deviation to smooth derivatives, '
                      '(default: %(default)s)')
     fgr.add_argument('-ff', '--flow-filter', choices=['box', 'gaussian'],
-                     default=settings.default['flow_filter'],
+                     default=settings['flow_filter'],
                      help='Specify which filter to use for optical flow '
                      'estimation, (default: %(default)s)')
 
-    # add a space to args that start with a `-` char to avoid an unexpected
-    # argument error. needed for the `--video-scale` option
     for i, arg in enumerate(sys.argv):
-        if (arg[0] == '-') and arg[1].isdigit():
-            sys.argv[i] = ' ' + arg
+        if arg[0] == '-' and arg[1].isdigit():  # accept args w/ - for -vs
+            sys.argv[i] = ' '+arg
 
     args = par.parse_args()
 
-    import logging
-    logging.basicConfig(level=settings.default['loglevel_a'],
-                        format='%(levelname)-7s: %(message)s')
-
+    logging.basicConfig(level=settings['loglevel_a'],
+                        format='[butterflow.%(levelname)s]: %(message)s')
     log = logging.getLogger('butterflow')
     if args.verbose:
-        log.setLevel(settings.default['loglevel_b'])
+        log.setLevel(settings['loglevel_b'])
 
     if args.version:
         from butterflow.__init__ import __version__
-        print('butterflow version %s' % __version__)
+        print('butterflow version {}'.format(__version__))
         return 0
 
+    cachedir = settings['tempdir']
     if args.cache:
-        print_cache_info()
+        nfiles = 0
+        sz = 0
+        for dirpath, dirnames, fnames in os.walk(cachedir):
+            if dirpath == settings['clbdir']:
+                continue
+            for fname in fnames:
+                nfiles += 1
+                fp = os.path.join(dirpath, fname)
+                sz += os.path.getsize(fp)
+        sz = sz / 1024.0**2
+        print('{} files, {:.2f} MB'.format(nfiles, sz))
+        print('cache @ '+cachedir)
         return 0
-
     if args.rm_cache:
-        rm_cache()
+        if os.path.exists(cachedir):
+            import shutil
+            shutil.rmtree(cachedir)
         print('cache deleted, done.')
         return 0
 
@@ -160,391 +167,244 @@ def main():
         ocl.print_ocl_devices()
         return 0
 
-    if args.video is None:
-        print(NO_VIDEO_SPECIFIED)
+    if not args.video:
+        print('no file specified')
         return 1
-
-    if not os.path.exists(args.video):
-        print('Error: file does not exist at path')
+    elif not os.path.exists(args.video):
+        print('file does not exist')
         return 1
 
     if args.probe:
-        if args.video:
-            try:
-                avinfo.print_av_info(args.video)
-            except Exception as e:
-                print('Error: %s' % e)
-        else:
-            print(NO_VIDEO_SPECIFIED)
+        avinfo.print_av_info(args.video)
         return 0
 
-    try:
-        vid_info = avinfo.get_av_info(args.video)
-    except Exception as e:
-        print('Error: %s' % e)
-        return 1
+    av_info = avinfo.get_av_info(args.video)
 
-    if not vid_info['v_stream_exists']:
-        print('Error: no video stream detected')
-        return 1
-
-    try:
-        sequence = sequence_from_str(vid_info['duration'],
-                                     vid_info['frames'], args.sub_regions)
-    except Exception as e:
-        print('Bad subregion string: %s' % e)
-        return 1
-
-    src_rate = (vid_info['rate_n'] * 1.0 /
-                vid_info['rate_d'])
-    try:
-        rate = rate_from_str(args.playback_rate, src_rate)
-    except Exception as e:
-        print('Bad playback rate: %s' % e)
-        return 1
-    if rate < src_rate:
-        log.warning('rate=%s < src_rate=%s', rate, src_rate)
-
-    try:
-        w, h = w_h_from_str(args.video_scale, vid_info['w'], vid_info['h'])
-    except Exception as e:
-        print('Bad video scale: %s' % e)
-        return 1
-
-    have_ocl = ocl.compat_ocl_device_available()
-    use_sw = args.sw or not have_ocl
-
-    if use_sw:
-        log.warning('not using opencl accelerated methods')
-
-    # make functions that will generate flows and interpolate frames
-    from cv2 import calcOpticalFlowFarneback as sw_optical_flow
-    farneback_method = sw_optical_flow if use_sw else \
-        motion.ocl_farneback_optical_flow
-    flags = 0
     if args.flow_filter == 'gaussian':
-        import cv2
-        flags = cv2.OPTFLOW_FARNEBACK_GAUSSIAN
+        args.flow_filter = cv2.OPTFLOW_FARNEBACK_GAUSSIAN
+    else:
+        args.flow_filter = 0
 
     if args.smooth_motion:
-        args.poly_s = 0.01
+        args.polys = 0.01
 
-    # don't make the function with `lambda` because `draw_debug_text` will need
-    # to retrieve kwargs with the `inspect` module
-    def flow_function(x, y, pyr=args.pyr_scale, l=args.levels, w=args.winsize,
-                      i=args.iters, polyn=args.poly_n, polys=args.poly_s,
-                      fast=args.fast_pyr, filt=flags):
-        if farneback_method == motion.ocl_farneback_optical_flow:
-            return farneback_method(x, y, pyr, l, w, i, polyn, polys, fast, filt)
+    use_sw_inter = args.sw or not ocl.compat_ocl_device_available()
+    if use_sw_inter:
+        log.warn('not using opencl, ctrl+c to quit')
+
+    def flow_fn(x, y,
+                pyr=args.pyr_scale, levels=args.levels, winsize=args.winsize,
+                iters=args.iters, polyn=args.poly_n, polys=args.poly_s,
+                fast=args.fast_pyr, filt=args.flow_filter):
+        if use_sw_inter:
+            return cv2.calcOpticalFlowFarneback(
+                x, y, pyr, levels, winsize, iters, polyn, polys, filt)
         else:
-            return farneback_method(x, y, pyr, l, w, i, polyn, polys, filt)
+            return motion.ocl_farneback_optical_flow(
+                x, y, pyr, levels, winsize, iters, polyn, polys, fast, filt)
 
-    from butterflow.interpolate import sw_interpolate_flow
-    interpolate_function = sw_interpolate_flow if use_sw else \
-        motion.ocl_interpolate_flow
+    inter_fn = None
+    if use_sw_inter:
+        from butterflow.interpolate import sw_interpolate_flow
+        inter_fn = sw_interpolate_flow
+    else:
+        inter_fn = motion.ocl_interpolate_flow
 
-    renderer = Renderer(
-        args.output_path,
-        vid_info,
-        sequence,
-        rate,
-        flow_function,
-        interpolate_function,
-        w,
-        h,
-        args.lossless,
-        args.trim_regions,
-        args.no_preview,
-        args.add_info,
-        args.text_type,
-        args.mark_frames,
-        args.mux)
+    w, h = w_h_from_input_str(args.video_scale, av_info['w'], av_info['h'])
+    def mk_even(x):
+        return x & ~1
+    w = mk_even(w)
+    h = mk_even(h)
 
-    motion.set_num_threads(settings.default['ocv_threads'])
+    rnd = Renderer(args.video,
+                   args.output_path,
+                   sequence_from_input_str(args.subregions,
+                                           av_info['duration'],
+                                           av_info['frames']),
+                   rate_from_input_str(args.playback_rate, av_info['rate']),
+                   flow_fn,
+                   inter_fn,
+                   w,
+                   h,
+                   args.lossless,
+                   args.trim_subregions,
+                   args.no_preview,
+                   args.add_info,
+                   args.text_type,
+                   args.mark_frames,
+                   args.mux)
 
+    motion.set_num_threads(settings['ocv_threads'])
+
+    log.info('Will render:\n' + str(rnd.sequence))
+
+    success = True
+    total_time = 0
     try:
-        # time how long it takes to render. timeit will turn off gc, must turn
-        # it back on to maximize performance re-nable it in the setup function
         import timeit
-        tot_time = timeit.timeit(renderer.render,
-                                 setup='import gc;gc.enable()',
-                                 number=1)  # only run once
-        tot_time /= 60  # time in minutes
-
-        new_sz = human_sz(float(os.path.getsize(args.output_path)))
-
-        print('{} real, {} interpolated, {} duped, {} dropped'.format(
-            renderer.tot_src_frs,
-            renderer.tot_frs_int,
-            renderer.tot_frs_dup,
-            renderer.tot_frs_drp))
-        print('write ratio: {}/{}, ({:.2f}%) {}'.format(
-            renderer.tot_frs_wrt,
-            renderer.tot_tgt_frs,
-            renderer.tot_frs_wrt * 100.0 / renderer.tot_tgt_frs,
-            new_sz))
-        print('butterflow took {:.3g} minutes, done.'.format(tot_time))
+        total_time = timeit.timeit(rnd.render_video,
+                                   setup='import gc;gc.enable()',
+                                   number=1)
     except (KeyboardInterrupt, SystemExit):
-        log.warning('stopped early, files were left in the cache')
-        log.warning('recoverable @ {}'.format(settings.default['tmp_dir']))
+        success = False
+    if success:
+        log.debug('Made: '+args.output_path)
+        out_sz = os.path.getsize(args.output_path) / 1024.0**2
+        log.debug('Write ratio: {}/{}, ({:.2f}%) {:.2f} MB'.format(
+                  rnd.tot_frs_wrt,
+                  rnd.tot_tgt_frs,
+                  rnd.tot_frs_wrt*100.0/rnd.tot_tgt_frs,
+                  out_sz))
+        print('Frames: {} real, {} interpolated, {} duped, {} dropped'.format(
+              rnd.tot_src_frs,
+              rnd.tot_frs_int,
+              rnd.tot_frs_dup,
+              rnd.tot_frs_drp))
+        print('butterflow took {:.3g} mins, done.'.format(total_time / 60))
+        return 0
+    else:
+        log.warn('files left in cache @ '+settings['tempdir'])
         return 1
-    except Exception:
-        return 1
 
 
-def human_sz(nbytes):
-    suffixes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB']
-    if nbytes == 0:
-        return '0 B'
-    i = 0
-    while nbytes >= 1024 and i < len(suffixes) - 1:
-        nbytes /= 1024.
-        i += 1
-    f = ('{:+.2f}'.format(nbytes)).rstrip('0').rstrip('.')
-    return '%s %s' % (f, suffixes[i])
+import re
 
+flt_pattern = r"(?P<flt>\d*\.\d+|\d+)"
+wh_pattern = re.compile(r"""
+(?=(?P<semicolon>.+:.+)|.+)
+(?(semicolon)
+  (?P<width>-1|\d+):(?P<height>-1|\d+)|
+  {}
+)
+(?<!^-1:-1$)  # ignore -1:-1
+""".format(flt_pattern), re.X)
+sl_pattern = r"(?=(?P<slash>.+/.+)|.+)"
+nd_pattern = r"(?P<numerator>\d*\.\d+|\d+)/(?P<denominator>\d*\.\d+|\d+)"
+pr_pattern = re.compile(r"""
+{}
+(?(slash)
+  {}|
+  (?P<flt_or_x>\d*\.\d+x?|\d+x?)
+)
+""".format(sl_pattern, nd_pattern), re.X)
+tm_pattern = r"""^
+(?:
+  (?:([01]?\d|2[0-3]):)?
+  ([0-5]?\d):
+)?
+(\.\d{1,3}|[0-5]?\d(?:\.\d{1,3})?)$
+"""
+sr_tm_pattern = tm_pattern[1:-2]  # remove ^$
+sr_end_pattern = r"end"
+sr_ful_pattern = r"full"
+sr_pattern = re.compile(r"""^
+a=(?P<tm_a>{tm}),
+b=(?P<tm_b>{tm}),
+(?P<target>fps|dur|spd)=
+{}
+(?P<val>
+  (?(slash)
+    {}|
+    {}
+  )
+)$
+""".format(sl_pattern, nd_pattern, flt_pattern, tm=sr_tm_pattern), re.X)
 
-def print_cache_info():
-    # clb_dir exists inside the tmp_dir
-    cache_dir = settings.default['tmp_dir']
-    num_files = 0
-    sz = 0
-    for dirpath, dirnames, filenames in os.walk(cache_dir):
-        # ignore the clb_dir
-        if dirpath == settings.default['clb_dir']:
-            continue
-        for f in filenames:
-            num_files += 1
-            fp = os.path.join(dirpath, f)
-            sz += os.path.getsize(fp)
-    sz = human_sz(float(sz))
-    print('{} files, {}'.format(num_files, sz))
-    print('cache @ %s' % cache_dir)
-
-
-def rm_cache():
-    # delete contents of the cache, including the clb_dir
-    cache_dir = settings.default['tmp_dir']
-    if os.path.exists(cache_dir):
-        import shutil
-        shutil.rmtree(cache_dir)
-
-
-def validate_chars_in_set(ch_set):
-    # decorator, ensures all chars in string args are in a char set
-    def wrapper(f):
-        def wrapped_f(*args, **kwargs):
-            strs = []
-            for a in args:
-                if isinstance(a, str):
-                    strs.append(a)
-            for k, v in kwargs:
-                if isinstance(v, str):
-                    strs.append(v)
-            for s in strs:
-                for i, ch in enumerate(s):
-                    if ch not in ch_set:
-                        msg = 'unknown char `{}` at idx={}'.format(ch, i)
-                        raise ValueError(msg)
-            return f(*args, **kwargs)
-        return wrapped_f
-    return wrapper
-
-
-@validate_chars_in_set(string.digits + ':-.')
-def w_h_from_str(string, source_width, source_height):
-    if ':' in string:  # used `w:h` syntax
-        w, h = string.split(':')
-        w = int(w)
-        h = int(h)
-        if w < -1 or h < -1:
-            raise ValueError('unknown negative component')
-        # keep aspect ratio if either component is -1
-        if w == -1 and h == -1:  # ffmpeg allows this so we should too
-            return source_width, source_height
-        else:
-            if w == -1:
-                w = int(h * source_width / source_height) & ~1  # round to even
-            elif h == -1:
-                h = int(w * source_height / source_width) & ~1
-    elif float(string) != 1.0:  # using a singlular int or float
-        # round to nearest even number
-        even_pixel = lambda x: \
-            int(math.floor(x * float(string) / 2) * 2)
-        w = even_pixel(source_width)
-        h = even_pixel(source_height)
-    else:  # use source w,h by default
-        w = source_width
-        h = source_height
-    # w and h must be divisible by 2 for yuv420p outputs
-    # don't auto round when using the `w:h` syntax (with no -1 components)
-    # because the user may not expect the changes
-    if math.fmod(w, 2) != 0 or math.fmod(h, 2) != 0:
-        raise ValueError('components not divisible by two')
-    return w, h
-
-
-@validate_chars_in_set(string.digits + '/x.')
-def rate_from_str(string, source_rate):
-    if string is None:
-        return source_rate
-    if '/' in string:  # got a fraction
-        # can't create Fraction object then cast to a float because it
-        # doesn't support non-rational numbers
-        n, d = string.split('/')
-        rate = float(n) / float(d)
-    elif 'x' in string:  # used the "multiple of" syntax (e.g. `2x`)
-        rate = float(string.replace('x', ''))
-        rate = rate * source_rate
-    else:  # got a singular integer or float
-        rate = float(string)
-    if rate <= 0:
-        raise ValueError('invalid frame rate value')
-    return rate
-
-
-@validate_chars_in_set(string.digits + ':.')
-def time_str_to_ms(time):
+def time_str_to_milliseconds(s):
     # converts a time str to milliseconds
     # time str syntax:
     # [hrs:mins:secs.xxx], [mins:secs.xxx], [secs.xxx]
     hr = 0
     minute = 0
     sec = 0
-    time = time.strip()
-    if time == '':
-        raise ValueError('no time specified')
-    if time.count(':') > 2:
-        raise ValueError('invalid time format')
-    val = time.split(':')
-    n = len(val)
+    tm_split = s.strip().split(':')
+    n = len(tm_split)
     # going backwards in the list
     # get secs.xxx portion
     if n >= 1:
-        if val[-1] != '':
-            sec = float(val[-1])
-    # get mins portion
+        if tm_split[-1] != '':
+            sec = float(tm_split[-1])
+    # get mins
     if n >= 2:
-        if val[-2] != '':
-            minute = float(val[-2])
-    # get hrs portion
+        if tm_split[-2] != '':
+            minute = float(tm_split[-2])
+    # get hrs
     if n == 3:
-        if val[-3] != '':
-            hr = float(val[-3])
-    return (hr * 3600 + minute * 60 + sec) * 1000.0
+        if tm_split[-3] != '':
+            hr = float(tm_split[-3])
+    return (hr*3600 + minute*60 + sec) * 1000.0
 
-
-@validate_chars_in_set(string.digits + '=./' + 'spdurf')
-def parse_tval_str(string):
-    # extract values from TARGET=VALUE string
-    # target can be fps, dur, spd
-    tgt = string.split('=')[0]  # the `TARGET` portion
-    val = string.split('=')[1]  # the `VALUE` portion
-    if tgt == 'fps':
-        val = rate_from_str(val, -1)
-    elif tgt == 'dur':
-        val = float(val) * 1000  # duration in ms
-    elif tgt == 'spd':
-        val = float(val)
+def rate_from_input_str(s, src_rate):
+    if not s:
+        return src_rate
+    match = re.match(pr_pattern, s)
+    if match:
+        if match.groupdict()['slash']:
+            return (float(match.groupdict()['numerator']) /
+                    float(match.groupdict()['denominator']))
+        flt_or_x = match.groupdict()['flt_or_x']
+        if 'x' in flt_or_x:
+            return float(flt_or_x[:-1])*src_rate
+        else:
+            return float(flt_or_x)
     else:
-        raise ValueError('invalid target')
-    return tgt, val
+        raise RuntimeError
 
-
-@validate_chars_in_set(string.digits + 'ab,=./:' + 'spdurf')
-def sub_from_str(string):
-    # returns a subregion from string
-    # input syntax:
-    # a=<time>,b=<time>,TARGET=VALUE
-    val = string.split(',')
-    a = val[0].split('=')[1]  # the `a=` portion
-    b = val[1].split('=')[1]  # the `b=` portion
-    c = val[2]  # the `TARGET=VALUE` portion
-    ta = time_str_to_ms(a)
-    tb = time_str_to_ms(b)
-    if ta > tb:
-        raise ValueError('a > b')  # start time > end time
-    sub = RenderSubregion(ta, tb)
-    tgt, val = parse_tval_str(c)
-    setattr(sub, tgt, val)
-    return sub
-
-
-@validate_chars_in_set(string.digits + ',=./' + 'spdurfl')
-def sub_from_str_full_key(string, duration):
-    # returns a subregion from string with the `full` keyword
-    # input syntax:
-    # full,TARGET=VALUE
-    val = string.split(',')
-    if val[0] == 'full':
-        # create a subregion from [0, duration]
-        sub = RenderSubregion(0, float(duration))
-        tgt, val = parse_tval_str(val[1])
-        setattr(sub, tgt, val)
-        return sub
+def w_h_from_input_str(s, src_w, src_h):
+    if not s:
+        return src_w, src_h
+    match = re.match(wh_pattern, s)
+    if match:
+        if match.groupdict()['semicolon']:
+            w = int(match.groupdict()['width'])
+            h = int(match.groupdict()['height'])
+            if w == -1:
+                w = int(h*src_w/src_h)
+            if h == -1:
+                h = int(w*src_h/src_w)
+            return w, h
+        else:
+            flt = float(match.groupdict()['flt'])
+            w = int(src_w * flt)
+            h = int(src_h * flt)
+            return w, h
     else:
-        raise ValueError('`full` key not found')
+        raise RuntimeError
 
-
-@validate_chars_in_set(string.digits + 'ab,=./:' + 'spdurfen')
-def sub_from_str_end_key(string, duration):
-    # returns a subregion from string with the `end` keyword
-    # input syntax:
-    # a=<time>,b=end,TARGET=VALUE
-    val = string.split(',')
-    b = val[1].split('=')[1]  # the `b=` portion
-    if b == 'end':
-        # replace the `end` with the duration of the video in seconds. the
-        # duration will be converted to ms automatically
-        string = string.replace('end', str(duration / 1000.0))
-        return sub_from_str(string)
-    else:
-        raise ValueError('`end` key not found')
-
-
-@validate_chars_in_set(string.digits + 'ab,=./:' + 'spdurflen')
-def sequence_from_str(duration, frames, string):
-    # return a vid sequence from -s <subregion>:<subregion>...
-    seq = VideoSequence(duration, frames)
-    if string is None:
+def sequence_from_input_str(s, src_dur, src_nfrs):
+    seq = VideoSequence(src_dur, src_nfrs)
+    if not s:
         return seq
-    # check for bad separators
-    # if there is a char before `a` that is not `:` like `,`
-    def find_char(str, ch):
-        idxs = []
-        for i, ltr in enumerate(str):
-            if ltr == ch:
-                idxs.append(i)
-        return idxs
-    idxs_of_a = find_char(string, 'a')
-    for i in idxs_of_a:
-        if i == 0:
-            continue
-        else:
-            ch_before_a = string[i - 1]
-            if ch_before_a != ':':
-                msg = 'invalid separator `{}` at idx={}'.format(ch_before_a, i)
-                raise ValueError(msg)
-    # look for `:a` which is the start of a new subregion
-    newsubstrs = []
-    substrs = string.split(':a')
-    if len(substrs) > 1:
-        # replace `a` character that was stripped when split
-        for substr in substrs:
-            if not substr.startswith('a'):
-                newsubstrs.append('a' + substr)
+    src_dur = str(datetime.timedelta(seconds=src_dur / 1000.0))
+    partition = list(src_dur.partition('.'))
+    partition[-1] = partition[-1][:3]  # keep secs.xxx...
+    src_dur = ''.join(partition)
+    s = re.sub(sr_ful_pattern,
+               'a=0,b={}'.format(src_dur), re.sub(sr_end_pattern, src_dur, s))
+    subs = re.split(':a', s)
+    new_subs = []
+    if len(subs) > 1:
+        for sub in subs:
+            if not sub.startswith('a'):
+                new_subs.append('a'+sub)
             else:
-                newsubstrs.append(substr)
-        substrs = newsubstrs
-    for substr in substrs:
-        sub = None
-        # has the full key
-        if 'full' in substr:
-            sub = sub_from_str_full_key(substr, duration)
-        # has the end key
-        elif 'end' in substr:
-            sub = sub_from_str_end_key(substr, duration)
+                new_subs.append(sub)
+        subs = new_subs
+    for sub in subs:
+        match = re.match(sr_pattern, sub)
+        if match:
+            sub = Subregion(time_str_to_milliseconds(match.groupdict()['tm_a']),
+                            time_str_to_milliseconds(match.groupdict()['tm_b']))
+            target = match.groupdict()['target']
+            val    = match.groupdict()['val']
+            if target == 'fps':
+                val = rate_from_input_str(val, -1)
+            elif target == 'dur':
+                val = float(val)*1000.0
+            elif target == 'spd':
+                val = float(val)
+            setattr(sub, 'target_'+target, val)
+            seq.add_subregion(sub)
         else:
-            sub = sub_from_str(substr)
-        seq.add_subregion(sub)
+            return None
     return seq

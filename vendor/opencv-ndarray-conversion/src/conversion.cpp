@@ -1,7 +1,7 @@
 #include "opencv-ndarray-conversion/conversion.h"
 /*
- * The following conversion functions are taken/adapted from OpenCV's cv2.cpp file
- * inside modules/python/src2 folder.
+ * The following conversion functions are taken/adapted from OpenCV's cv2.cpp
+ * file inside modules/python/src2 folder.
  */
 
 static void init()

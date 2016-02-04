@@ -7,30 +7,27 @@ import numpy as np
 from butterflow.motion import ocl_farneback_optical_flow, \
     ocl_interpolate_flow, set_cache_path, time_steps_for_int_frames
 
-# importing settings will make temp directories if they don't exist
-from butterflow.settings import default as settings
+from butterflow.settings import default as settings  # will mk temp dirs
 
 # but not the clb_dir, make it and set it for testing
-clb_dir = settings['clb_dir']
+clb_dir = settings['clbdir']
 if not os.path.exists(clb_dir):
     os.makedirs(clb_dir)
 set_cache_path(clb_dir + os.sep)
 
-
-def mk_sample_image(dst_path, w, h, ch):
+def mk_sample_image(dst, w, h, ch):
     # make a random 24-bit image w/ 8-bits per ch
-    if os.path.exists(dst_path):
+    if os.path.exists(dst):
         return
     dat = np.random.rand(h, w, ch) * 255  # 0,1.0 scaled to 0,255.0
     img = np.array(dat, dtype=np.uint8)   # float64 to uint8
-    cv2.imwrite(dst_path, img)
-
+    cv2.imwrite(dst, img)
 
 class OpticalFlowTestCase(unittest.TestCase):
     def setUp(self):
-        img_1 = os.path.join(settings['tmp_dir'],
+        img_1 = os.path.join(settings['tempdir'],
                              '~test_optical_flow_test_case_1.jpg')
-        img_2 = os.path.join(settings['tmp_dir'],
+        img_2 = os.path.join(settings['tempdir'],
                              '~test_optical_flow_test_case_2.jpg')
         mk_sample_image(img_1, 320, 240, 3)
         mk_sample_image(img_2, 320, 240, 3)
@@ -84,9 +81,9 @@ class OpticalFlowTestCase(unittest.TestCase):
         self.assertEqual(sys.getrefcount(v), 1+1)
 
     def test_farneback_optical_flow_hires(self):
-        img_1 = os.path.join(settings['tmp_dir'],
+        img_1 = os.path.join(settings['tempdir'],
                              '~test_farneback_optical_flow_hires_1.jpg')
-        img_2 = os.path.join(settings['tmp_dir'],
+        img_2 = os.path.join(settings['tempdir'],
                              '~test_farneback_optical_flow_hires_2.jpg')
         mk_sample_image(img_1, 4096, 2160, 3)
         mk_sample_image(img_2, 4096, 2160, 3)
@@ -98,12 +95,11 @@ class OpticalFlowTestCase(unittest.TestCase):
             ocl_farneback_optical_flow(
                 fr_1_gr,fr_2_gr,0.5,3,15,3,7,1.5,False,0))
 
-
 class InterpolateFlowTestCase(unittest.TestCase):
     def setUp(self):
-        img_1 = os.path.join(settings['tmp_dir'],
+        img_1 = os.path.join(settings['tempdir'],
                              '~test_interpolate_flow_test_case_1.jpg')
-        img_2 = os.path.join(settings['tmp_dir'],
+        img_2 = os.path.join(settings['tempdir'],
                              '~test_interpolate_flow_test_case_2.jpg')
         mk_sample_image(img_1, 320, 240, 3)
         mk_sample_image(img_2, 320, 240, 3)
@@ -140,9 +136,9 @@ class InterpolateFlowTestCase(unittest.TestCase):
         self.assertEqual(len(self.ocl_inter_method(0)),0)
 
     def test_ocl_interpolate_flow_hires(self):
-        img_1 = os.path.join(settings['tmp_dir'],
+        img_1 = os.path.join(settings['tempdir'],
                              '~test_ocl_interpolate_flow_hires_1.jpg')
-        img_2 = os.path.join(settings['tmp_dir'],
+        img_2 = os.path.join(settings['tempdir'],
                              '~test_ocl_interpolate_flow_hires_2.jpg')
         mk_sample_image(img_1, 4096, 2160, 3)
         mk_sample_image(img_2, 4096, 2160, 3)

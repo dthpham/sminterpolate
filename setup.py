@@ -60,12 +60,12 @@ except Exception:
 if homebrew_prefix is not None:
     homebrew_site_pkgs = os.path.join(homebrew_prefix, 'lib/python{}/'
                                       'site-packages/'.format(py_ver))
-    # Because some formulae provide python bindings, homebrew builds
-    # bindings against the first `python` (and `python-config`) in `PATH`
-    # (check `which python`).
+    # Because some formulae provide python bindings, homebrew builds bindings
+    # against the first python (and python-config) in PATH (check
+    # `which python`).
     #
-    # Homebrew site-packages should preceed all others on sys.path if it
-    # exists:
+    # Homebrew site-packages should preceed all others on sys.path
+    # if it exists:
     sys.path.insert(1, homebrew_site_pkgs)
 
 cflags       = ['-std=c11']  # c compilation flags
@@ -84,7 +84,7 @@ np_includes  = None    # numpy header search paths
 cv_includes  = None    # search path for opencv header files
 cv_ldflags   = None    # opencv library search paths
 cv_libs      = ['opencv_core', 'opencv_ocl', 'opencv_imgproc']
-cv_version   = 2411    # cv library version
+cv_version   = 2412    # cv library version
 
 is_win = sys.platform.startswith('win')
 is_osx = sys.platform.startswith('darwin')
@@ -92,7 +92,7 @@ is_nix = sys.platform.startswith('linux')
 
 # windows vendor dirs
 if is_win:
-    various_dir = os.path.join(vendordir, 'various', 'bin')
+    variousdir = os.path.join(vendordir, 'various', 'bin')
     cl_dir = os.path.join(vendordir, 'opencl')
     cv_dir = os.path.join(vendordir, 'opencv')
 
@@ -128,17 +128,16 @@ if is_nix:
     linkflags.extend(['-shared', '-Wl,--export-dynamic'])
 elif is_osx:
     # Don't explicity link against the system python on OSX to prevent
-    # segfaults arising from modules being built with one python (i.e.
-    # system python) and imported from a foreign python (i.e. brewed
-    # python).
+    # segfaults arising from modules being built with one python (i.e. system
+    # python) and imported from a foreign python (i.e. brewed python).
     #
     # See: https://github.com/Homebrew/homebrew/blob/master/share/doc/
     # homebrew/Common-Issues.md#python-segmentation-fault-11-on-import-
     # some_python_module
     #
-    # Building modules with `-undefined dynamic_lookup` instead of an
-    # explict link allows symbols to be resolved at import time. `otool -L
-    # <module>.so` shouldn't mention `Python`.
+    # Building modules with `-undefined dynamic_lookup` instead of an explict
+    # link allows symbols to be resolved at import time. `otool -L <module>.so`
+    # shouldn't mention Python.
     # See: https://github.com/Homebrew/homebrew-science/pull/1886
     linkflags.append('-Wl,-undefined,dynamic_lookup')
     linkflags.extend(['-arch', 'x86_64'])
@@ -177,12 +176,12 @@ ocl_ext = Extension('butterflow.ocl',
 if is_osx:
     if homebrew_prefix is not None:
         # Homebrew opencv uses a brewed numpy by default but it's possible for
-        # a user to their own or the system one if the `--without-brewed-numpy`
+        # a user to their own or the system one if the --without-brewed-numpy
         # option is used.
         #
         # Note: usually all pythonX.Y packages with headers are placed in
-        # `/usr/include/pythonX.Y/<package>` or `/usr/local/include/` but
-        # homebrew policy is to put them in `site-packages`
+        # /usr/include/pythonX.Y/<package> or /usr/local/include/, but
+        # homebrew policy is to put them in site-packages
         np_includes = os.path.join(homebrew_site_pkgs, 'numpy/core/include')
     else:
         # fallback to the system's numpy
@@ -202,9 +201,7 @@ if is_win:
     # append version number to library names
     cv_libs_versioned = []
     for x in cv_libs:
-        cv_libs_versioned.append('{name}{version}'.format(
-            name=x, version=cv_version
-        ))
+        cv_libs_versioned.append('{}{}'.format(x, cv_version))
     cv_libs = cv_libs_versioned
 
 # opencv-ndarray-conversion args
@@ -248,11 +245,9 @@ setup_kwargs = {
     'download_url': 'http://srv.dthpham.me/butterflow/butterflow-{}.tar.gz'.
                     format(version),
     'description': 'Makes slow motion and motion interpolated videos',
-    'keywords': ['slowmo', 'slow motion', 'smooth motion',
-                 'motion interpolation'],
-    'entry_points': {
-        'console_scripts': ['butterflow = butterflow.cli:main']
-    },
+    'keywords': ['slowmo', 'slow motion', 'motion interpolation',
+                 'smooth motion'],
+    'entry_points': {'console_scripts': ['butterflow = butterflow.cli:main']},
     'test_suite': 'tests'
 }
 
@@ -264,13 +259,11 @@ if use_cx_freeze:
     # collect exe and all other dependent DLLs
     # these files should have been copied to the vendor dir before building
     include_files = []
-    for fname in os.listdir(various_dir):
-        include_files.append((os.path.join(various_dir, fname), fname))
+    for fname in os.listdir(variousdir):
+        include_files.append((os.path.join(variousdir, fname), fname))
     # manually add DLL for opencv that wasn't picked up by cxfreeze
     dll = 'opencv_ffmpeg{}_64.dll'.format(cv_version)
-    include_files.append(
-        (os.path.join(vendordir, 'opencv', 'bin', dll), dll)
-    )
+    include_files.append((os.path.join(vendordir, 'opencv', 'bin', dll), dll))
     build_exe_options = {
         'packages': ['butterflow'],
         'include_msvcr': True,
@@ -279,14 +272,11 @@ if use_cx_freeze:
     }
     executables = [
         Executable(script='butterflow/__main__.py',
-                   icon='share/butterflow.ico',
                    targetName='butterflow.exe',
                    base=None)
     ]
-    setup_function(
-        options={'build_exe': build_exe_options},
-        executables=executables
-    )
+    setup_function(options={'build_exe': build_exe_options},
+                   executables=executables)
 else:
     # use setuptools setup function
     setup_function()

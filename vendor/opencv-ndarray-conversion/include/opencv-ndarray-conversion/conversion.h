@@ -10,7 +10,6 @@
 static PyObject* opencv_error = 0;
 
 class PyAllowThreads;
-
 class PyEnsureGIL;
 
 #define ERRWRAP2(expr) \

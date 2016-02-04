@@ -54,8 +54,8 @@ Line tools with `xcode-select --install` to get a version that searches
 ### Ubuntu (Vivid Vervet)
 These instructions will show you how to get Butterflow working in Ubuntu 15.04
 (Vivid Vervet). This version of Ubuntu brings back support for FFmpeg,
-installing Butterflow is more difficult on older versions of Ubuntu because
-it's not readily available.
+installing Butterflow is more difficult on older versions of Ubuntu because it's
+not readily available.
 
 Begin by installing tools, development files, and a generic OpenCL library and
 headers.
@@ -77,10 +77,11 @@ python setup.py develop
 ```
 
 ### Debian (Jessie)
-Begin by installing FFmpeg. Note: these instructions are adapted from this [guide](https://www.assetbank.co.uk/support/documentation/install/ffmpeg-debian-squeeze/ffmpeg-debian-jessie/). This [gist](https://gist.github.com/holms/7009218) is a tad more comprehensive
-and will show you how to make a package that you can manage with `apt-get`.
+Begin by installing FFmpeg. Note: these instructions are adapted from this [guide](https://www.assetbank.co.uk/support/documentation/install/ffmpeg-debian-squeeze/ffmpeg-debian-jessie/).
+This [gist](https://gist.github.com/holms/7009218) is more comprehensive and
+will show you how to make a package that you can manage with apt-get.
 
-First add the multimedia source to the bottom of `/etc/apt/sources.list`.
+First add the multimedia source to the bottom of /etc/apt/sources.list.
 
 ```
 deb http://www.deb-multimedia.org jessie main non-free
@@ -102,7 +103,7 @@ sudo apt-get install build-essential libmp3lame-dev libvorbis-dev libtheora-dev 
 ```
 
 Download the latest package of FFmpeg from their [releases](http://ffmpeg.org/releases/)
-page. Extract it to a folder, `cd` into it and run:
+page. Extract it to a folder, go into the directory and run:
 
 ```
 # This is going to install into /usr/local
@@ -154,9 +155,8 @@ but it's one you are expected to take.
 
 ### Testing
 You can run a suite of tests against Butterflow to ensure everything is set up
-properly with `python setup.py test`, or just `nosetests` or `nosetests2`, if you
-have [nose](https://nose.readthedocs.org/en/latest/) installed. Tests will fail
-if you don't have OpenCL set up.
+properly with `python setup.py test`. Tests will fail if you don't have OpenCL
+set up.
 
 ### Installing outside of a virtualenv
 To install Butterflow outside of a virtual environment, first exit your

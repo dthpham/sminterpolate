@@ -8,6 +8,8 @@
 
 # misc
 *~
+
+# de
 *.DS_Store
 *.directory
 
@@ -15,8 +17,6 @@
 bin
 lib
 include
-Scripts
-env
 
 # pip
 pip-selfcheck.json
@@ -35,10 +35,11 @@ __pycache__
 .vs
 *.pyproj*
 *.sln
+Scripts
+env
 
 # development
 tags
 *.pth
 dev_settings.py
-output.mp4
-clear.sh
+out.mp4

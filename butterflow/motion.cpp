@@ -1,4 +1,4 @@
-// methods to get optical flows and interpolate them
+// get optical flows and interpolate them
 
 #include <Python.h>
 #include <opencv2/core/core.hpp>
@@ -83,12 +83,11 @@ ocl_farneback_optical_flow(PyObject *self, PyObject *args) {
     PyObject *py_flow_1 = converter.toNDArray(mat_flow_x);
     PyObject *py_flow_2 = converter.toNDArray(mat_flow_y);
 
-    /* PyList_SetItem will steal a reference to items that are added to
-     * the list. In other words, it now assumes it owns that reference
-     * and the user is no longer responsible for it. The item will be
-     * referenced in the list but it's reference count will not be
-     * increased. When the list is deleted, every element in the list
-     * will be decrefed. */
+    /* PyList_SetItem will steal a reference to items that are added to the
+     * list. In other words, it now assumes it owns that reference and the user
+     * is no longer responsible for it. The item will be referenced in the list
+     * but it's reference count will not be increased. When the list is
+     # deleted, every element in the list will be decrefed. */
     PyList_SetItem(py_flows, 0, py_flow_1);
     PyList_SetItem(py_flows, 1, py_flow_2);
 
@@ -97,13 +96,13 @@ ocl_farneback_optical_flow(PyObject *self, PyObject *args) {
 
 static PyObject*
 time_steps_for_int_frames(PyObject *self, PyObject *arg) {
-    int n = PyInt_AsLong(arg);   /* number of int frames */
+    int n = PyInt_AsLong(arg);   /* num of int frames */
     int sub_divisions  = n + 1;  /* splits in region from 0,1 */
     PyObject *py_steps = PyList_New(n);
 
     for (int i = 0; i < n; i++) {
-        double time_step = max(0.0, min(1.0,
-                             (1.0 / sub_divisions) * (i + 1)));
+        double time_step = max(0.0,
+                           min(1.0, (1.0 / sub_divisions) * (i + 1)));
         /* Py_BuildValue +1 refcnt that will be stolen by PyList_SetItem */
         PyList_SetItem(py_steps, i, Py_BuildValue("d", time_step));
     }
@@ -192,8 +191,8 @@ ocl_interpolate_flow(PyObject *self, PyObject *args) {
         mat_new_bgr.convertTo(mat_new_bgr, CV_8UC3, 255.0);
 
         PyObject *py_new_fr = converter.toNDArray(mat_new_bgr);
-        /* PyList_Append will increment reference count. This behavior
-         * differs from PyList_SetItem which doesn't */
+        /* PyList_Append will increment reference count. This behavior differs
+         * from PyList_SetItem which doesn't */
         PyList_Append(py_frs, py_new_fr);
         Py_DECREF(py_new_fr);
     }

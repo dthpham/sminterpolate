@@ -1,16 +1,23 @@
 # Butterflow
-*Butterflow* is an easy to use command-line tool that lets you create fluid slow
-motion and motion interpolated videos.
+*Butterflow* is a command-line tool that lets you make fluid slow motion and
+motion interpolated videos.
 
 ## How does it work?
-It works by rendering intermediate frames between existing frames. For example,
-given two existing frames, `A` and `B`, this program can generate frames `C.1`,
-`C.2`...`C.n` that are positioned between the two. This process, called
-[motion interpolation](http://en.wikipedia.org/wiki/Motion_interpolation),
-increases frame rates and can give the perception of smoother motion and more
-fluid animation, an effect most people know as the "soap opera effect".
-Butterflow takes advantage of newly-available frames to make high speed, slow
-motion videos with minimal judder.
+It works by rendering intermediate frames between existing frames using a
+process called [motion interpolation](http://en.wikipedia.org/wiki/Motion_interpolation).
+For example, given two existing frames, `A` and `B`, this program can generate
+frames `C.1`, `C.2`...`C.n` that are positioned between the two. In contrast
+to other tools that can only blend or dupe frames, this program warps pixels
+based on motion to generate new ones.
+
+Butterflow uses these interpolated frames to increase a video's frame rate,
+which can give the perception of smoother motion and more fluid animation, an
+effect that most people know as the "soap opera effect".
+
+## Demonstration
+
+This is a demonstration of Butterflow leveraging motion interpolation to make
+slow motion videos with minimal judder.
 
 ![](http://srv.dthpham.me/static/ink.gif)
 
@@ -44,10 +51,10 @@ Refer to the
 for instructions.
 
 ## Setup
-Butterflow requires no additional setup to use, but it's too slow out of the box
-to do any serious work, so you need to set up a functional OpenCL environment on
-your machine to take advantage of hardware accelerated methods that will make
-rendering significantly faster.
+Butterflow requires no additional setup to use, however it's too slow out of
+the box to do any serious work. It's recommended that you set up a functional
+OpenCL environment on your machine to take advantage of hardware accelerated
+methods that will make rendering significantly faster.
 
 See [Setting up OpenCL](https://github.com/dthpham/butterflow/blob/master/docs/Setting-Up-OpenCL.md)
 for details on how to do this.

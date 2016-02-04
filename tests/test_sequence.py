@@ -1,137 +1,140 @@
 import unittest
 from butterflow.sequence import VideoSequence, Subregion
 
-
 class VideoSequenceTestcase(unittest.TestCase):
-    def test_add_subregion(self):
+    def test_relative_pos(self):
+        vs = VideoSequence(1,1)
+        self.assertEqual(vs.relative_pos(0), 0.0)
+        self.assertEqual(vs.relative_pos(0.4), 0.4)
+        self.assertEqual(vs.relative_pos(0.5), 0.5)
+        self.assertEqual(vs.relative_pos(0.6), 0.6)
+        self.assertEqual(vs.relative_pos(1), 1.0)
+        vs = VideoSequence(5,5)
+        self.assertEqual(vs.relative_pos(0), 0.0)
+        self.assertEqual(vs.relative_pos(2.4), 0.48)
+        self.assertEqual(vs.relative_pos(2.5), 0.5)
+        self.assertEqual(vs.relative_pos(2.6), 0.52)
+        self.assertEqual(vs.relative_pos(5), 1.0)
+
+    def test_relative_pos_min_max(self):
+        vs = VideoSequence(1,3)
+        self.assertEqual(vs.relative_pos(1.1), 1.0)
+        self.assertEqual(vs.relative_pos(0), 0.0)
+
+    def test_nearest_fr(self):
+        vs = VideoSequence(1,1)
+        self.assertEqual(vs.nearest_fr(0), 1-1)
+        self.assertEqual(vs.nearest_fr(0.5), 1-1)
+        self.assertEqual(vs.nearest_fr(1), 1-1)
+        vs = VideoSequence(1,2)
+        self.assertEqual(vs.nearest_fr(0), 1-1)
+        self.assertEqual(vs.nearest_fr(0.49), 1-1)
+        self.assertEqual(vs.nearest_fr(0.5), 2-1)
+        self.assertEqual(vs.nearest_fr(0.51), 2-1)
+        self.assertEqual(vs.nearest_fr(1), 2-1)
         vs = VideoSequence(1,4)
-        self.assertEqual(len(vs.subregions), 0)
+        self.assertEqual(vs.nearest_fr(0), 1-1)
+        self.assertEqual(vs.nearest_fr(0.24), 1-1)
+        self.assertEqual(vs.nearest_fr(0.25), 2-1)
+        self.assertEqual(vs.nearest_fr(0.26), 2-1)
+        self.assertEqual(vs.nearest_fr(0.49), 2-1)
+        self.assertEqual(vs.nearest_fr(0.5), 3-1)
+        self.assertEqual(vs.nearest_fr(0.51), 3-1)
+        self.assertEqual(vs.nearest_fr(0.74), 3-1)
+        self.assertEqual(vs.nearest_fr(0.75), 4-1)
+        self.assertEqual(vs.nearest_fr(0.76), 4-1)
+        self.assertEqual(vs.nearest_fr(0.9), 4-1)
+        self.assertEqual(vs.nearest_fr(1), 4-1)
+
+    def test_nearest_fr_min_max(self):
+        vs = VideoSequence(1,1)
+        self.assertEqual(vs.nearest_fr(0), 1-1)
+        self.assertEqual(vs.nearest_fr(1.1), 1-1)
+        vs = VideoSequence(1,3)
+        self.assertEqual(vs.nearest_fr(0), 1-1)
+        self.assertEqual(vs.nearest_fr(1.1), 3-1)
+
+    def test_add_subregion(self):
+        cnt_skip_subs = lambda x: \
+            len([s for s in x.subregions if s.skip])
+        cnt_usr_subs = lambda x: \
+            len(x.subregions) - cnt_skip_subs(x)
+        vs = VideoSequence(1,1)
+        self.assertEqual(cnt_usr_subs(vs), 0)
+        self.assertEqual(cnt_skip_subs(vs), 1)
         vs.add_subregion(Subregion(0,0.1))
-        self.assertEqual(len(vs.subregions), 1)
-        vs.add_subregion(Subregion(0.1,0.2))
-        self.assertEqual(len(vs.subregions), 2)
-        vs.add_subregion(Subregion(0.2,0.3))
-        self.assertEqual(len(vs.subregions), 3)
+        self.assertEqual(cnt_usr_subs(vs), 1)
+        self.assertEqual(cnt_skip_subs(vs), 1)
+        vs = VideoSequence(1,1)
         vs.add_subregion(Subregion(0.9,1))
-        self.assertEqual(len(vs.subregions), 4)
-
-    def test_add_subregion_ordering(self):
-        vs = VideoSequence(1,10)
-        s1 = Subregion(0, 0.1)
-        s2 = Subregion(0.3, 0.4)
-        s3 = Subregion(0.4, 0.5)
-        s4 = Subregion(0.5, 0.6)
-        s5 = Subregion(0.9, 1)
-        vs.add_subregion(s5)
-        vs.add_subregion(s1)
-        vs.add_subregion(s4)
-        vs.add_subregion(s2)
-        vs.add_subregion(s3)
-        self.assertEqual(vs.subregions[0], s1)
-        self.assertEqual(vs.subregions[1], s2)
-        self.assertEqual(vs.subregions[2], s3)
-        self.assertEqual(vs.subregions[3], s4)
-        self.assertEqual(vs.subregions[4], s5)
-
-    def test_relative_position(self):
+        self.assertEqual(cnt_usr_subs(vs), 1)
+        self.assertEqual(cnt_skip_subs(vs), 1)
         vs = VideoSequence(1,1)
-        self.assertEqual(vs.relative_position(0), 0.0)
-        self.assertEqual(vs.relative_position(0.4), 0.4)
-        self.assertEqual(vs.relative_position(0.5), 0.5)
-        self.assertEqual(vs.relative_position(0.6), 0.6)
-        self.assertEqual(vs.relative_position(1), 1.0)
-        vs = VideoSequence(5,5)
-        self.assertEqual(vs.relative_position(0), 0.0)
-        self.assertEqual(vs.relative_position(2.4), 0.48)
-        self.assertEqual(vs.relative_position(2.5), 0.5)
-        self.assertEqual(vs.relative_position(2.6), 0.52)
-        self.assertEqual(vs.relative_position(5), 1.0)
-
-    def test_relative_position_min_max(self):
+        vs.add_subregion(Subregion(0,1))
+        self.assertEqual(cnt_usr_subs(vs), 1)
+        self.assertEqual(cnt_skip_subs(vs), 0)
+        vs = VideoSequence(1,2)
+        vs.add_subregion(Subregion(0,0.5))
+        vs.add_subregion(Subregion(0.5,0.6))
+        self.assertEqual(cnt_usr_subs(vs), 2)
+        self.assertEqual(cnt_skip_subs(vs), 1)
+        vs = VideoSequence(1,2)
+        vs.add_subregion(Subregion(0.5,0.6))
+        vs.add_subregion(Subregion(0,0.1))
+        self.assertEqual(cnt_usr_subs(vs), 2)
+        self.assertEqual(cnt_skip_subs(vs), 2)
         vs = VideoSequence(1,3)
-        self.assertEqual(vs.relative_position(1.1), 1.0)
-        self.assertEqual(vs.relative_position(0), 0.0)
-
-    def test_nearest_frame(self):
-        vs = VideoSequence(1,1)
-        self.assertEqual(vs.nearest_frame(0), 1-1)
-        self.assertEqual(vs.nearest_frame(0.5), 1-1)
-        self.assertEqual(vs.nearest_frame(1), 1-1)
+        vs.add_subregion(Subregion(0,0.1))
+        self.assertEqual(cnt_usr_subs(vs), 1)
+        self.assertEqual(cnt_skip_subs(vs), 1)
+        vs.add_subregion(Subregion(0.9,1))
+        self.assertEqual(cnt_usr_subs(vs), 2)
+        self.assertEqual(cnt_skip_subs(vs), 1)
+        vs.add_subregion(Subregion(0.66,0.66))
+        self.assertEqual(cnt_usr_subs(vs), 3)
+        self.assertEqual(cnt_skip_subs(vs), 2)
         vs = VideoSequence(1,3)
-        self.assertEqual(vs.nearest_frame(0), 1-1)
-        self.assertEqual(vs.nearest_frame(0.1), 1-1)
-        self.assertEqual(vs.nearest_frame(0.4), 1-1)
-        self.assertEqual(vs.nearest_frame(0.5), 2-1)
-        self.assertEqual(vs.nearest_frame(0.55), 2-1)
-        self.assertEqual(vs.nearest_frame(0.6), 2-1)
-        self.assertEqual(vs.nearest_frame(0.9), 3-1)
-        self.assertEqual(vs.nearest_frame(1), 3-1)
-        vs = VideoSequence(1,10)
-        self.assertEqual(vs.nearest_frame(0), 1-1)
-        self.assertEqual(vs.nearest_frame(0.1), 1-1)
-        self.assertEqual(vs.nearest_frame(0.4), 4-1)
-        self.assertEqual(vs.nearest_frame(0.5), 5-1)
-        self.assertEqual(vs.nearest_frame(0.55), 6-1)
-        self.assertEqual(vs.nearest_frame(0.6), 6-1)
-        self.assertEqual(vs.nearest_frame(0.9), 9-1)
-        self.assertEqual(vs.nearest_frame(1), 10-1)
-        vs = VideoSequence(5,5)
-        self.assertEqual(vs.nearest_frame(2), 2-1)
-        self.assertEqual(vs.nearest_frame(2.4), 2-1)
-        self.assertEqual(vs.nearest_frame(2.5), 3-1)
-        self.assertEqual(vs.nearest_frame(2.6), 3-1)
-
-    def test_nearest_frame_min_max(self):
-        vs = VideoSequence(1,1)
-        self.assertEqual(vs.nearest_frame(0), 1-1)
-        self.assertEqual(vs.nearest_frame(1.1), 1-1)
-        vs = VideoSequence(1,3)
-        self.assertEqual(vs.nearest_frame(0), 1-1)
-        self.assertEqual(vs.nearest_frame(1.1), 3-1)
-
-    def test_validate(self):
-        vs = VideoSequence(1,10)
-        s1 = Subregion(0, 0.1)
-        vs.add_subregion(s1)
-        self.assertTrue(vs.validate(Subregion(0.2, 0.3)))
-        self.assertTrue(vs.validate(Subregion(0.4, 0.8)))
-        self.assertTrue(vs.validate(Subregion(0.9, 1.0)))
-
-    def test_validate_fails_out_of_bounds(self):
-        vs = VideoSequence(1,1)
-        s = Subregion(0,1.1)
-        with self.assertRaises(RuntimeError):
-            vs.add_subregion(s)
-        s = Subregion(0,2)
-        s.fa = 1
-        s.fb = 2
-        with self.assertRaises(RuntimeError):
-            vs.add_subregion(s)
-
-    def test_validate_fails_intersects(self):
-        vs = VideoSequence(1,10)
-        s1 = Subregion(0.1,0.2)
-        s2 = Subregion(0.15,0.25)
-        vs.add_subregion(s1)
-        with self.assertRaises(RuntimeError):
-            vs.add_subregion(s2)
-        vs = VideoSequence(5,1)
-        s1 = Subregion(1,1)
-        s2 = Subregion(0,5)
-        with self.assertRaises(RuntimeError):
-            vs.add_subregion(s1)
-            vs.add_subregion(s2)
-        with self.assertRaises(RuntimeError):
-            vs.add_subregion(s2)
-            vs.add_subregion(s1)
-
+        vs.add_subregion(Subregion(0.66,0.66))
+        self.assertEqual(cnt_usr_subs(vs), 1)
+        self.assertEqual(cnt_skip_subs(vs), 2)
+        vs.add_subregion(Subregion(0,0.1))
+        self.assertEqual(cnt_usr_subs(vs), 2)
+        self.assertEqual(cnt_skip_subs(vs), 2)
+        vs.add_subregion(Subregion(0.9,1))
+        self.assertEqual(cnt_usr_subs(vs), 3)
+        self.assertEqual(cnt_skip_subs(vs), 2)
+        vs = VideoSequence(1,4)
+        vs.add_subregion(Subregion(0.25,0.5))
+        vs.add_subregion(Subregion(0.5,0.75))
+        self.assertEqual(cnt_usr_subs(vs), 2)
+        self.assertEqual(cnt_skip_subs(vs), 2)
+        vs.add_subregion(Subregion(0,0.25))
+        self.assertEqual(cnt_usr_subs(vs), 3)
+        self.assertEqual(cnt_skip_subs(vs), 1)
+        vs.add_subregion(Subregion(0.75,1))
+        self.assertEqual(cnt_usr_subs(vs), 4)
+        self.assertEqual(cnt_skip_subs(vs), 0)
+        vs = VideoSequence(1,5)
+        vs.add_subregion(Subregion(0.2,0.4))
+        vs.add_subregion(Subregion(0.6,0.8))
+        self.assertEqual(cnt_usr_subs(vs), 2)
+        self.assertEqual(cnt_skip_subs(vs), 3)
+        vs.add_subregion(Subregion(0.4,0.6))
+        self.assertEqual(cnt_usr_subs(vs), 3)
+        self.assertEqual(cnt_skip_subs(vs), 2)
+        vs.add_subregion(Subregion(0.8,1))
+        self.assertEqual(cnt_usr_subs(vs), 4)
+        self.assertEqual(cnt_skip_subs(vs), 1)
+        vs.add_subregion(Subregion(0,0.2))
+        self.assertEqual(cnt_usr_subs(vs), 5)
+        self.assertEqual(cnt_skip_subs(vs), 0)
 
 class SubregionTestCase(unittest.TestCase):
     def setUp(self):
-        self.t_intersects = lambda x, y, z, w: \
+        self.time_intersects = lambda x, y, z, w: \
             self.x_intersects('time', x, y, z, w)
-        self.f_intersects = lambda x, y, z, w: \
-            self.x_intersects('frame', x, y, z, w)
+        self.fr_intersects = lambda x, y, z, w: \
+            self.x_intersects('fr', x, y, z, w)
 
     def test_init(self):
         self.assertIsInstance(Subregion(0,1), Subregion)
@@ -146,7 +149,7 @@ class SubregionTestCase(unittest.TestCase):
             setattr(s1, 'tb', s1_b)
             setattr(s2, 'ta', s2_a)
             setattr(s2, 'tb', s2_b)
-        elif x == 'frame':
+        elif x == 'fr':
             setattr(s1, 'fa', s1_a)
             setattr(s1, 'fb', s1_b)
             setattr(s2, 'fa', s2_a)
@@ -158,49 +161,48 @@ class SubregionTestCase(unittest.TestCase):
 
     def test_intersects_inside(self):
         args = [1,2,1.5,1.75]
-        self.assertTrue(self.t_intersects(*args))
-        self.assertTrue(self.f_intersects(*args))
+        self.assertTrue(self.time_intersects(*args))
+        self.assertTrue(self.fr_intersects(*args))
 
     def test_intersects_inside_right_edge(self):
         args = [1,2,1.5,1.75]
-        self.assertTrue(self.t_intersects(*args))
-        self.assertTrue(self.f_intersects(*args))
+        self.assertTrue(self.time_intersects(*args))
+        self.assertTrue(self.fr_intersects(*args))
 
     def test_intersects_inside_left_edge(self):
         args = [1,2,1,1.5]
-        self.assertTrue(self.t_intersects(*args))
-        self.assertTrue(self.f_intersects(*args))
+        self.assertTrue(self.time_intersects(*args))
+        self.assertTrue(self.fr_intersects(*args))
 
     def test_intersects_overlap_right(self):
         args = [1,2,1.75,3]
-        self.assertTrue(self.t_intersects(*args))
-        self.assertTrue(self.f_intersects(*args))
+        self.assertTrue(self.time_intersects(*args))
+        self.assertTrue(self.fr_intersects(*args))
 
     def test_intersects_borders_right_edge(self):
         args = [1,2,2,3]
-        self.assertFalse(self.t_intersects(*args))
-        self.assertFalse(self.f_intersects(*args))
+        self.assertFalse(self.time_intersects(*args))
+        self.assertFalse(self.fr_intersects(*args))
 
     def test_intersects_overlap_left(self):
         args = [1,2,0.5,1.5]
-        self.assertTrue(self.t_intersects(*args))
-        self.assertTrue(self.f_intersects(*args))
+        self.assertTrue(self.time_intersects(*args))
+        self.assertTrue(self.fr_intersects(*args))
 
     def test_intersects_borders_left_edge(self):
         args = [1,2,0.5,1]
-        self.assertFalse(self.t_intersects(*args))
-        self.assertFalse(self.f_intersects(*args))
+        self.assertFalse(self.time_intersects(*args))
+        self.assertFalse(self.fr_intersects(*args))
 
     def test_intersects_equal(self):
         args = [1,2,1,2]
-        self.assertTrue(self.t_intersects(*args))
-        self.assertTrue(self.f_intersects(*args))
+        self.assertTrue(self.time_intersects(*args))
+        self.assertTrue(self.fr_intersects(*args))
 
     def test_intersects_envelops(self):
         args = [1,1,0,2]
-        self.assertTrue(self.t_intersects(*args))
-        self.assertTrue(self.f_intersects(*args))
-
+        self.assertTrue(self.time_intersects(*args))
+        self.assertTrue(self.fr_intersects(*args))
 
 if __name__ == '__main__':
     unittest.main()

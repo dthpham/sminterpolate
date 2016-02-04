@@ -1,7 +1,7 @@
 # Example Usage
 Run `butterflow -h` for a full list of options and their default values.
 
-## Typical commands that you will use
+## Typical commands that you'll use
 ### Frame interpolation
 Double the frame rate:
 
@@ -15,12 +15,15 @@ Set a video's frame rate to 96fps:
 butterflow -r 96 [video]
 ```
 
+These commands will remove frames or interpolate new ones based on the original
+video's frame rate.
+
 Use the `-sm`, `--smooth-motion` flag if having artifact-less frames is a
-priority. This will tune settings to emphasize blending frames over warping
-pixels, which is the default behavior.
+priority. This will tune settings to emphasize blending frames over the default
+behavior of warping pixels.
 
 ### Altering speed and duration
-Slow-mo a video to 0.25x speed:
+Set video to 0.25x speed:
 
 ```
 butterflow -s full,spd=0.25 [video]
@@ -43,7 +46,7 @@ butterflow -t -s a=5,b=6,spd=0.5 [video]
 
 The `-t`, `--trim-regions` option will discard all regions that are not
 explicitly specified. Keep in mind, rendering will be faster if you're working
-on smaller regions, so this flag will be useful if you need to do quick tests.
+on smaller regions, so this flag will be useful for doing quick tests.
 
 ### Multiple regions
 Separate regions with a colon `:`.
@@ -65,7 +68,7 @@ a=20,b=end,fps=200 [video]
 ```
 
 ## Using fractions
-You can use fractions for rates, e.g., `30/1.001` is equivalent to 29.97fps.
+You can use fractions for rates, e.g., 30/1.001 is equivalent to 29.97fps.
 
 ## Robustness of image
 Butterflow uses the Farneback algorithm to compute dense optical flows for frame

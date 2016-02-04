@@ -1,8 +1,9 @@
-// retrieves media file information
+// get av file info
 
 #include <Python.h>
 #include <stdio.h>
 #include <string.h>
+#include <math.h>
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
 #include <libavutil/avutil.h>
@@ -14,10 +15,15 @@
     PyErr_SetString(PyExc_RuntimeError, "set dict failed"); \
     return (PyObject*)NULL; }
 #define MS_PER_SEC 1000
+#define EPSILON 1.0e-8
 
 
 int gcd(int a, int b) {
     return b == 0 ? a : gcd(b, a % b);
+}
+
+int almost_equal(double a, double b) {
+    return fabs(a - b) <= EPSILON;
 }
 
 static PyObject*
@@ -29,20 +35,19 @@ get_av_info(PyObject *self, PyObject *arg) {
 
     AVFormatContext *format_ctx = avformat_alloc_context();
 
-    /* make quiet. should reset when finished */
     int initial_level = av_log_get_level();
-    av_log_set_level(AV_LOG_ERROR);
+    av_log_set_level(AV_LOG_ERROR);  /* make quiet */
 
     int rc = avformat_open_input(&format_ctx, path, NULL, NULL);
     if (rc != 0) {
-        PyErr_SetString(PyExc_RuntimeError, "could not open file");
+        PyErr_SetString(PyExc_RuntimeError, "open input failed");
         return (PyObject*)NULL;
     }
 
     rc = avformat_find_stream_info(format_ctx, NULL);
     if (rc < 0) {
         avformat_close_input(&format_ctx);
-        PyErr_SetString(PyExc_RuntimeError, "could not find stream info");
+        PyErr_SetString(PyExc_RuntimeError, "no stream info found");
         return (PyObject*)NULL;
     }
 
@@ -77,7 +82,8 @@ get_av_info(PyObject *self, PyObject *arg) {
     unsigned long frames = 0;
     AVRational sar  = {0, 0};  /* sample aspect ratio */
     AVRational dar  = {0, 0};  /* display aspect ratio */
-    AVRational rate = {0, 0};  /* average fps */
+    float rate = 0.0;          /* average fps */
+    AVRational rational_rate = {0, 0};
 
     if (v_stream_exists) {
         AVStream *v_stream = format_ctx->streams[v_stream_idx];
@@ -90,9 +96,9 @@ get_av_info(PyObject *self, PyObject *arg) {
         int64_t c_duration = av_rescale_q(format_ctx->duration, av_tb, ms_tb);
 
         duration = v_duration;
-        if (v_duration == 0) {
-            /* fallback to the container duration if the video stream doesnt
-             * report anything */
+        if (duration < 0 || almost_equal(v_duration, 0)) {
+            /* fallback to the container duration if the video stream
+             * doesnt report anything */
             duration = c_duration;
         }
 
@@ -101,10 +107,11 @@ get_av_info(PyObject *self, PyObject *arg) {
         w = v_codec_ctx->width;
         h = v_codec_ctx->height;
 
-        rate = format_ctx->streams[v_stream_idx]->avg_frame_rate;
+        rational_rate = format_ctx->streams[v_stream_idx]->avg_frame_rate;
+        rate = rational_rate.num * 1.0 / rational_rate.den;
 
         /* calculate num of frames ourselves */
-        frames = (rate.num * 1.0 / rate.den) * (duration / 1000.0);
+        frames = rate * duration / 1000.0;
 
         /* if sample aspect ratio is unknown assume it is 1:1 */
         sar = format_ctx->streams[v_stream_idx]->sample_aspect_ratio;
@@ -145,8 +152,9 @@ get_av_info(PyObject *self, PyObject *arg) {
     py_safe_set(py_info, "dar_n", PyInt_FromLong(dar.num));
     py_safe_set(py_info, "dar_d", PyInt_FromLong(dar.den));
     py_safe_set(py_info, "duration", PyFloat_FromDouble(duration));
-    py_safe_set(py_info, "rate_n", PyInt_FromLong(rate.num));
-    py_safe_set(py_info, "rate_d", PyInt_FromLong(rate.den));
+    py_safe_set(py_info, "rate_n", PyInt_FromLong(rational_rate.num));
+    py_safe_set(py_info, "rate_d", PyInt_FromLong(rational_rate.den));
+    py_safe_set(py_info, "rate", PyFloat_FromDouble(rate));
     py_safe_set(py_info, "frames", PyLong_FromUnsignedLong(frames));
 
     return py_info;
@@ -156,7 +164,7 @@ static PyObject*
 print_av_info(PyObject *self, PyObject *arg) {
     PyObject *py_info = get_av_info(self, arg);
 
-    if (py_info == NULL) {  /* something bad happened */
+    if (py_info == NULL) {
         return (PyObject*)NULL;
     }
 
@@ -194,11 +202,6 @@ print_av_info(PyObject *self, PyObject *arg) {
     x /= 60;
     hrs = x % 24;
 
-    /* calculate rate */
-    int rate_n = PyInt_AsLong(PyDict_GetItemString(py_info, "rate_n"));
-    int rate_d = PyInt_AsLong(PyDict_GetItemString(py_info, "rate_d"));
-    float rate = rate_n * 1.0 / rate_d;
-
     printf("Video information:");
     printf("\n  Streams available  \t: %s"
            "\n  Resolution         \t: %dx%d, SAR %d:%d DAR %d:%d"
@@ -212,7 +215,7 @@ print_av_info(PyObject *self, PyObject *arg) {
         (int)PyInt_AsLong(PyDict_GetItemString(py_info, "sar_d")),
         (int)PyInt_AsLong(PyDict_GetItemString(py_info, "dar_n")),
         (int)PyInt_AsLong(PyDict_GetItemString(py_info, "dar_d")),
-        rate,
+        (float)PyFloat_AsDouble(PyDict_GetItemString(py_info, "rate")),
         hrs, mins, secs,
         duration / 1000.0,
         PyInt_AsUnsignedLongMask(PyDict_GetItemString(py_info, "frames")));

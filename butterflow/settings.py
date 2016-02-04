@@ -1,4 +1,4 @@
-# centralized, app-wide settings
+# app-wide settings
 
 import os
 import logging
@@ -7,16 +7,15 @@ import cv2
 from butterflow.__init__ import __version__
 from butterflow import motion
 
-
 default = {
     'debug_opts':     False,
     # default logging level
     # levels in order of urgency: critical, error, warning, info, debug
-    'loglevel_a':     logging.ERROR,
-    # loglevel will be set to `DEBUG` if verbose is True
+    'loglevel_a':     logging.WARNING,
+    # loglevel will be set to DEBUG if verbose is True
     'loglevel_b':     logging.DEBUG,
     'verbose':        False,
-    # only support `ffmpeg` for now
+    # only support ffmpeg for now, can change to avutil if needed
     # Documentation: https://ffmpeg.org/ffmpeg.html
     'avutil':         'ffmpeg',
     # avutil and encoder loglevel
@@ -31,8 +30,8 @@ default = {
     # scaling opts
     'video_scale':    1.0,
     'scaler_up':      cv2.cv.CV_INTER_AREA,
-    # `CV_INTER_CUBIC` looks best but is slower, `CV_INTER_LINEAR` is faster
-    # but still looks okay
+    # CV_INTER_CUBIC looks best but is slower, CV_INTER_LINEAR is faster but
+    # still looks okay
     'scaler_dn':      cv2.cv.CV_INTER_CUBIC,
     # muxing opts
     'v_container':    'mp4',
@@ -41,7 +40,7 @@ default = {
     # audio codec and quality
     # See: https://trac.ffmpeg.org/wiki/Encode/AAC
     'ca':             'aac',   # built in encoder, doesnt require an ext lib
-    'ba':             '240k',  # bitrate, usable >= 192k
+    'ba':             '192k',  # bitrate, usable >= 192k
     'qa':             4,       # quality scale of audio from 0.1 to 10
     # farneback optical flow options
     'pyr_scale':      0.5,
@@ -69,8 +68,8 @@ default = {
     'txt_max_scale':  1.0,
     'txt_thick':      1,
     'strk_thick':     2,
-    'h_fits':         768,
-    'v_fits':         216,
+    'txt_w_fits':     768,
+    'txt_h_fits':     216,
     'txt_t_pad':      30,
     'txt_l_pad':      20,
     'txt_r_pad':      20,
@@ -78,6 +77,8 @@ default = {
     'txt_min_scale':  0.6,   # don't draw if the font is scaled below this
     'txt_placeh':     '_',   # placeholder if value in fmt text is None
     # progress bar settings
+    'bar_w_fits':     572,
+    'bar_h_fits':     142,
     'bar_t_pad':      0.7,   # relative padding from the top
     'bar_s_pad':      0.12,  # relative padding on each side
     'ln_thick':       3,     # pixels of lines that make outer rectangle
@@ -88,6 +89,8 @@ default = {
     'bar_color':      cv2.cv.RGB(255, 255, 255),
     'bar_strk_color': cv2.cv.RGB(192, 192, 192),
     # frame marker settings
+    'mrk_w_fits':     572,
+    'mrk_h_fits':     142,
     'mrk_d_pad':      20,
     'mrk_r_pad':      20,
     'mrk_out_thick':  -1,    # -1, a filled circle
@@ -115,32 +118,22 @@ default['cv'] = 'libx264'
 default['enc_loglevel'] = 'error'
 
 # define location of files and directories
-default['out_path'] = os.path.join(os.getcwd(), 'output.mp4')
+default['out_path'] = os.path.join(os.getcwd(), 'out.mp4')
 
-# since value of `tempfile.tempdir` is `None` python will search std list of
-# dirs and will select the first one that the user can create a file in
+# since value of tempfile.tempdir is None python will search std list of dirs
+# and will select the first one that the user can create a file in
 # See: https://docs.python.org/2/library/tempfile.html#tempfile.tempdir
 #
-# butterflow will write renders to a temp file in `tempdir` and will move it
-# to it's destination path when completed using `shutil.move()`. if the dst
-# is on the current filesystem then `os.rename()` is used, otherwise the file
-# is copied with `shutil.copy2` then removed
-tempdir = tempfile.gettempdir()
-default['tmp_dir'] = os.path.join(tempdir, 'butterflow-{}'.format(__version__))
-default['clb_dir'] = os.path.join(default['tmp_dir'], 'clb')
-
-
-# define interpolation and flow functions
-default['flow_function'] = lambda x, y: \
-    motion.ocl_farneback_optical_flow(
-        x, y, default['pyr_scale'], default['levels'], default['winsize'],
-        default['iters'], default['poly_n'], default['poly_s'],
-        default['fast_pyr'], 0)
-default['interpolate_function'] = motion.ocl_interpolate_flow
-
+# butterflow will write renders to a temp file in tempdir and will move it to
+# it's destination path when completed using shutil.move(). if the dst is on
+# the current filesystem then os.rename() is used, otherwise the file is copied
+# with shutil.copy2 then removed
+default['tempdir'] = os.path.join(tempfile.gettempdir(),
+                                  'butterflow-{}'.format(__version__))
+default['clbdir'] = os.path.join(default['tempdir'], 'clb')
 
 # override default settings with development settings
-# ignore errors when `dev_settings.py` does not exist
+# ignore errors when dev_settings.py does not exist
 # ignore errors when `default` variable is not defined in the file
 try:
     from butterflow import dev_settings
@@ -151,11 +144,10 @@ except ImportError:
 except AttributeError:
     pass
 
-
 # make temporary directories
-for x in [default['clb_dir'], default['tmp_dir']]:
+for x in [default['clbdir'], default['tempdir']]:
     if not os.path.exists(x):
         os.makedirs(x)
 
 # set the location of the clb cache
-motion.set_cache_path(default['clb_dir'] + os.sep)
+motion.set_cache_path(default['clbdir'] + os.sep)

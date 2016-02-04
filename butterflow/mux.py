@@ -4,82 +4,65 @@ import os
 import shutil
 import subprocess
 import math
-from butterflow import avinfo
 from butterflow.settings import default as settings
 
-def extract_audio(video, destination, start, end, spd=1.0):
-    av_info = avinfo.get_av_info(video)
-    if not av_info['a_stream_exists']:
-        raise RuntimeError('no audio stream found')
-    filename = os.path.splitext(os.path.basename(destination))[0]
-    tempfile1 = '~{filename}.{ext}'.format(
-            filename=filename,
-            ext=settings['v_container']).lower()
-    tempfile1 = os.path.join(settings['tmp_dir'], tempfile1)
+def extract_audio_with_spd(src, dst, ss, to, spd=1.0):
+    fname = os.path.splitext(os.path.basename(dst))[0]
+    tempfile1 = os.path.join(settings['tempdir'],
+                             '~{}.{}'.format(fname, settings['v_container']).
+                             lower())
     call = [
         settings['avutil'],
         '-loglevel', settings['av_loglevel'],
         '-y',
-        '-i', video,
-        '-ss', str(start / 1000.0),
-        '-to', str(end / 1000.0),
+        '-i', src,
+        '-ss', str(ss/1000.0),  # ss in ms
+        '-to', str(to/1000.0),  # to in ms
         '-map_metadata', '-1',
         '-map_chapters', '-1',
         '-vn',
-        '-sn',
-    ]
-    # `aac` is considered an experimental encoder and so `-strict experimental`
-    # or `-strict 2` is required
+        '-sn']
     if settings['ca'] == 'aac':
-        call.extend(['-strict', '-2'])
+        call.extend(['-strict', '-2'])  # aac is an experimental encoder so
+        # -strict experimental or -strict 2 is req
     call.extend([
         '-c:a', settings['ca'],
         '-b:a', settings['ba'],
-        tempfile1
-    ])
-    proc = subprocess.call(call)
-    if proc == 1:
-        raise RuntimeError('extraction failed')
-    # change speed of file using the `atempo` filter
-    tempfile2 = '~{filename}.{spd}x.{ext}'.format(
-        filename=filename,
-        spd=spd,
-        ext=settings['a_container']
-    )
-    tempfile2 = os.path.join(settings['tmp_dir'], tempfile2)
-    # the `atempo` filter is limited to using values between `ATEMPO_MIN=0.5`
-    # and `ATEMPO_MAX=2.0` work around this limitation by stringing multiple
-    # `atempo` filters together
-    atempo_chain = []
-    for f in atempo_factors_for_spd(spd):
+        tempfile1])
+    if subprocess.call(call) == 1:
+        raise RuntimeError
+    # change spd using atempo filter
+    tempfile2 = os.path.join(settings['tempdir'],
+                             '~{}.{}x.{}'.format(fname, spd,
+                                                 settings['a_container']))
+    atempo_chain = []  # chain atempo filts to workaround val limitation
+    for f in mk_product_chain(spd, 0.5, 2.0):
+        if f == 1:
+            continue
         atempo_chain.append('atempo={}'.format(f))
     call = [
         settings['avutil'],
         '-loglevel', settings['av_loglevel'],
         '-y',
         '-i', tempfile1,
-        '-filter:a', ','.join(atempo_chain),
-    ]
+        '-filter:a', ','.join(atempo_chain)]
     if settings['ca'] == 'aac':
         call.extend(['-strict', '-2'])
     call.extend([
         '-c:a', settings['ca'],
         '-b:a', settings['ba'],
-        tempfile2,
-    ])
-    proc = subprocess.call(call)
-    if proc == 1:
-        raise RuntimeError('change tempo failed')
+        tempfile2])
+    if subprocess.call(call) == 1:
+        raise RuntimeError
     os.remove(tempfile1)
-    shutil.move(tempfile2, destination)
+    shutil.move(tempfile2, dst)
 
-
-def concat_files(destination, files):
+def concat_av_files(dst, files):
     # concatenates files of the same type (same codec and codec parameters) in
     # sequence using ffmpeg's concat demuxer method
     # See: https://trac.ffmpeg.org/wiki/Concatenate#demuxer
-    listfile = os.path.join(settings['tmp_dir'], 'list.txt')
-    with open(listfile, 'w') as f:  # write list of files to be concatenated
+    tempfile = os.path.join(settings['tempdir'], 'list.txt')
+    with open(tempfile, 'w') as f:
         for file in files:
             f.write('file \'{}\'\n'.format(file))
     call = [
@@ -87,53 +70,44 @@ def concat_files(destination, files):
         '-loglevel', settings['av_loglevel'],
         '-y',
         '-f', 'concat',
-        '-i', listfile,
+        '-i', tempfile,
         '-c', 'copy',
-        destination
-    ]
-    proc = subprocess.call(call)
-    if proc == 1:
-        raise RuntimeError('merge files failed')
-    os.remove(listfile)
+        dst]
+    if subprocess.call(call) == 1:
+        raise RuntimeError
+    os.remove(tempfile)
 
-
-def mux(video, audio, destination):
-    tempfile = '~{vidname}+{audname}.{ext}'.format(
-            vidname=os.path.splitext(os.path.basename(video))[0],
-            audname=os.path.splitext(os.path.basename(audio))[0],
-            ext=settings['v_container'])
-    tempfile = os.path.join(settings['tmp_dir'], tempfile)
+def mux_av(vid, audio, dst):
+    tempfile = '~{}+{}.{}'.format(os.path.splitext(os.path.basename(vid))[0],
+                                  os.path.splitext(os.path.basename(audio))[0],
+                                  settings['v_container'])
+    tempfile = os.path.join(settings['tempdir'], tempfile)
     call = [
         settings['avutil'],
         '-loglevel', settings['av_loglevel'],
         '-y',
-        '-i', video,
+        '-i', vid,
         '-i', audio,
         '-c', 'copy',  # use copy to avoid re-encoding
-        tempfile
-    ]
-    proc = subprocess.call(call)
-    if proc == 1:
-        raise RuntimeError('mux failed')
-    shutil.move(tempfile, destination)
+        tempfile]
+    if subprocess.call(call) == 1:
+        raise RuntimeError
+    shutil.move(tempfile, dst)
 
-ATEMPO_MIN = 0.5
-ATEMPO_MAX = 2.0
-
-
-def atempo_factors_for_spd(s):
-    # returns a list of `atempo` values between `ATEMPO_MIN` and `ATEMPO_MAX`
-    # that when multiplied together will produce a desired speed
-    def solve(s, limit):
-        facs = []
-        x = int(math.log(s) / math.log(limit))  # apply log rule for exponents
+def mk_product_chain(prd, min, max):
+    # returns a list of values between [min,max] when multiplied together will
+    # yield a desired product
+    if prd >= min and prd <= max:
+        return [1, prd]
+    def solve(prd, limit):
+        vals = []
+        x = int(math.log(prd) / math.log(limit))  # apply log rule for exps
         for i in range(x):
-            facs.append(limit)
-        y = s * 1.0 / math.pow(limit, x)
-        facs.append(y)
-        return facs
-    if s < ATEMPO_MIN:
-        return solve(s, ATEMPO_MIN)
-    elif s > ATEMPO_MAX:
-        return solve(s, ATEMPO_MAX)
-    return [s]  # `s` is between bounds, no chaining needed
+            vals.append(limit)
+        y = float(prd) / math.pow(limit, x)
+        vals.append(y)
+        return vals
+    if prd < min:
+        return solve(prd, min)
+    else:
+        return solve(prd, max)
