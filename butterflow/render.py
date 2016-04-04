@@ -18,8 +18,8 @@ log = logging.getLogger('butterflow')
 
 class Renderer(object):
     def __init__(self, src, dst, sequence, rate, flow_fn, inter_fn, w, h,
-                 lossless, trim, preview, add_info, text_type, mark_frames,
-                 mux):
+                 lossless, trim_regions, show_preview, add_info, text_type,
+                 mark_frames, mux):
         self.src = src
         self.dst = dst
         self.sequence = sequence
@@ -29,8 +29,8 @@ class Renderer(object):
         self.w = w
         self.h = h
         self.lossless = lossless
-        self.trim = trim
-        self.preview = preview
+        self.trim_regions = trim_regions
+        self.show_preview = show_preview
         self.add_info = add_info
         self.text_type = text_type
         self.mark_frames = mark_frames
@@ -38,6 +38,14 @@ class Renderer(object):
         self.render_pipe = None
         self.fr_source = None
         self.av_info = avinfo.get_av_info(src)
+        self.scaling_method = None
+        new_res = w * h
+        src_res = self.av_info['w'] * self.av_info['h']
+        if new_res < src_res:
+            self.scaling_method = settings['scaler_dn']
+        elif new_res > src_res:
+            self.scaling_method = settings['scaler_up']
+        self.preview_win_title = os.path.basename(self.src) + ' - Butterflow'
         self.tot_src_frs = 0
         self.tot_frs_int = 0
         self.tot_frs_dup = 0
@@ -46,21 +54,6 @@ class Renderer(object):
         self.tot_tgt_frs = 0
         self.subs_to_render = 0
         self.curr_sub_idx = 0
-
-    @property
-    def preview_win_title(self):
-        return '{} - Butterflow'.format(os.path.basename(self.src))
-
-    @property
-    def scaling_method(self):
-        new_res = self.w * self.h
-        src_res = self.av_info['w'] * self.av_info['h']
-        if new_res < src_res:
-            return settings['scaler_dn']
-        elif new_res > src_res:
-            return settings['scaler_up']
-        else:
-            return None
 
     def mk_render_pipe(self, dst):
         vf = []
@@ -318,7 +311,8 @@ class Renderer(object):
                                         interpolation=self.scaling_method)
 
                     if self.mark_frames:
-                        draw.draw_fr_marker(fr, fr_type == 'interpolated')
+                        draw.draw_fr_marker(fr,
+                                            fill=fr_type == 'interpolated')
 
                     if self.add_info:
                         if wrts_needed > 1:
@@ -345,10 +339,10 @@ class Renderer(object):
                                              frs_drp,
                                              frs_dup)
 
-                    if self.preview:
+                    if self.show_preview:
                         fr_to_show = fr.copy()
                         draw.draw_progress_bar(fr_to_show,
-                                               float(frs_wrt) / tgt_frs)
+                                               progress=float(frs_wrt)/tgt_frs)
                         cv2.imshow(self.preview_win_title,
                                    np.asarray(fr_to_show))
                         cv2.waitKey(settings['imshow_ms'])
@@ -366,59 +360,69 @@ class Renderer(object):
         self.fr_source.open()
         self.mk_render_pipe(tempfile1)
         self.subs_to_render = 0
+
         for sub in self.sequence.subregions:
-            if self.trim and sub.skip:
+            if self.trim_regions and sub.skip:
                 continue
             else:
                 self.subs_to_render += 1
-        if self.preview:
+
+        if self.show_preview:
             cv2.namedWindow(self.preview_win_title, cv2.WINDOW_OPENGL)
             cv2.resizeWindow(self.preview_win_title, self.w, self.h)
+
         for i, sub in enumerate(self.sequence.subregions):
-            if self.trim and sub.skip:
+            if self.trim_regions and sub.skip:
                 continue
             else:
                 self.curr_sub_idx += 1
                 log.info('Rendering: Sub {0:02d}...'.format(i))
                 self.render_subregion(sub)
-        if self.preview:
+
+        if self.show_preview:
             cv2.destroyAllWindows()
+
         self.fr_source.close()
         self.close_render_pipe()
 
         if self.mux:
-            log.info('Muxing...')
-            if self.av_info['a_stream_exists']:
-                audio_files = []
-                for i, sub in enumerate(self.sequence.subregions):
-                    if self.trim and sub.skip:
-                        continue
-                    tempfile2 = os.path.join(
-                        settings['tempdir'],
-                        '~{}.{}.{}'.format(src_fname,
-                                           i,
-                                           settings['a_container']).lower())
-                    mux.extract_audio_with_spd(self.src,
-                                               tempfile2,
-                                               sub.ta,
-                                               sub.tb,
-                                               sub.target_spd)
-                    audio_files.append(tempfile2)
-                tempfile3 = os.path.join(
-                    settings['tempdir'],
-                    '~{}.merged.{}'.format(src_fname,
-                                           settings['a_container']).lower())
-                mux.concat_av_files(tempfile3, audio_files)
-                mux.mux_av(tempfile1, tempfile3, self.dst)
-                for file in audio_files:
-                    os.remove(file)
-                os.remove(tempfile3)
-                os.remove(tempfile1)
-                return
-            else:
-                log.warn('no audio stream exists')
+            self.mux_original_audio_with_rendered_video(tempfile1)
+            return
+        else:
+            shutil.move(tempfile1, self.dst)
 
-        shutil.move(tempfile1, self.dst)
+    def mux_original_audio_with_rendered_video(self, vid):
+        log.info('Muxing...')
+        if not self.av_info['a_stream_exists']:
+            log.warn('no audio stream exists')
+            shutil.move(vid, self.dst)
+            return
+        src_fname = os.path.splitext(os.path.basename(self.src))[0]
+        audio_files = []
+        for i, sub in enumerate(self.sequence.subregions):
+            if self.trim_regions and sub.skip:
+                continue
+            tempfile1 = os.path.join(
+                settings['tempdir'],
+                '~{}.{}.{}'.format(src_fname,
+                                   i,
+                                   settings['a_container']).lower())
+            mux.extract_audio_with_spd(self.src,
+                                       tempfile1,
+                                       sub.ta,
+                                       sub.tb,
+                                       spd=sub.target_spd)
+            audio_files.append(tempfile1)
+        tempfile2 = os.path.join(
+            settings['tempdir'],
+            '~{}.merged.{}'.format(src_fname,
+                                   settings['a_container']).lower())
+        mux.concat_av_files(tempfile2, audio_files)
+        mux.mux_av(vid, tempfile2, self.dst)
+        for file in audio_files:
+            os.remove(file)
+        os.remove(tempfile2)
+        os.remove(vid)
 
     def __del__(self):
         # close the pipe if it was inadvertently left open. this can happen if

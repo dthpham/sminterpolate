@@ -75,7 +75,7 @@ default = {
     'txt_r_pad':      20,
     'txt_ln_b_pad':   10,    # spacing between lines
     'txt_min_scale':  0.6,   # don't draw if the font is scaled below this
-    'txt_placeh':     '_',   # placeholder if value in fmt text is None
+    'txt_placeh':     '?',   # placeholder if value in fmt text is None
     # progress bar settings
     'bar_w_fits':     572,
     'bar_h_fits':     142,

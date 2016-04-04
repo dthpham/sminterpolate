@@ -37,8 +37,6 @@ def extract_audio_with_spd(src, dst, ss, to, spd=1.0):
                                                  settings['a_container']))
     atempo_chain = []  # chain atempo filts to workaround val limitation
     for f in mk_product_chain(spd, 0.5, 2.0):
-        if f == 1:
-            continue
         atempo_chain.append('atempo={}'.format(f))
     call = [
         settings['avutil'],
@@ -70,6 +68,7 @@ def concat_av_files(dst, files):
         '-loglevel', settings['av_loglevel'],
         '-y',
         '-f', 'concat',
+        '-safe', '0',
         '-i', tempfile,
         '-c', 'copy',
         dst]
@@ -96,9 +95,9 @@ def mux_av(vid, audio, dst):
 
 def mk_product_chain(prd, min, max):
     # returns a list of values between [min,max] when multiplied together will
-    # yield a desired product
+    # yield prd
     if prd >= min and prd <= max:
-        return [1, prd]
+        return [prd]
     def solve(prd, limit):
         vals = []
         x = int(math.log(prd) / math.log(limit))  # apply log rule for exps

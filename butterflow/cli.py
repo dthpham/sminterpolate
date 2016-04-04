@@ -406,5 +406,5 @@ def sequence_from_input_str(s, src_dur, src_nfrs):
             setattr(sub, 'target_'+target, val)
             seq.add_subregion(sub)
         else:
-            return None
+            raise RuntimeError
     return seq

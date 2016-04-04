@@ -18,11 +18,11 @@ def fr_at_time_step(target_fr, u, v, ts):
     shape = target_fr.shape
     fr = np.zeros(shape, dtype=np.float32)
     for idx in np.ndindex(shape):
-        py = idx[0] + v[idx[0], idx[1]] * ts
-        px = idx[1] + u[idx[0], idx[1]] * ts
+        py = np.rint(idx[0] + v[idx[0], idx[1]] * ts)
+        px = np.rint(idx[1] + u[idx[0], idx[1]] * ts)
         ch = idx[2]
-        fr[idx] = target_fr[np.clip(np.rint(py), 0, shape[0]-1),
-                            np.clip(np.rint(px), 0, shape[1]-1),
+        fr[idx] = target_fr[np.asscalar(np.int32(np.clip(py, 0, shape[0]-1))),
+                            np.asscalar(np.int32(np.clip(px, 0, shape[1]-1))),
                             ch]
     return ts, fr
 

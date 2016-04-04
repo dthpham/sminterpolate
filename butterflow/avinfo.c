@@ -216,7 +216,9 @@ print_av_info(PyObject *self, PyObject *arg) {
         (int)PyInt_AsLong(PyDict_GetItemString(py_info, "dar_n")),
         (int)PyInt_AsLong(PyDict_GetItemString(py_info, "dar_d")),
         (float)PyFloat_AsDouble(PyDict_GetItemString(py_info, "rate")),
-        hrs, mins, secs,
+        hrs,
+        mins,
+        secs,
         duration / 1000.0,
         PyInt_AsUnsignedLongMask(PyDict_GetItemString(py_info, "frames")));
 
