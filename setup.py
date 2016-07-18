@@ -84,17 +84,11 @@ np_includes  = None    # numpy header search paths
 cv_includes  = None    # search path for opencv header files
 cv_ldflags   = None    # opencv library search paths
 cv_libs      = ['opencv_core', 'opencv_ocl', 'opencv_imgproc']
-cv_version   = 2412    # cv library version
+cv_version   = 2413    # cv library version
 
 is_win = sys.platform.startswith('win')
 is_osx = sys.platform.startswith('darwin')
 is_nix = sys.platform.startswith('linux')
-
-# windows vendor dirs
-if is_win:
-    variousdir = os.path.join(vendordir, 'various', 'bin')
-    cl_dir = os.path.join(vendordir, 'opencl')
-    cv_dir = os.path.join(vendordir, 'opencv')
 
 # global cflags
 if is_devbuild:
@@ -155,10 +149,6 @@ if is_nix or is_win:
 elif is_osx:
     cl_linkflags = ['-framework', 'OpenCL']
 
-if is_win:
-    cl_includes = [os.path.join(cl_dir, 'include')]
-    cl_ldflag = [os.path.join(cl_dir, 'lib')]
-
 ocl_extra_link_args = linkflags
 if is_osx:
     ocl_extra_link_args.extend(cl_linkflags)
@@ -166,9 +156,7 @@ if is_osx:
 ocl_ext = Extension('butterflow.ocl',
                     extra_compile_args=cflags,
                     extra_link_args=ocl_extra_link_args,
-                    include_dirs=cl_includes,
                     libraries=cl_lib,
-                    library_dirs=cl_ldflag,
                     sources=[os.path.join(pkgdir, 'ocl.c')],
                     language='c')
 
@@ -195,9 +183,6 @@ elif is_win:
 
 # opencv args
 if is_win:
-    # path to headers and libraries
-    cv_includes = os.path.join(cv_dir, 'include')
-    cv_ldflags = os.path.join(cv_dir, 'lib')
     # append version number to library names
     cv_libs_versioned = []
     for x in cv_libs:
@@ -211,16 +196,14 @@ ndconv_includes = os.path.join(ndconv_dir, 'include')
 motion_ext = Extension('butterflow.motion',
                        extra_compile_args=cxxflags,
                        extra_link_args=linkflags,
-                       include_dirs=mklist(cv_includes, ndconv_includes,
-                                           np_includes),
+                       include_dirs=mklist(ndconv_includes, np_includes),
                        libraries=cv_libs,
-                       library_dirs=mklist(cv_ldflags, cl_ldflag),
                        sources=[os.path.join(pkgdir, 'motion.cpp'),
                                 os.path.join(ndconv_dir, 'src',
                                              'conversion.cpp')],
                        language='c++')
 
-# should we use cxfreeze?
+# should we use cx_Freeze?
 use_cx_freeze = False
 if is_win and 'build_exe' in sys.argv:
     try:
@@ -228,7 +211,7 @@ if is_win and 'build_exe' in sys.argv:
         from cx_Freeze import setup, Executable
         use_cx_freeze = True
     except ImportError:
-        # use setuptools if cxfreeze doesn't exist
+        # use setuptools if cx_Freeze doesn't exist
         from setuptools import setup
 else:
     from setuptools import setup
@@ -244,8 +227,8 @@ setup_kwargs = {
     'url': 'https://github.com/dthpham/butterflow',
     'download_url': 'http://srv.dthpham.me/butterflow/butterflow-{}.tar.gz'.
                     format(version),
-    'description': 'Makes slow motion and motion interpolated videos',
-    'keywords': ['slowmo', 'slow motion', 'motion interpolation',
+    'description': 'Makes fluid slow motion and motion interpolated videos',
+    'keywords': ['motion interpolation', 'slow motion', 'slowmo',
                  'smooth motion'],
     'entry_points': {'console_scripts': ['butterflow = butterflow.cli:main']},
     'test_suite': 'tests'
@@ -253,30 +236,21 @@ setup_kwargs = {
 
 # make a partial setup function
 import functools
-setup_function = functools.partial(setup, **setup_kwargs)
+setup = functools.partial(setup, **setup_kwargs)
 
 if use_cx_freeze:
-    # collect exe and all other dependent DLLs
-    # these files should have been copied to the vendor dir before building
-    include_files = []
-    for fname in os.listdir(variousdir):
-        include_files.append((os.path.join(variousdir, fname), fname))
-    # manually add DLL for opencv that wasn't picked up by cxfreeze
-    dll = 'opencv_ffmpeg{}_64.dll'.format(cv_version)
-    include_files.append((os.path.join(vendordir, 'opencv', 'bin', dll), dll))
+    # use cx_Freeze setup
     build_exe_options = {
         'packages': ['butterflow'],
         'include_msvcr': True,
         'excludes': ['Tkinter'],
-        'include_files': include_files
     }
     executables = [
         Executable(script='butterflow/__main__.py',
                    targetName='butterflow.exe',
                    base=None)
     ]
-    setup_function(options={'build_exe': build_exe_options},
-                   executables=executables)
+    setup(options={'build_exe': build_exe_options}, executables=executables)
 else:
-    # use setuptools setup function
-    setup_function()
+    # use setuptools setup
+    setup()

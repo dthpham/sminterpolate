@@ -9,8 +9,8 @@ from butterflow.settings import default as settings  # will make temp dirs
 from butterflow import avinfo
 from butterflow.source import OpenCvFrameSource
 
-def mk_sample_video(dst, dur, w, h, rate):
-    if os.path.exists(dst):
+def mk_sample_video(dest, duration, w, h, rate):
+    if os.path.exists(dest):
         return
     call = [
         settings['avutil'],
@@ -18,13 +18,13 @@ def mk_sample_video(dst, dur, w, h, rate):
         '-y',
         '-f', 'lavfi',
         '-i', 'testsrc=duration={}:size={}x{}:rate={}:decimals=2'.format(
-            dur, w, h, str(rate)),
+            duration, w, h, str(rate)),
         '-pix_fmt', 'yuv420p',
-        dst]
+        dest]
     if subprocess.call(call) == 1:
         raise RuntimeError
 
-def avutil_fr_at_idx(src, dst, idx):
+def avutil_fr_at_idx(src, dest, idx):
     # extract image using avutil and return a cvimage
     get_fr_proc = subprocess.call([
         settings['avutil'],
@@ -33,23 +33,23 @@ def avutil_fr_at_idx(src, dst, idx):
         '-i', src,
         '-vf', 'select=gte(n\,{})'.format(idx),
         '-vframes', '1',
-        dst])
+        dest])
     if get_fr_proc == 1:
         raise RuntimeError
-    return cv2.imread(dst)
+    return cv2.imread(dest)
 
 class OpenCvFrameSourceTestCase(unittest.TestCase):
     def setUp(self):
         self.videofile_fr1 = os.path.join(settings['tempdir'],
-                                    '~test_av_frame_source_test_case_fr_1.mp4')
+                                     'test_av_frame_source_test_case_fr_1.mp4')
         self.videofile_fr3 = os.path.join(settings['tempdir'],
-                                    '~test_av_frame_source_test_case_fr_3.mp4')
+                                     'test_av_frame_source_test_case_fr_3.mp4')
         # make a 1fr and 3fr video
         mk_sample_video(self.videofile_fr1, 1, 320, 240, fractions.Fraction(1))
         mk_sample_video(self.videofile_fr3, 1, 320, 240, fractions.Fraction(3))
         # path to avutil fr to compare with
         self.imagefile = os.path.join(settings['tempdir'],
-                                      '~test_av_frame_source_test_case.png')
+                                      'test_av_frame_source_test_case.png')
         self.src_1 = OpenCvFrameSource(self.videofile_fr1)
         self.src_3 = OpenCvFrameSource(self.videofile_fr3)
         self.src_3.open()
@@ -113,9 +113,9 @@ class OpenCvFrameSourceTestCase(unittest.TestCase):
         f2 = avutil_fr_at_idx(self.src_3.src, self.imagefile, 0)
         self.assertTrue(np.array_equal(f1,f2))
 
-    def test_nfrs_equal_to_avinfo_nfrs(self):
+    def test_frames_equal_to_avinfo_frames(self):
         av = avinfo.get_av_info(self.src_3.src)
-        self.assertEqual(self.src_3.nfrs, av['frames'])
+        self.assertEqual(self.src_3.frames, av['frames'])
 
     def test_open_close(self):
         self.assertIsNone(self.src_1.capture)

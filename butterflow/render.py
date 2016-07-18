@@ -1,7 +1,5 @@
-# -*- coding: utf-8 -*-
-# make video w/ interpolated frames
-
 import os
+import sys
 import shutil
 import subprocess
 import math
@@ -13,49 +11,45 @@ from butterflow import mux
 from butterflow import avinfo
 from butterflow import draw
 
+
 import logging
 log = logging.getLogger('butterflow')
 
+
 class Renderer(object):
-    def __init__(self, src, dst, sequence, rate, flow_fn, inter_fn, w, h,
-                 lossless, trim_regions, show_preview, add_info, text_type,
-                 mark_frames, mux):
+    def __init__(self, src, dest, sequence, rate, optflow_fn, interpolate_fn,
+                 w, h, scaling_method, lossless, keep_subregions, show_preview,
+                 add_info, text_type, mark_frames, mux):
         self.src = src
-        self.dst = dst
+        self.dest = dest
         self.sequence = sequence
         self.rate = rate
-        self.flow_fn = flow_fn
-        self.inter_fn = inter_fn
+        self.optflow_fn = optflow_fn
+        self.interpolate_fn = interpolate_fn
         self.w = w
         self.h = h
+        self.scaling_method = scaling_method
         self.lossless = lossless
-        self.trim_regions = trim_regions
+        self.keep_subregions = keep_subregions
         self.show_preview = show_preview
         self.add_info = add_info
         self.text_type = text_type
         self.mark_frames = mark_frames
         self.mux = mux
-        self.render_pipe = None
+        self.pipe = None
         self.fr_source = None
         self.av_info = avinfo.get_av_info(src)
-        self.scaling_method = None
-        new_res = w * h
-        src_res = self.av_info['w'] * self.av_info['h']
-        if new_res < src_res:
-            self.scaling_method = settings['scaler_dn']
-        elif new_res > src_res:
-            self.scaling_method = settings['scaler_up']
-        self.preview_win_title = os.path.basename(self.src) + ' - Butterflow'
-        self.tot_src_frs = 0
-        self.tot_frs_int = 0
-        self.tot_frs_dup = 0
-        self.tot_frs_drp = 0
-        self.tot_frs_wrt = 0
-        self.tot_tgt_frs = 0
+        self.source_frs = 0
+        self.frs_interpolated = 0
+        self.frs_duped = 0
+        self.frs_dropped = 0
+        self.frs_written = 0
         self.subs_to_render = 0
+        self.frs_to_render = 0
         self.curr_sub_idx = 0
+        self.window_title = os.path.basename(self.src) + ' - Butterflow'
 
-    def mk_render_pipe(self, dst):
+    def mk_render_pipe(self, dest):
         vf = []
         vf.append('format=yuv420p')
         call = [
@@ -79,8 +73,6 @@ class Renderer(object):
         if settings['cv'] == 'libx264':
             quality = ['-crf', str(settings['crf'])]
             if self.lossless:
-                # -qp 0 is recommended over -crf for lossless
-                # See: https://trac.ffmpeg.org/wiki/Encode/H.264#LosslessH.264
                 quality = ['-qp', '0']
             call.extend(quality)
             call.extend(['-level', '4.2'])
@@ -90,141 +82,125 @@ class Renderer(object):
         if settings['cv'] == 'libx265':
             quality = 'crf={}'.format(settings['crf'])
             if self.lossless:
-                # ffmpeg doesn't pass -x265-params to x265 correctly, must
-                # provide keys for every single value until fixed
-                # See: https://trac.ffmpeg.org/ticket/4284
+                # Bug: https://trac.ffmpeg.org/ticket/4284
                 quality = 'lossless=1'
             params.append(quality)
         if len(params) > 0:
             call.extend([':'.join(params)])
-        call.extend([dst])
-        self.render_pipe = subprocess.Popen(call, stdin=subprocess.PIPE)
-        if self.render_pipe == 1:
+        call.extend([dest])
+        log.debug('subprocess: {}'.format(' '.join(call)))
+        self.pipe = subprocess.Popen(call, stdin=subprocess.PIPE)
+        if self.pipe == 1:
             raise RuntimeError
 
-    def close_render_pipe(self):
-        if self.render_pipe and not self.render_pipe.stdin.closed:
-            # flush doesn't necessarily write file's data to disk, must use
-            # flush followed by os.fsync() to ensure this behavior
-            self.render_pipe.stdin.flush()
-            self.render_pipe.stdin.close()
-            self.render_pipe.wait()
+    def close(self):
+        if self.pipe and not self.pipe.stdin.closed:
+            self.pipe.stdin.flush()
+            self.pipe.stdin.close()
+            self.pipe.wait()
+
+    def update_progress(self, progress):
+        if settings['quiet']:
+            return
+        sys.stdout.write('\rrendering: {}%'.format(int(progress*100)))
+        sys.stdout.flush()
+
+    def scale_fr(self, fr):
+        return cv2.resize(fr,
+                          (self.w, self.h),
+                          interpolation=self.scaling_method)
+
+    def calc_frs_to_render(self, sub):
+        reg_len = (sub.fb - sub.fa) + 1
+        reg_duration = (sub.tb - sub.ta) / 1000.0
+        to_render = 0
+
+        if sub.target_dur:
+            to_render = int(self.rate *
+                            (sub.target_dur / 1000.0))
+        elif sub.target_fps:
+            to_render = int(sub.target_fps * reg_duration)
+        elif sub.target_spd:
+            to_render = int(self.rate * reg_duration *
+                            (1 / sub.target_spd))
+
+        to_render = max(0, to_render)
+        interpolate_each_go = float(to_render) / max(1, (reg_len - 1))
+        if interpolate_each_go == 0:
+            to_render = 1
+        return to_render
 
     def render_subregion(self, sub):
-        fa = sub.fa
-        fb = sub.fb
-        ta = sub.ta
-        tb = sub.tb
-
-        reg_len = (fb - fa) + 1       # num of frs in the region
-        reg_dur = (tb - ta) / 1000.0  # duration of sub in secs
-
-        tgt_frs = 0  # num of frs we're targeting to render
-
-        # only one of these needs to be set to calculate tgt_frames
-        if sub.target_dur:
-            tgt_frs = int(self.rate *
-                          (sub.target_dur / 1000.0))
-        elif sub.target_fps:
-            tgt_frs = int(sub.target_fps * reg_dur)
-        elif sub.target_spd:
-            tgt_frs = int(self.rate * reg_dur *
-                          (1 / sub.target_spd))
-
-        tgt_frs = max(0, tgt_frs)
-        # the make factor or inverse the time step
-        int_each_go = float(tgt_frs) / max(1, (reg_len - 1))
-
-        # prevent a division by zero error when only a fr frame needs to be
-        # written
-        if int_each_go == 0:
-            tgt_frs = 1
-
-        self.tot_tgt_frs += tgt_frs
-
-        int_each_go = int(int_each_go)
+        reg_len = (sub.fb - sub.fa) + 1
+        frs_to_render = self.calc_frs_to_render(sub)
+        interpolate_each_go = int(float(frs_to_render) / max(1, (reg_len - 1)))
 
         pairs = reg_len - 1
         if pairs >= 1:
-            will_make = (int_each_go * pairs) + pairs
+            will_make = (interpolate_each_go * pairs) + pairs
         else:
-            # no pairs available, will only add src fr to to_wrt
             will_make = 1
-        extra_frs = will_make - tgt_frs
 
-        # frs will need to be dropped or duped based on how many frs are
-        # expected to be generated. this includes source and interpolated frs
+        extra_frs = will_make - frs_to_render
+
         drp_every = 0
+        dup_every = 0
         if extra_frs > 0:
             drp_every = will_make / math.fabs(extra_frs)
-
-        dup_every = 0
         if extra_frs < 0:
             dup_every = will_make / math.fabs(extra_frs)
 
-        # keep track of progress in this subregion
-        src_seen = 0  # num of source frames seen
-        frs_int = 0  # num of frames interpolated
-        wrk_idx = 0  # idx in the subregion being worked on
-        frs_wrt = 0  # num of frames written in this subregion
-        frs_dup = 0  # num of frames duped
-        frs_drp = 0  # num of frames dropped
-        fin_run = False  # is this the final run?
-        runs = 0  # num of runs through the loop
+        src_seen = 0
+        frs_interpolated = 0
+        work_idx = 0
+        frs_written = 0
+        frs_duped = 0
+        frs_dropped = 0
+        runs = 0
+        final_run = False
 
         fr_1 = None
-        self.fr_source.seek_to_fr(fa)
-        fr_2 = self.fr_source.read()  # first frame in the region
+        self.fr_source.seek_to_fr(sub.fa)
+        fr_2 = self.fr_source.read()
 
-        # scale down now, but wait after drawing on the frame before scaling up
-        if self.scaling_method == settings['scaler_dn']:
-            fr_2 = cv2.resize(fr_2,
-                              (self.w, self.h),
-                              interpolation=self.scaling_method)
         src_seen += 1
-        if fa == fb or tgt_frs == 1:
-            # only 1 fr expected. run through the main loop once
-            fin_run = True
+
+        if sub.fa == sub.fb or frs_to_render == 1:
             runs = 1
+            final_run = True
         else:
-            # at least one fr pair is available. num of runs is equal to the
-            # the total number of frames in the region - 1. range will run from
-            # [0,runs)
-            self.fr_source.seek_to_fr(fa + 1)  # seek to the next fr
+            self.fr_source.seek_to_fr(sub.fa + 1)
             runs = reg_len
 
-        for run_idx in range(0, runs):
-            # which fr in the video is being worked on
-            pair_a = fa + run_idx
-            pair_b = pair_a + 1 if run_idx + 1 < runs else pair_a
+        if self.scaling_method == settings['scaler_dn']:
+            fr_2 = self.scale_fr(fr_2)
 
-            # if working on the last fr, write it out because we cant
-            # interpolate without a pair
-            if run_idx >= runs - 1:
-                fin_run = True
+        for run in range(0, runs):
+            pair_a = sub.fa + run
+            pair_b = pair_a + 1 if run + 1 < runs else pair_a
 
-            frs_to_wrt = []  # hold frs to be written
-            fr_1 = fr_2  # reference to prev fr saves a seek & read
+            if run >= runs - 1:  # working on last fr?
+                final_run = True
 
-            if fin_run:
-                frs_to_wrt.append((fr_1, 'source', 1))
+            frs_to_write = []
+            fr_1 = fr_2
+
+            if final_run:
+                frs_to_write.append((fr_1, 'SOURCE', 1))
             else:
-                # begin interpolating frs between pairs
-                # the fr being read should always be valid otherwise break
                 fr_2 = self.fr_source.read()
-                src_seen += 1
                 if fr_2 is None:
                     raise RuntimeError
-                elif self.scaling_method == settings['scaler_dn']:
-                    fr_2 = cv2.resize(fr_2,
-                                      (self.w, self.h),
-                                      interpolation=self.scaling_method)
+                src_seen += 1
+
+                if self.scaling_method == settings['scaler_dn']:
+                    fr_2 = self.scale_fr(fr_2)
 
                 fr_1_gr = cv2.cvtColor(fr_1, cv2.COLOR_BGR2GRAY)
                 fr_2_gr = cv2.cvtColor(fr_2, cv2.COLOR_BGR2GRAY)
 
-                f_uv = self.flow_fn(fr_1_gr, fr_2_gr)
-                b_uv = self.flow_fn(fr_2_gr, fr_1_gr)
+                f_uv = self.optflow_fn(fr_1_gr, fr_2_gr)
+                b_uv = self.optflow_fn(fr_2_gr, fr_1_gr)
 
                 if isinstance(f_uv, np.ndarray):
                     fu = f_uv[:,:,0]
@@ -238,193 +214,189 @@ class Renderer(object):
                 fr_1_32 = np.float32(fr_1) * 1/255.0
                 fr_2_32 = np.float32(fr_2) * 1/255.0
 
-                will_wrt = True  # frs will be written?
+                will_write = True
 
-                # look ahead to see if frs will be dropped. compensate by
-                # lowering the num of frames to be interpolated
-                cmp_int_each_go = int_each_go    # compensated int_each_go
-                w_drp = []                       # frs that would be dropped
-                tmp_wrk_idx = wrk_idx - 1        # zero-indexed
-                for x in range(1 + int_each_go):  # 1 real + interpolated fr
-                    tmp_wrk_idx += 1
-                    if drp_every > 0:
-                        if math.fmod(tmp_wrk_idx, drp_every) < 1.0:
-                            w_drp.append(x + 1)
-                n_drp = len(w_drp)
+                would_drp = []
+                cmp_interpolate_each_go = interpolate_each_go
+                cmp_work_idx = work_idx - 1
 
-                # start compensating
-                if n_drp > 0:
-                    # can compensate by reducing num of frs to be interpolated,
-                    # since they are available
-                    if n_drp <= int_each_go:
-                        cmp_int_each_go -= n_drp
+                for x in range(1 + interpolate_each_go):
+                    cmp_work_idx += 1
+                    if drp_every > 0 and \
+                            math.fmod(cmp_work_idx, drp_every) < 1.0:
+                        would_drp.append(x + 1)
+
+                if len(would_drp) > 0:
+                    if len(would_drp) <= interpolate_each_go:
+                        cmp_interpolate_each_go -= len(would_drp)
                     else:
-                        # can't compensate using interpolated frs alone, will
-                        # have to drop the source fr. nothing will be written
-                        will_wrt = False
-                    if not will_wrt:
-                        # nothing will be written this go
-                        wrk_idx += 1  # still have to increment the wrk_idx
-                        self.tot_frs_drp += 1
+                        will_write = False
+                    if not will_write:
+                        work_idx += 1
+                        self.frs_dropped += 1
 
-                if will_wrt:
-                    int_frs = self.inter_fn(
-                        fr_1_32, fr_2_32, fu, fv, bu, bv, cmp_int_each_go)
-                    frs_int += len(int_frs)
-                    frs_to_wrt.append((fr_1, 'source', 0))
-                    for i, fr in enumerate(int_frs):
-                        frs_to_wrt.append((fr, 'interpolated', i + 1))
+                if will_write:
+                    interpolated_frs = self.interpolate_fn(
+                        fr_1_32, fr_2_32, fu, fv, bu, bv,
+                        cmp_interpolate_each_go)
 
-            for (fr, fr_type, btw_idx) in frs_to_wrt:
-                wrk_idx += 1
-                wrts_needed = 1
-                # duping should never happen unless the sub being worked on
-                # only has one fr
-                if dup_every > 0:
-                    if math.fmod(wrk_idx, dup_every) < 1.0:
-                        frs_dup += 1
-                        wrts_needed = 2
-                if fin_run:
-                    wrts_needed = (tgt_frs - frs_wrt)
-                    # final fr should be dropped if needed
-                    if drp_every > 0:
-                        if math.fmod(wrk_idx, drp_every) < 1.0:
-                            self.tot_frs_drp += 1
-                            continue
+                    frs_interpolated += len(interpolated_frs)
 
-                for wrt_idx in range(wrts_needed):
+                    frs_to_write.append((fr_1, 'SOURCE', 0))
+                    for i, fr in enumerate(interpolated_frs):
+                        frs_to_write.append((fr, 'INTERPOLATED', i+1))
+
+            for (fr, fr_type, idx_between_pair) in frs_to_write:
+                work_idx += 1
+                writes_needed = 1
+
+                if dup_every > 0 and math.fmod(work_idx, dup_every) < 1.0:
+                    frs_duped += 1
+                    writes_needed = 2
+                if final_run:
+                    writes_needed = (frs_to_render - frs_written)
+                    if drp_every > 0 and math.fmod(work_idx, drp_every) < 1.0:
+                        self.frs_dropped += 1
+                        continue
+
+                for write_idx in range(writes_needed):
                     fr_to_write = fr
-                    frs_wrt += 1
-                    is_dup = False
-                    if wrt_idx == 0:
-                        if fr_type == 'source':
-                            self.tot_src_frs += 1
+                    frs_written += 1
+                    self.frs_written += 1
+                    progress = float(self.frs_written)/self.frs_to_render
+                    is_dupe = False
+                    if write_idx == 0:
+                        if fr_type == 'SOURCE':
+                            self.source_frs += 1
                         else:
-                            self.tot_frs_int += 1
+                            self.frs_interpolated += 1
                     else:
-                        is_dup = True
-                        self.tot_frs_dup += 1
-                    self.tot_frs_wrt += 1
+                        is_dupe = True
+                        self.frs_duped += 1
+
                     if self.scaling_method == settings['scaler_up']:
-                        fr = cv2.resize(fr,
-                                        (self.w, self.h),
-                                        interpolation=self.scaling_method)
+                        fr = self.scale_fr(fr)
 
                     if self.mark_frames:
-                        draw.draw_fr_marker(fr,
-                                            fill=fr_type == 'interpolated')
-
+                        draw.draw_marker(fr, fill=fr_type == 'INTERPOLATED')
                     if self.add_info:
-                        if wrts_needed > 1:
+                        if writes_needed > 1:
                             fr_to_write = fr.copy()
-                        draw.draw_debug_text(fr_to_write,
-                                             self.text_type,
-                                             self.rate,
-                                             self.flow_fn,
-                                             self.tot_frs_wrt,
-                                             pair_a,
-                                             pair_b,
-                                             btw_idx,
-                                             fr_type,
-                                             is_dup,
-                                             tgt_frs,
-                                             frs_wrt,
-                                             sub,
+                        draw.draw_debug_text(fr_to_write, self.text_type,
+                                             self.rate, self.optflow_fn,
+                                             self.frs_written, pair_a, pair_b,
+                                             idx_between_pair, fr_type,
+                                             is_dupe, frs_to_render,
+                                             frs_written, sub,
                                              self.curr_sub_idx,
                                              self.subs_to_render,
-                                             drp_every,
-                                             dup_every,
-                                             src_seen,
-                                             frs_int,
-                                             frs_drp,
-                                             frs_dup)
-
+                                             drp_every, dup_every, src_seen,
+                                             frs_interpolated, frs_dropped,
+                                             frs_duped)
                     if self.show_preview:
                         fr_to_show = fr.copy()
-                        draw.draw_progress_bar(fr_to_show,
-                                               progress=float(frs_wrt)/tgt_frs)
-                        cv2.imshow(self.preview_win_title,
-                                   np.asarray(fr_to_show))
+                        draw.draw_progress_bar(fr_to_show, progress=progress)
+                        cv2.imshow(self.window_title, np.asarray(fr_to_show))
                         cv2.waitKey(settings['imshow_ms'])
 
-                    self.render_pipe.stdin.write(bytes(fr_to_write.data))
+                    self.pipe.stdin.write(bytes(fr_to_write.data))
+                    self.update_progress(progress)
 
-    def render_video(self):
-        src_fname = os.path.splitext(os.path.basename(self.src))[0]
-        tempfile1 = os.path.join(settings['tempdir'],
-                                 '~{}.{}'.format(src_fname,
-                                                 settings['v_container']).
-                                 lower())
-
+    def render(self):
+        filename = os.path.splitext(os.path.basename(self.src))[0]
+        tempfile1 = os.path.join(
+            settings['tempdir'],
+            '{}.{}'.format(filename, settings['v_container']).lower())
         self.fr_source = OpenCvFrameSource(self.src)
         self.fr_source.open()
         self.mk_render_pipe(tempfile1)
-        self.subs_to_render = 0
-
+        self.frs_to_render = 0
         for sub in self.sequence.subregions:
-            if self.trim_regions and sub.skip:
+            if not self.keep_subregions and sub.skip:
                 continue
             else:
                 self.subs_to_render += 1
-
+                self.frs_to_render += self.calc_frs_to_render(sub)
         if self.show_preview:
-            cv2.namedWindow(self.preview_win_title, cv2.WINDOW_OPENGL)
-            cv2.resizeWindow(self.preview_win_title, self.w, self.h)
-
+            cv2.namedWindow(self.window_title,
+                            cv2.WINDOW_OPENGL)
+            cv2.resizeWindow(self.window_title, self.w, self.h)
+        self.update_progress(0)
         for i, sub in enumerate(self.sequence.subregions):
-            if self.trim_regions and sub.skip:
+            if not self.keep_subregions and sub.skip:
                 continue
             else:
                 self.curr_sub_idx += 1
-                log.info('Rendering: Sub {0:02d}...'.format(i))
+                log.info('sub {0:02d}:'.format(i))
                 self.render_subregion(sub)
-
+        if not settings['quiet']:
+            sys.stdout.write('\n')
+            sys.stdout.flush()
         if self.show_preview:
             cv2.destroyAllWindows()
-
         self.fr_source.close()
-        self.close_render_pipe()
-
+        self.close()
         if self.mux:
-            self.mux_original_audio_with_rendered_video(tempfile1)
+            self.mux_orig_audio_with_rendered_video(tempfile1)
             return
         else:
-            shutil.move(tempfile1, self.dst)
+            shutil.move(tempfile1, self.dest)
 
-    def mux_original_audio_with_rendered_video(self, vid):
-        log.info('Muxing...')
+    def mux_orig_audio_with_rendered_video(self, vid):
+        progress = 0
+        def update_progress():
+            if settings['quiet']:
+                return
+            sys.stdout.write('\rmux: {}%'.format(int(progress*100)))
+            if progress >= 1:
+                sys.stdout.write('\n')
+            sys.stdout.flush()
         if not self.av_info['a_stream_exists']:
             log.warn('no audio stream exists')
-            shutil.move(vid, self.dst)
+            shutil.move(vid, self.dest)
             return
-        src_fname = os.path.splitext(os.path.basename(self.src))[0]
+        filename = os.path.splitext(os.path.basename(self.src))[0]
         audio_files = []
+        to_extract = 0
+        for sub in self.sequence.subregions:
+            if not self.keep_subregions and sub.skip:
+                continue
+            else:
+                to_extract += 1
+        if to_extract == 0:
+            progress += 1.0/3
+            update_progress()
+        progress_chunk = 1.0/to_extract/3
         for i, sub in enumerate(self.sequence.subregions):
-            if self.trim_regions and sub.skip:
+            if not self.keep_subregions and sub.skip:
                 continue
             tempfile1 = os.path.join(
                 settings['tempdir'],
-                '~{}.{}.{}'.format(src_fname,
-                                   i,
-                                   settings['a_container']).lower())
-            mux.extract_audio_with_spd(self.src,
-                                       tempfile1,
-                                       sub.ta,
-                                       sub.tb,
-                                       spd=sub.target_spd)
+                '{}.{}.{}'.format(filename,
+                                  i,
+                                  settings['a_container']).lower())
+            mux.extract_audio(self.src,
+                              tempfile1,
+                              sub.ta,
+                              sub.tb,
+                              speed=sub.target_spd)
             audio_files.append(tempfile1)
+            progress += progress_chunk
+            update_progress()
         tempfile2 = os.path.join(
             settings['tempdir'],
-            '~{}.merged.{}'.format(src_fname,
-                                   settings['a_container']).lower())
+            '{}.merged.{}'.format(filename,
+                                  settings['a_container']).lower())
         mux.concat_av_files(tempfile2, audio_files)
-        mux.mux_av(vid, tempfile2, self.dst)
+        progress += 1.0/3
+        update_progress()
+        mux.mux_av(vid, tempfile2, self.dest)
+        progress += 1.0/3
+        update_progress()
         for file in audio_files:
             os.remove(file)
         os.remove(tempfile2)
         os.remove(vid)
 
     def __del__(self):
-        # close the pipe if it was inadvertently left open. this can happen if
-        # user does ctrl+c while rendering
-        self.close_render_pipe()
+        self.close()

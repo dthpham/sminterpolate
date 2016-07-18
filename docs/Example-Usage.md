@@ -1,22 +1,21 @@
 # Example Usage
-Run `butterflow -h` for a full list of options and their default values.
+**Tip** Run `butterflow -h` for a full list of options and their default values.
 
 ## Typical commands that you'll use
-### Frame interpolation
+### Altering frame rate
 Double the frame rate:
-
 ```
 butterflow -r 2x [video]
 ```
 
 Set a video's frame rate to 96fps:
-
 ```
 butterflow -r 96 [video]
 ```
 
-These commands will remove frames or interpolate new ones based on the original
-video's frame rate.
+These commands will remove frames or interpolate new ones based on several
+factors, but in general frames will be interpolated if the rate is
+increased otherwise they will be dropped.
 
 Use the `-sm`, `--smooth-motion` flag if having artifact-less frames is a
 priority. This will tune settings to emphasize blending frames over the default
@@ -24,50 +23,56 @@ behavior of warping pixels.
 
 ### Altering speed and duration
 Set video to 0.25x speed:
-
 ```
 butterflow -s full,spd=0.25 [video]
 ```
 
 Set a video's duration to be 30s long:
-
 ```
 butterflow -s full,dur=30 [video]
 ```
 
-This will speed up or slow down the video depending on it's original duration.
+In most cases, slowing a video down or extending it's duration will cause frames
+to be interpolated otherwise they will be dropped.
 
 ### Working on one region
+Double the frame rate on a 1s region:
+```
+butterflow -r 2x -s a=1:30:24,b=1:30:25,spd=1
+```
+
 Slow-mo a 1s region to 0.5x speed:
-
 ```
-butterflow -t -s a=5,b=6,spd=0.5 [video]
+butterflow -s a=5,b=6,spd=0.5 [video]
 ```
 
-The `-t`, `--trim-regions` option will discard all regions that are not
-explicitly specified. Keep in mind, rendering will be faster if you're working
-on smaller regions, so this flag will be useful for doing quick tests.
+Rendering will be faster if you're working on smaller regions so use `-s` on
+small segments of a video if you need to do quick tests.
+
+The `-k`, `--keep-regions` option will render regions that are not explicitly
+specified into the output video.
 
 ### Multiple regions
 Separate regions with a colon `:`.
 
 With two regions:
-
 ```
-butterflow -t -s a=1,b=2,spd=0.5:a=9,b=end,spd=0.5 [video]
+butterflow -s a=1,b=2,spd=0.5:a=9,b=end,spd=0.5 [video]
 ```
 
 With four regions:
-
 ```
-butterflow -t -s \
+butterflow -s \
 a=0,b=6,spd=0.125:\
 a=6,b=6.8,dur=3:\
 a=6.8,b=7,dur=0.4:\
 a=20,b=end,fps=200 [video]
 ```
 
-## Using fractions
+## Flexible time syntax
+Valid time inputs include [hr:min:sec], [min:sec], [sec], [sec.xxx].
+
+## Fractions for rates
 You can use fractions for rates, e.g., 30/1.001 is equivalent to 29.97fps.
 
 ## Robustness of image

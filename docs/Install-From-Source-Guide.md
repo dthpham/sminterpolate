@@ -1,4 +1,5 @@
 # Install From Source Guide
+**Important** [Set up OpenCL](Setting-up-OpenCL.md) when you're done.
 
 ## Supported platforms
 Butterflow has been successfully built and tested on several platforms,
@@ -9,27 +10,27 @@ Getting Butterflow to work on other Linux distributions may be possible, but
 expect support to be limited.
 
 ## Instructions
+### Windows 10
+See the [Install on Windows Guide](Install-On-Windows-Guide.md).
+
 ### OS X (El Capitan)
 These instructions will show you how to compile and build a development version
 of Butterflow using OS X's pre-installed Python. At minimum, you will need to
 have OS X Mavericks installed.
 
-To begin, install dependencies with [Homebrew](http://brew.sh/).
-
+First, install dependencies with [Homebrew](http://brew.sh/).
 ```
 brew install ffmpeg
 brew install homebrew/science/opencv --with-ffmpeg --with-opengl
 ```
 
 Then install packages that will be used to set up a virtual environment.
-
 ```
 sudo easy_install pip
 pip install virtualenv
 ```
 
-Finally, build and install a development version of Butterflow.
-
+Then build and install a development version of Butterflow.
 ```
 git clone https://github.com/dthpham/butterflow.git
 virtualenv -p /usr/bin/python butterflow
@@ -57,15 +58,13 @@ These instructions will show you how to get Butterflow working in Ubuntu 15.04
 installing Butterflow is more difficult on older versions of Ubuntu because it's
 not readily available.
 
-Begin by installing tools, development files, and a generic OpenCL library and
+First, install tools, development files, and a generic OpenCL library and its
 headers.
-
 ```
 sudo apt-get install git virtualenv python-dev ocl-icd-opencl-dev libopencv-dev python-opencv ffmpeg
 ```
 
-Now compile and install Butterflow.
-
+Then download and build Butterflow.
 ```
 git clone https://github.com/dthpham/butterflow.git
 virtualenv -p /usr/bin/python2 butterflow
@@ -77,49 +76,14 @@ python setup.py develop
 ```
 
 ### Debian (Jessie)
-Begin by installing FFmpeg. Note: these instructions are adapted from this [guide](https://www.assetbank.co.uk/support/documentation/install/ffmpeg-debian-squeeze/ffmpeg-debian-jessie/).
-This [gist](https://gist.github.com/holms/7009218) is more comprehensive and
-will show you how to make a package that you can manage with apt-get.
+First, install FFMPEG using this [guide](Install-FFmpeg-On-Debian-Guide.md).
 
-First add the multimedia source to the bottom of /etc/apt/sources.list.
-
-```
-deb http://www.deb-multimedia.org jessie main non-free
-deb-src http://www.deb-multimedia.org jessie main non-free
-```
-
-Update your package list and keyring.
-
-```
-sudo apt-get update
-sudo apt-get install deb-multimedia-keyring
-sudo apt-get update
-```
-
-Download dependencies.
-
-```
-sudo apt-get install build-essential libmp3lame-dev libvorbis-dev libtheora-dev libspeex-dev yasm pkg-config libfaac-dev libopenjpeg-dev libx264-dev
-```
-
-Download the latest package of FFmpeg from their [releases](http://ffmpeg.org/releases/)
-page. Extract it to a folder, go into the directory and run:
-
-```
-# This is going to install into /usr/local
-./configure --enable-gpl --enable-postproc --enable-swscale --enable-avfilter --enable-libmp3lame --enable-libvorbis --enable-libtheora --enable-libx264 --enable-libspeex --enable-shared --enable-pthreads --enable-libopenjpeg --enable-libfaac --enable-nonfree
-make
-sudo make install
-```
-
-Install all other dependencies.
-
+Then install all other dependencies.
 ```
 sudo apt-get install build-essential git python-virtualenv python-dev python-setuptools libopencv-dev python-opencv ocl-icd-opencl-dev libgl1-mesa-dev x264
 ```
 
-Finally, build and install Butterflow.
-
+Then download and build Butterflow.
 ```
 git clone https://github.com/dthpham/butterflow.git
 virtualenv -p /usr/bin/python2 butterflow
@@ -130,14 +94,14 @@ python setup.py develop
 ```
 
 ### Arch Linux
-Install dependencies:
-
+First, install dependencies.
 ```
-sudo pacman -S git python2-setuptools python2-virtualenv python2-numpy ocl-icd opencl-headers opencv ffmpeg
+sudo pacman -S git python2-setuptools python2-virtualenv python2-numpy ocl-icd opencl-headers ffmpeg
+# Get OpenCV 2.x the AUR
+yaourt -S opencv2
 ```
 
-Now build and install Butterflow.
-
+Then download and build Butterflow.
 ```
 git clone https://github.com/dthpham/butterflow.git
 virtualenv2 -p /usr/bin/python2 butterflow
@@ -148,17 +112,16 @@ python setup.py develop
 ```
 
 ## What to do afterwards
-### Enabling OpenCL acceleration
+### Enabling OpenCL acceleration (recommended)
 Refer to [Setting up OpenCL](Setting-up-OpenCL.md) for details on how to take
-advantage of hardware acceleration through OpenCL. This step isn't mandatory,
-but it's one you are expected to take.
+advantage of hardware acceleration through OpenCL. This isn't required but
+rendering will be slow without it.
 
 ### Testing
-You can run a suite of tests against Butterflow to ensure everything is set up
-properly with `python setup.py test`. Tests will fail if you don't have OpenCL
-set up.
+Run `python setup.py test` to test.
 
-### Installing outside of a virtualenv
-To install Butterflow outside of a virtual environment, first exit your
-virtualenv if you are in one with `deactivate`, then run
-`python setup.py install`. To uninstall, run `pip uninstall butterflow`.
+### Installing outside of virtualenv
+First, exit the virtual environment with `deactivate`, then run
+`python setup.py install`.
+
+To uninstall, run `pip uninstall butterflow`.

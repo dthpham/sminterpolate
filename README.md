@@ -1,6 +1,6 @@
 # Butterflow
-*Butterflow* is a command-line tool that lets you make fluid slow motion and
-motion interpolated videos.
+*Butterflow* is a command-line tool that makes fluid slow motion and motion
+interpolated videos.
 
 ## How does it work?
 It works by rendering intermediate frames between existing frames using a
@@ -15,7 +15,6 @@ which can give the perception of smoother motion and more fluid animation, an
 effect that most people know as the "soap opera effect".
 
 ## Demonstration
-
 This is a demonstration of Butterflow leveraging motion interpolation to make
 slow motion videos with minimal judder.
 

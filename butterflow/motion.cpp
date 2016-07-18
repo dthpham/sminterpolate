@@ -1,5 +1,3 @@
-// get optical flows and interpolate them
-
 #include <Python.h>
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
@@ -95,7 +93,7 @@ ocl_farneback_optical_flow(PyObject *self, PyObject *args) {
 }
 
 static PyObject*
-time_steps_for_int_frames(PyObject *self, PyObject *arg) {
+time_steps_for_nfrs(PyObject *self, PyObject *arg) {
     int n = PyInt_AsLong(arg);   /* num of int frames */
     int sub_divisions  = n + 1;  /* splits in region from 0,1 */
     PyObject *py_steps = PyList_New(n);
@@ -171,8 +169,8 @@ ocl_interpolate_flow(PyObject *self, PyObject *args) {
     oclMat ocl_new_b, ocl_new_g, ocl_new_r;
     oclMat ocl_new_bgr;
 
-    PyObject *py_frs = PyList_New(0);
-    PyObject *py_time_steps = time_steps_for_int_frames(self, py_int_each_go);
+    PyObject *py_frames = PyList_New(0);
+    PyObject *py_time_steps = time_steps_for_nfrs(self, py_int_each_go);
 
     for (int i = 0; i < int_each_go; i++) {
         PyObject *py_ts = PyList_GetItem(py_time_steps,
@@ -193,13 +191,13 @@ ocl_interpolate_flow(PyObject *self, PyObject *args) {
         PyObject *py_new_fr = converter.toNDArray(mat_new_bgr);
         /* PyList_Append will increment reference count. This behavior differs
          * from PyList_SetItem which doesn't */
-        PyList_Append(py_frs, py_new_fr);
+        PyList_Append(py_frames, py_new_fr);
         Py_DECREF(py_new_fr);
     }
 
     Py_DECREF(py_time_steps);
 
-    return py_frs;
+    return py_frames;
 }
 
 static PyObject*
@@ -223,7 +221,7 @@ static PyMethodDef module_methods[] = {
         "Interpolate flow from frames"},
     {"ocl_farneback_optical_flow", ocl_farneback_optical_flow, METH_VARARGS,
         "Calc farneback optical flow"},
-    {"time_steps_for_int_frames", time_steps_for_int_frames, METH_O,
+    {"time_steps_for_nfrs", time_steps_for_nfrs, METH_O,
         "Get time steps for interpolated frames"},
     {"set_cache_path", set_cache_path, METH_O,
         "Sets the path of OpenCL kernel binaries"},

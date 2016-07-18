@@ -1,23 +1,23 @@
 # Setting Up OpenCL
 
 ## General requirements
-In general, setting up OpenCL only requires that you to install at least one
-vendor-specific OpenCL implementation that supports your hardware.
-
-Furthermore, you need to have a FULL_PROFILE device that supports OpenCL 1.2
-or higher to do hardware accelerated rendering with Butterflow.
+Setting up OpenCL only requires that you to install at least one vendor-specific
+OpenCL implementation that supports your hardware. You need to have a
+FULL_PROFILE device that supports OpenCL 1.2 or higher to do hardware
+accelerated rendering with Butterflow.
 
 ## Additional information
-Most of this guide is adapted from other sources and is by no means definitive.
-For additional information on how to satisfy the OpenCL requirements, please
-read [How to set up OpenCL in Linux](http://wiki.tiker.net/OpenCLHowTo). If
-you're on Arch Linux, have a look at their [GPGPU wiki page](https://wiki.archlinux.org/index.php/GPGPU).
+Most of this guide is adapted from other sources and should not be considered
+definitive or up to date. For additional information on how to satisfy the
+OpenCL requirements, please read
+[How to set up OpenCL in Linux](http://wiki.tiker.net/OpenCLHowTo). If
+you're on Arch Linux, refer to the
+[GPGPU wiki page](https://wiki.archlinux.org/index.php/GPGPU).
 
 ## Instructions
 ### OS X (Mavericks and newer)
-Luckily, Apple provides support for OpenCL by default on all Macs so you will
-be able to take advantage of hardware acceleration without having to set
-anything up.
+Apple provides support for OpenCL by default on all Macs so you will be able to
+take advantage of hardware acceleration without having to set anything up.
 
 If you encounter an error that you suspect is related to OpenCL, it may be
 because you don't have a compatible graphics device. Double check to see if
@@ -27,16 +27,13 @@ support page and verify that it meets the minimum requirements outlined in the
 
 ### Ubuntu (Vivid Vervet)
 #### Nvidia
-Install these packages:
-
+First, install these packages:
 ```
 sudo apt-get install nvidia-346 nvidia-346-uvm nvidia-modprobe nvidia-opencl-dev nvidia-opencl-icd-346
 ```
 
 Then manually set Ubuntu to use the proprietary Nvidia 346 drivers via the
-"Additional Drivers" dialog.
-
-Finally, reboot.
+"Additional Drivers" dialog, then reboot.
 
 #### Intel or AMD
 I recommend installing and using AMD's OpenCL library and ICD if you're using
@@ -48,14 +45,12 @@ We're going to use version 15.9 as an example
 
 Extract the driver package to a folder. Launch a terminal, go into the
 directory, then run:
-
 ```
 bash AMD-Catalyst-15.9-Linux-installer-*.run --extract .
 ```
 
 Then using a 64-bit machine as an example (the commands are slightly different
 on a 32-bit machine):
-
 ```
 TGT_DIR="/opt/amd-opencl-icd-15.9/lib"
 mkdir -p "$TGT_DIR"
@@ -68,8 +63,7 @@ touch /etc/OpenCL/vendors/amd.icd
 echo "$TGT_DIR/libamdocl64.so" > /etc/OpenCL/vendors/amd.icd
 ```
 
-Now test Butterflow.
-
+Finally, test Butterflow.
 ```
 # Add the location of the OpenCL library to LD_LIBRARY_PATH If you want to use
 # AMD's OpenCL library at runtime. This isn't required:
@@ -79,26 +73,22 @@ butterflow -d
 
 ### Debian (Jessie)
 Begin by adding non-free components to /etc/apt/sources.list.
-
 ```
 deb <repos> jessie main non-free
 deb-src <repos> jessie main non-free
 ```
 
-Refresh your package list.
-
+Then refresh your package list.
 ```
 sudo apt-get update
 ```
 
-Now install a client driver:
-
+Finally, install a client driver:
 * `nvidia-opencl-icd`
 * `amd-opencl-icd` (Supports both Intel and AMD devices)
 
 ### Arch Linux
-Install a client driver:
-
+Just install a client driver:
 * [`opencl-nvidia`](https://www.archlinux.org/packages/extra/x86_64/opencl-nvidia/)
 * [`intel-opencl-runtime`](https://aur.archlinux.org/packages/intel-opencl-runtime/)
 * [`amdapp-sdk`](https://aur.archlinux.org/packages/amdapp-sdk/) (Supports both

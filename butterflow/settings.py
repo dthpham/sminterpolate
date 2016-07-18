@@ -1,26 +1,42 @@
-# app-wide settings
-
 import os
 import logging
 import tempfile
 import cv2
+import motion
 from butterflow.__init__ import __version__
-from butterflow import motion
+
 
 default = {
     'debug_opts':     False,
     # default logging level
     # levels in order of urgency: critical, error, warning, info, debug
-    'loglevel_a':     logging.WARNING,
-    # loglevel will be set to DEBUG if verbose is True
-    'loglevel_b':     logging.DEBUG,
+    'loglevel_0':     logging.WARNING,
+    # loglevel will be set to INFO if verbose count is x
+    'loglevel_1':     logging.INFO,
+    'loglevel_2':     logging.DEBUG,
     'verbose':        False,
+    'quiet':          False,
+    # quiet loglevel
+    'loglevel_quiet': logging.ERROR,
     # only support ffmpeg for now, can change to avutil if needed
     # Documentation: https://ffmpeg.org/ffmpeg.html
     'avutil':         'ffmpeg',
     # avutil and encoder loglevel
     # options: panic, fatal, error, warning, info, verbose, debug, trace
     'av_loglevel':    'error',  # `info` is default
+    # default loglevel is `info` for x264 and x265
+    # x265 opts: `none`, `error`, `warning`, `info`, `debug`, plus `full`
+    'enc_loglevel':   'info',
+    # x265 is considered a work in progress and is under heavy development
+    # + 50-75% more compression efficiency than x264
+    # + retains same visual quality
+    # - veryslow preset encoding speed is noticeably slower than x264
+    # for x265 options, See: http://x265.readthedocs.org/en/default/cli.html
+    #
+    # x264 is stable and used in many popular video conversion tools
+    # + uses gpu for some lookahead ops but doesn't mean algos are optimized
+    # + well tuned for high quality encodings
+    'cv':             'libx264',
     # See: https://trac.ffmpeg.org/wiki/Encode/H.264
     # See: https://trac.ffmpeg.org/wiki/Encode/H.264#a2.Chooseapreset
     # presets: ultrafast, superfast, veryfast, faster, fast, medium, slow,
@@ -42,6 +58,18 @@ default = {
     'ca':             'aac',   # built in encoder, doesnt require an ext lib
     'ba':             '192k',  # bitrate, usable >= 192k
     'qa':             4,       # quality scale of audio from 0.1 to 10
+    # location of files and directories
+    'out_path':       os.path.join(os.getcwd(), 'out.mp4'),
+    # since value of tempfile.tempdir is None python will search std list of
+    # dirs and will select the first one that the user can create a file in
+    # See: https://docs.python.org/2/library/tempfile.html#tempfile.tempdir
+    #
+    # butterflow will write renders to a temp file in tempdir and will move it
+    # to it's destination path when completed using shutil.move(). if the dest
+    # is on the current filesystem then os.rename() is used, otherwise the file
+    # is copied with shutil.copy2 then removed
+    'tempdir':        os.path.join(tempfile.gettempdir(),
+                                   'butterflow-{}'.format(__version__)),
     # farneback optical flow options
     'pyr_scale':      0.5,
     'levels':         3,
@@ -67,7 +95,7 @@ default = {
     'font_type':      cv2.cv.CV_AA,
     'txt_max_scale':  1.0,
     'txt_thick':      1,
-    'strk_thick':     2,
+    'txt_stroke_thick':  2,
     'txt_w_fits':     768,
     'txt_h_fits':     216,
     'txt_t_pad':      30,
@@ -81,13 +109,13 @@ default = {
     'bar_h_fits':     142,
     'bar_t_pad':      0.7,   # relative padding from the top
     'bar_s_pad':      0.12,  # relative padding on each side
-    'ln_thick':       3,     # pixels of lines that make outer rectangle
-    'strk_sz':        1,     # size of the stroke in pixels
-    'ln_type':        cv2.cv.CV_FILLED,  # -1, a filled line
+    'bar_ln_thick':   3,     # pixels of lines that make outer rectangle
+    'bar_stroke_thick':  1,     # size of the stroke in pixels
+    'bar_ln_type':    cv2.cv.CV_FILLED,  # -1, a filled line
     'bar_in_pad':     3,     # padding from the inner bar
     'bar_thick':      15,    # thickness of the inner bar
     'bar_color':      cv2.cv.RGB(255, 255, 255),
-    'bar_strk_color': cv2.cv.RGB(192, 192, 192),
+    'bar_stroke_color':  cv2.cv.RGB(192, 192, 192),
     # frame marker settings
     'mrk_w_fits':     572,
     'mrk_h_fits':     142,
@@ -97,40 +125,13 @@ default = {
     'mrk_out_radius': 7,
     'mrk_in_thick':   -1,
     'mrk_in_radius':  4,
-    'mrk_line_type':  cv2.cv.CV_AA,
+    'mrk_ln_type':    cv2.cv.CV_AA,
     'mrk_out_color':  cv2.cv.RGB(255, 255, 255),
-    'mrk_def_color':  cv2.cv.RGB(128, 128, 128),
+    'mrk_color':      cv2.cv.RGB(128, 128, 128),
     'mrk_fill_color': cv2.cv.RGB(255, 0, 0)
 }
 
-# x265 is considered a work in progress and is under heavy development
-# + 50-75% more compression efficiency than x264
-# + retains same visual quality
-# - veryslow preset encoding speed is noticeably slower than x264
-# for x265 options, See: http://x265.readthedocs.org/en/default/cli.html
-#
-# x264 is stable and used in many popular video conversion tools
-# + uses gpu for some lookahead ops but does not mean the algos are optimized
-# + well tuned for high quality encodings
-default['cv'] = 'libx264'
-# default loglevel is `info` for x264 and x265
-# options: `none`, `error`, `warning`, `info`, `debug`, plus `full` for x265
-default['enc_loglevel'] = 'error'
-
-# define location of files and directories
-default['out_path'] = os.path.join(os.getcwd(), 'out.mp4')
-
-# since value of tempfile.tempdir is None python will search std list of dirs
-# and will select the first one that the user can create a file in
-# See: https://docs.python.org/2/library/tempfile.html#tempfile.tempdir
-#
-# butterflow will write renders to a temp file in tempdir and will move it to
-# it's destination path when completed using shutil.move(). if the dst is on
-# the current filesystem then os.rename() is used, otherwise the file is copied
-# with shutil.copy2 then removed
-default['tempdir'] = os.path.join(tempfile.gettempdir(),
-                                  'butterflow-{}'.format(__version__))
-default['clbdir'] = os.path.join(default['tempdir'], 'clb')
+default['clbdir'] = os.path.join(default['tempdir'], 'clb')  # ocl cache files
 
 # override default settings with development settings
 # ignore errors when dev_settings.py does not exist

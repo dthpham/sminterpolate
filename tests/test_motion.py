@@ -5,7 +5,7 @@ import cv2
 from cv2 import calcOpticalFlowFarneback as sw_farneback_optical_flow
 import numpy as np
 from butterflow.motion import ocl_farneback_optical_flow, \
-    ocl_interpolate_flow, set_cache_path, time_steps_for_int_frames
+    ocl_interpolate_flow, set_cache_path, time_steps_for_nfrs
 
 from butterflow.settings import default as settings  # will mk temp dirs
 
@@ -15,20 +15,20 @@ if not os.path.exists(clb_dir):
     os.makedirs(clb_dir)
 set_cache_path(clb_dir + os.sep)
 
-def mk_sample_image(dst, w, h, ch):
+def mk_sample_image(dest, w, h, ch):
     # make a random 24-bit image w/ 8-bits per ch
-    if os.path.exists(dst):
+    if os.path.exists(dest):
         return
     dat = np.random.rand(h, w, ch) * 255  # 0,1.0 scaled to 0,255.0
     img = np.array(dat, dtype=np.uint8)   # float64 to uint8
-    cv2.imwrite(dst, img)
+    cv2.imwrite(dest, img)
 
 class OpticalFlowTestCase(unittest.TestCase):
     def setUp(self):
         img_1 = os.path.join(settings['tempdir'],
-                             '~test_optical_flow_test_case_1.jpg')
+                             'test_optical_flow_test_case_1.jpg')
         img_2 = os.path.join(settings['tempdir'],
-                             '~test_optical_flow_test_case_2.jpg')
+                             'test_optical_flow_test_case_2.jpg')
         mk_sample_image(img_1, 320, 240, 3)
         mk_sample_image(img_2, 320, 240, 3)
         fr_1 = cv2.imread(img_1)
@@ -82,9 +82,9 @@ class OpticalFlowTestCase(unittest.TestCase):
 
     def test_farneback_optical_flow_hires(self):
         img_1 = os.path.join(settings['tempdir'],
-                             '~test_farneback_optical_flow_hires_1.jpg')
+                             'test_farneback_optical_flow_hires_1.jpg')
         img_2 = os.path.join(settings['tempdir'],
-                             '~test_farneback_optical_flow_hires_2.jpg')
+                             'test_farneback_optical_flow_hires_2.jpg')
         mk_sample_image(img_1, 4096, 2160, 3)
         mk_sample_image(img_2, 4096, 2160, 3)
         fr_1 = cv2.imread(img_1)
@@ -98,9 +98,9 @@ class OpticalFlowTestCase(unittest.TestCase):
 class InterpolateFlowTestCase(unittest.TestCase):
     def setUp(self):
         img_1 = os.path.join(settings['tempdir'],
-                             '~test_interpolate_flow_test_case_1.jpg')
+                             'test_interpolate_flow_test_case_1.jpg')
         img_2 = os.path.join(settings['tempdir'],
-                             '~test_interpolate_flow_test_case_2.jpg')
+                             'test_interpolate_flow_test_case_2.jpg')
         mk_sample_image(img_1, 320, 240, 3)
         mk_sample_image(img_2, 320, 240, 3)
         fr_1 = cv2.imread(img_1)
@@ -137,9 +137,9 @@ class InterpolateFlowTestCase(unittest.TestCase):
 
     def test_ocl_interpolate_flow_hires(self):
         img_1 = os.path.join(settings['tempdir'],
-                             '~test_ocl_interpolate_flow_hires_1.jpg')
+                             'test_ocl_interpolate_flow_hires_1.jpg')
         img_2 = os.path.join(settings['tempdir'],
-                             '~test_ocl_interpolate_flow_hires_2.jpg')
+                             'test_ocl_interpolate_flow_hires_2.jpg')
         mk_sample_image(img_1, 4096, 2160, 3)
         mk_sample_image(img_2, 4096, 2160, 3)
         fr_1 = cv2.imread(img_1)
@@ -157,23 +157,23 @@ class InterpolateFlowTestCase(unittest.TestCase):
 
     def test_ocl_interpolate_flow_refcnt(self):
         # sys.getrefcnt is generally one higher than expected
-        frs = self.ocl_inter_method(1)
-        self.assertEqual(sys.getrefcount(frs),1+1)
-        self.assertEqual(sys.getrefcount(frs[0]),1+1)
-        frs = self.ocl_inter_method(2)
-        self.assertEqual(sys.getrefcount(frs),1+1)
-        self.assertEqual(sys.getrefcount(frs[0]),1+1)
-        self.assertEqual(sys.getrefcount(frs[1]),1+1)
+        frames = self.ocl_inter_method(1)
+        self.assertEqual(sys.getrefcount(frames),1+1)
+        self.assertEqual(sys.getrefcount(frames[0]),1+1)
+        frames = self.ocl_inter_method(2)
+        self.assertEqual(sys.getrefcount(frames),1+1)
+        self.assertEqual(sys.getrefcount(frames[0]),1+1)
+        self.assertEqual(sys.getrefcount(frames[1]),1+1)
 
-    def test_time_steps_for_int_frames(self):
-        self.assertSequenceEqual(time_steps_for_int_frames(0),[])
-        self.assertSequenceEqual(time_steps_for_int_frames(1),[0.5])
-        self.assertSequenceEqual(time_steps_for_int_frames(2),[1/3.0, 2/3.0])
-        self.assertSequenceEqual(time_steps_for_int_frames(3),[0.25, 0.5, 0.75])
+    def test_time_steps_for_nfrs(self):
+        self.assertSequenceEqual(time_steps_for_nfrs(0),[])
+        self.assertSequenceEqual(time_steps_for_nfrs(1),[0.5])
+        self.assertSequenceEqual(time_steps_for_nfrs(2),[1/3.0, 2/3.0])
+        self.assertSequenceEqual(time_steps_for_nfrs(3),[0.25, 0.5, 0.75])
 
-    def test_time_steps_for_int_frames_refcnt(self):
+    def test_time_steps_for_nfrs_refcnt(self):
         # sys.getrefcnt is generally one higher than expected
-        ts = time_steps_for_int_frames(1)
+        ts = time_steps_for_nfrs(1)
         self.assertEqual(sys.getrefcount(ts), 1+1)
         self.assertEqual(sys.getrefcount(ts[0]), 1+1)
 

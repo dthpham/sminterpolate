@@ -1,30 +1,26 @@
-# track and manage subregions in a sequence
-
 import datetime
 
-import logging
-log = logging.getLogger('butterflow')
 
 class VideoSequence(object):
-    def __init__(self, dur, nfrs):
-        self.dur = dur
-        self.nfrs = nfrs
+    def __init__(self, duration, frames):
+        self.duration = duration
+        self.frames = frames
         self.subregions = []
-        self.add_subregion(Subregion(0, dur, skip=True))  # initial sub w/ skip
+        self.add_subregion(Subregion(0, duration, skip=True))
 
     def relative_pos(self, time):
-        return max(0.0, min(float(time) / self.dur, 1.0))  # [0,1]
+        return max(0.0, min(float(time) / self.duration, 1.0))
 
     def nearest_fr(self, time):
-        return max(0, min(int(self.relative_pos(time) * self.nfrs),
-                          self.nfrs-1))  # [0,self.nfrs-1]
+        return max(0, min(int(self.relative_pos(time) * self.frames),
+                          self.frames-1))
 
     def add_subregion(self, sub):
-        if sub.ta > self.dur or sub.tb > self.dur:
-            raise RuntimeError  # not checked when sub initialized
+        if sub.ta > self.duration or sub.tb > self.duration:
+            raise RuntimeError
         sub.fa = self.nearest_fr(sub.ta)
         sub.fb = self.nearest_fr(sub.tb)
-        if len(self.subregions) == 0 and sub.skip:  # initial sub
+        if len(self.subregions) == 0 and sub.skip:
             self.subregions.append(sub)
             return
         temp_subs = []
@@ -34,7 +30,6 @@ class VideoSequence(object):
         temp_subs.append(sub)
         temp_subs.sort(key=lambda x: (x.fb, x.fa), reverse=False)
         self.subregions = temp_subs
-        # fill gaps
         temp_subs = []
         seq_len = len(self.subregions)
         i = 0
@@ -47,10 +42,10 @@ class VideoSequence(object):
                 temp_subs.append(new_sub)
             temp_subs.append(curr)
             if i+1 == seq_len:  # last sub to end
-                if curr.tb != self.dur:
-                    new_sub = Subregion(curr.tb, self.dur, skip=True)
+                if curr.tb != self.duration:
+                    new_sub = Subregion(curr.tb, self.duration, skip=True)
                     new_sub.fa = curr.fb
-                    new_sub.fb = self.nfrs-1
+                    new_sub.fb = self.frames-1
                     temp_subs.append(new_sub)
                 break
             next = self.subregions[i+1]
@@ -61,7 +56,6 @@ class VideoSequence(object):
                 temp_subs.append(new_sub)
             i += 1
         self.subregions = temp_subs
-        # warn if overlapping
         for x in self.subregions:
             overlaps = False
             for y in temp_subs:
@@ -71,26 +65,24 @@ class VideoSequence(object):
                     overlaps = True
                     break
             if overlaps:
-                log.warn('Subregions overlap')
+                # log.warn('subregions overlap')
                 break
-        # TODO: walk through and de-overlap / update fr positions?
 
     def __str__(self):
-        s = 'Sequence: dur={}, nfrs={} [\n'.format(
-            str(datetime.timedelta(seconds=self.dur/1000.0)),
-            self.nfrs)
+        s = 'sequence: t={}, f={}\n'.format(
+            str(datetime.timedelta(seconds=self.duration/1000.0)),
+            self.frames)
         for i, sub in enumerate(self.subregions):
-            s += '  {} {}\n'.format('{0:02d}'.format(i), sub)
-        s += ']'
+            s += '  {} {}'.format('{0:02d}'.format(i), sub)
+            if i < len(self.subregions)-1:
+                s += '\n'
         return s
 
+
 class Subregion(object):
-    def __init__(self, ta, tb, skip=False):  # skip: can make subs inside
-        if ta > tb:
-            raise AttributeError('ta={} > tb={}'.format(ta/1000.0,
-                                                        tb/1000.0))
-        if ta < 0 or tb < 0:
-            raise AttributeError('time < 0')
+    def __init__(self, ta, tb, skip=False):
+        if ta > tb or ta < 0 or tb < 0:
+            raise AttributeError('bad subregion')
         self.ta = ta
         self.tb = tb
         self.fa = 0
@@ -100,7 +92,7 @@ class Subregion(object):
         self.target_fps = None
         self.skip = skip
         if skip:
-            self.target_spd = 1  # render at 1x spd by default
+            self.target_spd = 1.0
 
     def intersects(self, o):
         # a subregion intersects with another if either end, in terms of time
@@ -129,11 +121,14 @@ class Subregion(object):
             return False
 
     def __str__(self):
-        s = 'Sub: {}-{} [{}-{}]'.format(
+        s = 'sub: t={}-{} f={}-{} tgt={},{},{}'.format(
             str(datetime.timedelta(seconds=self.ta/1000.0)),
             str(datetime.timedelta(seconds=self.tb/1000.0)),
             self.fa,
-            self.fb)
+            self.fb,
+            self.target_spd if self.target_spd is not None else '?',
+            self.target_dur if self.target_dur is not None else '?',
+            self.target_fps if self.target_fps is not None else '?')
         if self.skip:
             s += ' (skip)'
         return s

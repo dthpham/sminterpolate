@@ -9,13 +9,13 @@ import numpy as np
 from butterflow.settings import default as settings  # will mk temp dirs
 from butterflow import avinfo
 
-def mk_sample_wav_file(dst, dur):
-    if os.path.exists(dst):
+def mk_sample_wav_file(dest, duration):
+    if os.path.exists(dest):
         return
-    wav = wave.open(dst, 'w')
+    wav = wave.open(dest, 'w')
     wav.setparams((2, 2, 44100, 0, 'NONE', 'un-compressed'))  # 2-ch
     # 44100 random samples between -1 and 1
-    data = np.random.uniform(-1, 1, 44100 * dur)  # duration in seconds
+    data = np.random.uniform(-1, 1, 44100 * duration)  # duration in seconds
     scaled = np.int16(data / np.max(np.abs(data)) * 32767)
     for i in scaled:
         v = struct.pack('h', i)  # short int, 2 bytes or 16 bits
@@ -23,8 +23,8 @@ def mk_sample_wav_file(dst, dur):
         wav.writeframes(v)
     wav.close()
 
-def mk_sample_video(dst, dur, w, h, rate, sar=None, dar=None):
-    if os.path.exists(dst):
+def mk_sample_video(dest, duration, w, h, rate, sar=None, dar=None):
+    if os.path.exists(dest):
         return
     call = [
         settings['avutil'],
@@ -32,7 +32,7 @@ def mk_sample_video(dst, dur, w, h, rate, sar=None, dar=None):
         '-y',
         '-f', 'lavfi',
         '-i', 'smptebars=duration={}:size={}x{}:rate={}'.
-        format(dur, w, h, str(rate))]
+        format(duration, w, h, str(rate))]
     vf = []
     if sar is not None:
         vf.append('setsar={}:{}'.format(sar.numerator, sar.denominator))
@@ -40,12 +40,12 @@ def mk_sample_video(dst, dur, w, h, rate, sar=None, dar=None):
         vf.append('setdar={}:{}'.format(dar.numerator, dar.denominator))
     if len(vf) > 0:
         call.extend(['-vf', ','.join(vf)])
-    call.append(dst)
+    call.append(dest)
     if subprocess.call(call) == 1:
         raise RuntimeError
 
-def mux_video_with_files(dst, video, *files):
-    if os.path.exists(dst):
+def mux_video_with_files(dest, video, *files):
+    if os.path.exists(dest):
         return
     call = [
         settings['avutil'],
@@ -58,7 +58,7 @@ def mux_video_with_files(dst, video, *files):
         '-strict', '-2',
         '-c:a', 'aac',
         '-c:v', 'copy',
-        dst])
+        dest])
     if subprocess.call(call) == 1:
         raise RuntimeError
 
@@ -68,7 +68,7 @@ class AvInfoTestCase(unittest.TestCase):
 
     def test_get_av_info_video_duration_rate_frames_rational_rate(self):
         testfile = os.path.join(settings['tempdir'],
-                                '~test_get_av_info_video_rational_rate.mp4')
+                                'test_get_av_info_video_rational_rate.mp4')
         mk_sample_video(testfile, 2, 640, 360, fractions.Fraction(24, 1))
         av = avinfo.get_av_info(testfile)
         self.assertEqual(av['duration'], 2*1000)
@@ -78,7 +78,7 @@ class AvInfoTestCase(unittest.TestCase):
 
     def test_get_av_info_video_duration_rate_frames_fractional_rate(self):
         testfile = os.path.join(settings['tempdir'],
-                                '~test_get_av_info_video_fractional_rate.mp4')
+                                'test_get_av_info_video_fractional_rate.mp4')
         mk_sample_video(testfile, 3, 640, 360, fractions.Fraction(30000, 1001))
         av = avinfo.get_av_info(testfile)
         self.assertEqual(av['duration'], 3.003*1000)
@@ -88,7 +88,7 @@ class AvInfoTestCase(unittest.TestCase):
 
     def test_get_av_info_w_h_sar_unknown(self):
         testfile = os.path.join(settings['tempdir'],
-                                '~test_get_av_info_w_h_sar_unknown.mp4')
+                                'test_get_av_info_w_h_sar_unknown.mp4')
         mk_sample_video(testfile, 1, 640, 360, fractions.Fraction(1, 1))
         av = avinfo.get_av_info(testfile)
         self.assertEqual(av['w'], 640)
@@ -102,11 +102,11 @@ class AvInfoTestCase(unittest.TestCase):
 
     def test_get_av_info_w_h_sar_known_dar_known(self):
         testfile = os.path.join(settings['tempdir'],
-                               '~test_get_av_info_w_h_sar_known_dar_known.mp4')
+                                'test_get_av_info_w_h_sar_known_dar_known.mp4')
         sar = fractions.Fraction(4, 3)
         dar = fractions.Fraction(16, 9)
         mk_sample_video(testfile, 1, 320, 240, fractions.Fraction(1, 1),
-                          sar=sar, dar=dar)
+                        sar=sar, dar=dar)
         av = avinfo.get_av_info(testfile)
         self.assertEqual(av['w'], 320)
         self.assertEqual(av['h'], 240)
@@ -117,7 +117,7 @@ class AvInfoTestCase(unittest.TestCase):
 
     def test_get_av_info_w_h_sar_known_dar_unknown(self):
         testfile = os.path.join(settings['tempdir'],
-                             '~test_get_av_info_w_h_sar_known_dar_unknown.mp4')
+                              'test_get_av_info_w_h_sar_known_dar_unknown.mp4')
         sar = fractions.Fraction(32, 27)
         mk_sample_video(testfile, 1, 714, 458, fractions.Fraction(1, 1),
                         sar=sar)
@@ -133,15 +133,15 @@ class AvInfoTestCase(unittest.TestCase):
 
     def test_get_av_info_stream_exists(self):
         videofile = os.path.join(settings['tempdir'],
-                                 '~test_get_av_info_stream_exists.mp4')
+                                 'test_get_av_info_stream_exists.mp4')
         mk_sample_video(videofile, 1, 320, 240, fractions.Fraction(1, 1))
         av = avinfo.get_av_info(videofile)
-        self.assertTrue( av['v_stream_exists'])
+        self.assertTrue(av['v_stream_exists'])
         self.assertFalse(av['a_stream_exists'])
         self.assertFalse(av['s_stream_exists'])
 
         wavfile = os.path.join(settings['tempdir'],
-                               '~test_get_av_info_stream_exists.wav')
+                               'test_get_av_info_stream_exists.wav')
         mk_sample_wav_file(wavfile, 1)
         av = avinfo.get_av_info(wavfile)
         self.assertTrue(av['a_stream_exists'])
@@ -149,17 +149,16 @@ class AvInfoTestCase(unittest.TestCase):
         self.assertFalse(av['s_stream_exists'])
 
         muxedfile = os.path.join(settings['tempdir'],
-                                 '~test_get_av_info_stream_exists.muxed.mp4')
+                                 'test_get_av_info_stream_exists.muxed.mp4')
         mux_video_with_files(muxedfile, videofile, wavfile)
         av = avinfo.get_av_info(muxedfile)
-        self.assertTrue( av['v_stream_exists'])
-        self.assertTrue( av['a_stream_exists'])
+        self.assertTrue(av['v_stream_exists'])
+        self.assertTrue(av['a_stream_exists'])
         self.assertFalse(av['s_stream_exists'])
-
 
     def test_get_av_info_multimedia_file_no_video_stream(self):
         testfile = os.path.join(settings['tempdir'],
-                       '~test_get_av_info_multimedia_file_no_video_stream.wav')
+                        'test_get_av_info_multimedia_file_no_video_stream.wav')
         mk_sample_wav_file(testfile, 1)
         av = avinfo.get_av_info(testfile)
         self.assertEqual(av['path'], testfile)
@@ -177,7 +176,7 @@ class AvInfoTestCase(unittest.TestCase):
 
     def test_get_av_info_path(self):
         testfile = os.path.join(settings['tempdir'],
-                                '~test_get_av_info_path.mp4')
+                                'test_get_av_info_path.mp4')
         mk_sample_video(testfile, 1, 320, 240, fractions.Fraction(1, 1))
         av = avinfo.get_av_info(testfile)
         self.assertEqual(av['path'], testfile)
@@ -188,7 +187,7 @@ class AvInfoTestCase(unittest.TestCase):
 
     def test_get_av_info_non_multimedia_file_fails(self):
         testfile = os.path.join(settings['tempdir'],
-                                '~test_get_av_info_non_multimedia_file_fails')
+                                'test_get_av_info_non_multimedia_file_fails')
         with open(testfile, 'w'):
             pass
         with self.assertRaises(RuntimeError):

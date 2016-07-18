@@ -1,5 +1,3 @@
-// get av file info
-
 #include <Python.h>
 #include <stdio.h>
 #include <string.h>

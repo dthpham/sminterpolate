@@ -6,6 +6,7 @@ import multiprocessing
 from itertools import izip
 import signal
 
+
 def time_steps_for_nfrs(n):  # py version
     sub_divisions = n + 1
     time_steps = []
@@ -13,6 +14,7 @@ def time_steps_for_nfrs(n):  # py version
         time_steps.append(max(0.0,
                           min(1.0, (1.0 / sub_divisions) * (i+1))))
     return time_steps
+
 
 def fr_at_time_step(target_fr, u, v, ts):
     shape = target_fr.shape
@@ -26,14 +28,17 @@ def fr_at_time_step(target_fr, u, v, ts):
                             ch]
     return ts, fr
 
+
 def fr_at_time_step_wrp(args):   # to pass multiple args for Pool.map
     return fr_at_time_step(*args)
+
 
 def init_worker():  # captures ctrl+c
     signal.signal(signal.SIGINT, signal.SIG_IGN)
 
+
 def sw_interpolate_flow(prev_fr, next_fr, fu, fv, bu, bv, int_each_go):
-    frs = []
+    frames = []
     time_steps = time_steps_for_nfrs(int_each_go)
     cpus = multiprocessing.cpu_count()
     pool = multiprocessing.Pool(cpus, init_worker)
@@ -52,7 +57,7 @@ def sw_interpolate_flow(prev_fr, next_fr, fu, fv, bu, bv, int_each_go):
                     nxt = n[1]
                     bfr = alpha_blend(prv, nxt, n[0])  # n[0] is the step
                     bfr = (bfr*255.0).astype(np.uint8)
-                    frs.append(bfr)
+                    frames.append(bfr)
             task_list = []
             for j in range(work_steps):
                 if i+j > len(time_steps)-1:
@@ -68,4 +73,4 @@ def sw_interpolate_flow(prev_fr, next_fr, fu, fv, bu, bv, int_each_go):
         class KeyboardInterruptError(Exception): pass
         raise KeyboardInterruptError  # re-raise
     pool.close()
-    return frs
+    return frames
