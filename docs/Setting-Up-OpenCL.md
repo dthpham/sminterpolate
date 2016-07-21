@@ -42,7 +42,7 @@ If you encounter an error that you suspect is related to OpenCL, it may be becau
 
 Typically, you just need to install at least one vendor-specific OpenCL implementation that supports your hardware under Arch. For NVIDIA install [opencl-nvidia](https://www.archlinux.org/packages/extra/x86_64/opencl-nvidia/) or [intel-opencl-runtime](https://aur.archlinux.org/packages/intel-opencl-runtime/) if you're using an Intel device.
 
-# Device compatibility
+## Device compatibility
 **Important:** You need to have a `FULL_PROFILE` device that supports OpenCL 1.2 or higher to do hardware accelerated rendering with Butterflow. You can print your device info with `butterflow -d` or by using a more comprehensive tool like [clinfo](https://github.com/Oblomov/clinfo).
 
 If there are no compatible devices available, Butterflow will automatically use software-rendering (slow). To force this, use the `-sw` flag.

@@ -57,4 +57,4 @@
 2. Change into the project directory.
 3. Build extension modules with `python setup.py build_ext -IC:\msys64\mingw64\local\include -LC:\msys64\mingw64\local\lib`.
 4. Install Butterflow (See: [Installing it](Install-From-Source-Guide.md#installing-it)).
-5. See: [What to do when you're done](Install-From-Source-Guide.md#what-to-do-when-youre-done).
+5. See: [What to do when you're done](Install-From-Source-Guide.md#what-to-do-when-youre-done-installing).

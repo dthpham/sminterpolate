@@ -1,5 +1,5 @@
 # Install From Source Guide
-**Important:** Read [What to do when you're done](#what-to-do-when-youre-done) after installing.
+**Important:** Read [What to do when you're done](#what-to-do-when-youre-done-installing) after installing.
 
 ## Supported platforms
 **Important:** Butterflow only works on 64-bit systems.
@@ -67,6 +67,6 @@ You may have to manually add `/usr/local/lib` and `/usr/local/include` to your s
 
 ## What to do when you're done installing
 1. **Recommended:** Check if your OpenCL device is detected with `buutterflow -d`.
- * If it isn't, refer to [Setting up OpenCL](Setting-up-OpenCL.md) for instructions on how to get it working. This step isn't required but when working on large segments of a video or with high resolution frames, rendering will be extremely slow without it.
+ * If it isn't, refer to [Setting up OpenCL](Setting-Up-OpenCL.md) for instructions on how to get it working. This step isn't required but when working on large segments of a video or with high resolution frames, rendering will be extremely slow without it.
 2. **Optional:** While in the project directory, you can run a suite of tests against butterflow with `python setup.py test`.
  * Tests will fail if OpenCL isn't set up.
