@@ -1,11 +1,15 @@
 # Butterflow
-*Butterflow* is a command-line tool that makes fluid slow motion and motion interpolated videos.
+## It's a command-line tool that can:
+* **Increase a video's frame rate** by rendering new frames on motion (*pixel-warping + blending*).
+* Make **smooth motion** videos (*simple blending between frames*).
+* Leverage new frames/increase in frame rates to make **fluid slow motion** videos.
 
-It works by rendering intermediate frames between existing frames using a process called [motion interpolation](http://en.wikipedia.org/wiki/Motion_interpolation). For example, given two existing frames, `A` and `B`, this program can generate frames `C.1`, `C.2`...`C.n` that are positioned between the two. In contrast to other tools that can only blend or dupe frames, this program warps pixels based on motion to generate new ones.
+## How does it work?
+It works by rendering intermediate frames between existing frames using a process called [motion interpolation](http://en.wikipedia.org/wiki/Motion_interpolation). For example, given two existing frames, `A` and `B`, this program can generate frames `C.1`, `C.2`...`C.n` that are positioned between the two. In contrast to other tools that can only *blend or dupe* frames, this program *warps pixels based on motion* to generate new ones.
 
 BF uses these interpolated frames to increase a video's frame rate, which can give the perception of smoother motion and more fluid animation, an effect that most people know as the "soap opera effect".
 
-This is a demonstration of BF leveraging motion interpolation to make slow motion videos with minimal judder:
+Here's a demo of BF leveraging motion interpolation to make slow motion videos with minimal judder:
 
 ![](http://srv.dthpham.me/static/bf-example-1.gif)
 
