@@ -19,15 +19,15 @@ In this example, BF has slowed down a `1s` video down by `10x`. An additional `2
 
 Here is another example of the same concept. Opening the Butterflow'd video and frame-stepping through it would make the interpolated frames (marked "`Int: Y`") more obvious.
 
-## How to install
+## How to install:
 **Important:** Only works on 64-bit systems.
 
 * **Mac OS X:** With [Homebrew](http://brew.sh/), `brew install homebrew/science/butterflow`.
+* **Windows (Portable)**: Download [butterflow-0.2.2.dev0-alpha.1.7z](http://srv.dthpham.me/butterflow/releases/win/butterflow-0.2.2.dev0-alpha.1.7z). See: [How to use it](https://github.com/dthpham/butterflow/blob/master/docs/Install-On-Windows-Guide.md#how-to-use-it).
 * **Arch Linux:** A package is available in the AUR under [`butterflow`](https://aur.archlinux.org/packages/butterflow/).
-* **From Source (Ubuntu and Debian):** Refer to the [Install From Source Guide](https://github.com/dthpham/butterflow/blob/master/docs/Install-From-Source-Guide.md) for instructions.
-* **Windows:** See the [Install on Windows Guide](https://github.com/dthpham/butterflow/blob/master/docs/Install-On-Windows-Guide.md).
+* **From Source (Ubuntu, Debian):** Refer to the [Install From Source Guide](https://github.com/dthpham/butterflow/blob/master/docs/Install-From-Source-Guide.md) for instructions.
 
-## Setup (Recommended)
+## Setup (recommended)
 **Tip:** No setup is necessary on OS X. Read [this](https://github.com/dthpham/butterflow/blob/master/docs/Setting-Up-OpenCL.md#os-x-mavericks-and-newer) if you run into a problem w/ OpenCL.
 
 Butterflow requires no additional setup to use, however it's too slow out of the box to do any serious work. It's recommended that you set up a functional OpenCL environment on your machine to take advantage of hardware accelerated methods that will make rendering significantly faster.

@@ -58,7 +58,7 @@ def main():
 
     vid.add_argument('-o', '--output-path', type=str,
                      default=settings['out_path'],
-                     help='Specify path to the .mp4 output video')
+                     help='Specify path to the output video')
     vid.add_argument('-r', '--playback-rate', type=str,
                      help='Specify the playback rate as an integer or a float '
                      'Fractional forms are acceptable, e.g., 24/1.001 is the '
@@ -188,7 +188,7 @@ def main():
 
     extension = os.path.splitext(os.path.basename(args.output_path))[1].lower()
     if extension[1:] != 'mp4':
-        print('out file needs .mp4 extension')
+        print('bad out file extension')
         return 0
 
     av_info = avinfo.get_av_info(args.video)
@@ -232,7 +232,7 @@ def main():
         rate = rate_from_input_str(args.playback_rate, av_info['rate'])
     except (ValueError, AttributeError) as error:
         print('error: '+str(error))
-        exit(1)
+        return 1
 
     def nearest_even_int(x):
         return x & ~1

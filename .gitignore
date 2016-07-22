@@ -43,3 +43,8 @@ tags
 *.pth
 dev_settings.py
 out.mp4
+
+# win10
+win10_include_files
+butterflow.lnk
+init.bat

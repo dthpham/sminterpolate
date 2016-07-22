@@ -45,4 +45,4 @@ Typically, you just need to install at least one vendor-specific OpenCL implemen
 ## Device compatibility
 **Important:** You need to have a `FULL_PROFILE` device that supports OpenCL 1.2 or higher to do hardware accelerated rendering with Butterflow. You can print your device info with `butterflow -d` or by using a more comprehensive tool like [clinfo](https://github.com/Oblomov/clinfo).
 
-If there are no compatible devices available, Butterflow will automatically use software-rendering (slow). To force this, use the `-sw` flag.
+BF will automatically software-rendering if there are no compatible devices available (it will be extremely slow). To force this, use the `-sw` flag.

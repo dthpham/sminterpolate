@@ -240,14 +240,31 @@ setup = functools.partial(setup, **setup_kwargs)
 
 if use_cx_freeze:
     # use cx_Freeze setup
+    import fnmatch
+    include_files = []
+    with open('win10_include_files', 'r') as f:
+        for line in f:
+            line = line.rstrip()
+            if line.startswith('PREFIX'):
+                prefix = line.split('=')[1]
+                continue
+            else:
+                pattern = line
+                for file in os.listdir(prefix):
+                    if fnmatch.fnmatch(file, pattern):
+                        filename = file
+                relpath = os.path.relpath(os.path.join(prefix, filename))
+                include_files.append((relpath, filename))
     build_exe_options = {
         'packages': ['butterflow'],
         'include_msvcr': True,
         'excludes': ['Tkinter'],
+        'include_files': include_files
     }
     executables = [
         Executable(script='butterflow/__main__.py',
                    targetName='butterflow.exe',
+                   icon='butterflow.ico',
                    base=None)
     ]
     setup(options={'build_exe': build_exe_options}, executables=executables)
