@@ -1,6 +1,6 @@
 # Butterflow
 ## It's a command-line tool that can:
-* **Increase a video's frame rate** by rendering new frames on motion (*pixel-warping + blending*).
+* **Increase a video's frame rate** by rendering new frames based on motion (*pixel-warping + blending*).
 * Make **smooth motion** videos (*simple blending between frames*).
 * Leverage new frames/increase in frame rates to make **fluid slow motion** videos.
 
@@ -32,10 +32,10 @@ Here is another example of the same concept. Opening the Butterflow'd video and 
 
 Butterflow requires no additional setup to use, however it's too slow out of the box to do any serious work. It's recommended that you set up a functional OpenCL environment on your machine to take advantage of hardware accelerated methods that will make rendering significantly faster.
 
-See [Setting up OpenCL](https://github.com/dthpham/butterflow/blob/master/docs/Setting-Up-OpenCL.md) for details on how to do this.
+See: [Setting up OpenCL](https://github.com/dthpham/butterflow/blob/master/docs/Setting-Up-OpenCL.md) for details on how to do this.
 
 ## Usage
-Run `butterflow -h` for a full list of options. See [Example Usage](https://github.com/dthpham/butterflow/blob/master/docs/Example-Usage.md) for typical commands.
+Run `butterflow -h` for a full list of options. See: [Example Usage](https://github.com/dthpham/butterflow/blob/master/docs/Example-Usage.md) for typical commands.
 
 ## Documentation
 Check the [docs folder](https://github.com/dthpham/butterflow/tree/master/docs).
