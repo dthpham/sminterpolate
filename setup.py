@@ -69,22 +69,8 @@ if homebrew_prefix is not None:
     sys.path.insert(1, homebrew_site_pkgs)
 
 cflags       = ['-std=c11']  # c compilation flags
-includes     = []      # search paths for header files
-ldflags      = []      # library search paths
-linkflags    = []      # linker flags
-py_includes  = None    # python header files
-py_libs      = None    # python library search paths
-libav_libs   = ['avcodec', 'avformat', 'avutil']
-cl_ldflag    = None    # opencl library search path
-cl_lib       = None    # name of the opencl library
-cl_includes  = None    # opencl header search paths
-cl_linkflags = None
+linkflags    = []            # linker flags
 cxxflags     = []
-np_includes  = None    # numpy header search paths
-cv_includes  = None    # search path for opencv header files
-cv_ldflags   = None    # opencv library search paths
-cv_libs      = ['opencv_core', 'opencv_ocl', 'opencv_imgproc']
-cv_version   = 2413    # cv library version
 
 is_win = sys.platform.startswith('win')
 is_osx = sys.platform.startswith('darwin')
@@ -96,20 +82,13 @@ if is_devbuild:
     cflags.append('-g')  # turn off debugging symbols for release
     cflags.extend(['-O0', '-fbuiltin', '-fdiagnostics-show-option'])
 
-# building with msvc?
-if is_win:
-    # http://bugs.python.org/issue11722
-    # cflags.append('-DMS_WIN64')  # code specific to the MS Win64 API
-    # cflags.append('-DWIN32')     # and to the MS Win32 API
-    pass
-
 # disable warnings that are safe to ignore
 cflags.extend(['-Wno-unused-variable', '-Wno-unused-function'])
-if is_nix or is_win:
-    cflags.extend(['-Wno-cpp'])
-elif is_osx:
+if is_osx:
     cflags.extend(['-Wno-shorten-64-to-32', '-Wno-overloaded-virtual',
                    '-Wno-#warnings'])
+else:
+    cflags.extend(['-Wno-cpp'])
 
 # set cxxflags, remove c only options
 for x in cflags:
@@ -136,31 +115,26 @@ elif is_osx:
     linkflags.append('-Wl,-undefined,dynamic_lookup')
     linkflags.extend(['-arch', 'x86_64'])
 
-avinfo_ext = Extension('butterflow.avinfo',
-                       extra_compile_args=cflags,
+avinfo_ext = Extension('butterflow.avinfo', extra_compile_args=cflags,
                        extra_link_args=linkflags,
-                       libraries=libav_libs,
+                       libraries=['avcodec', 'avformat', 'avutil'],
                        sources=[os.path.join(pkgdir, 'avinfo.c')],
                        language='c')
 
 # opencl args
-if is_nix or is_win:
-    cl_lib = ['OpenCL']
-elif is_osx:
-    cl_linkflags = ['-framework', 'OpenCL']
-
-ocl_extra_link_args = linkflags
+cl_lib = None
+cl_linkflags = None
 if is_osx:
-    ocl_extra_link_args.extend(cl_linkflags)
+    cl_linkflags = ['-framework', 'OpenCL']
+else:
+    cl_lib = ['OpenCL']
 
-ocl_ext = Extension('butterflow.ocl',
-                    extra_compile_args=cflags,
-                    extra_link_args=ocl_extra_link_args,
-                    libraries=cl_lib,
-                    sources=[os.path.join(pkgdir, 'ocl.c')],
-                    language='c')
+ocl_ext = Extension('butterflow.ocl', extra_compile_args=cflags,
+                    extra_link_args=cl_linkflags, libraries=cl_lib,
+                    sources=[os.path.join(pkgdir, 'ocl.c')], language='c')
 
 # numpy args
+np_includes = None
 if is_osx:
     if homebrew_prefix is not None:
         # Homebrew opencv uses a brewed numpy by default but it's possible for
@@ -175,74 +149,60 @@ if is_osx:
         # fallback to the system's numpy
         np_includes = '/System/Library/Frameworks/Python.framework/Versions/'\
                       '{}/Extras/lib/python/numpy/core/include'.format(py_ver)
-elif is_win:
-    # are we sure we want to make numpy a build dependency?
-    # import numpy
-    # np_includes = numpy.get_include()
-    pass
-
-# opencv args
-if is_win:
-    # append version number to library names
-    cv_libs_versioned = []
-    for x in cv_libs:
-        cv_libs_versioned.append('{}{}'.format(x, cv_version))
-    cv_libs = cv_libs_versioned
 
 # opencv-ndarray-conversion args
-ndconv_dir = os.path.join(vendordir, 'opencv-ndarray-conversion')
-ndconv_includes = os.path.join(ndconv_dir, 'include')
+nddir = os.path.join(vendordir, 'opencv-ndarray-conversion')
+nd_includes = os.path.join(nddir, 'include')
 
 motion_ext = Extension('butterflow.motion',
                        extra_compile_args=cxxflags,
                        extra_link_args=linkflags,
-                       include_dirs=mklist(ndconv_includes, np_includes),
-                       libraries=cv_libs,
+                       include_dirs=mklist(nd_includes, np_includes),
+                       libraries=['opencv_core', 'opencv_ocl',
+                                  'opencv_imgproc'],
                        sources=[os.path.join(pkgdir, 'motion.cpp'),
-                                os.path.join(ndconv_dir, 'src',
-                                             'conversion.cpp')],
+                                os.path.join(nddir, 'src', 'conversion.cpp')],
                        language='c++')
 
-# should we use cx_Freeze?
+# should we use cxfreeze?
 use_cx_freeze = False
 if is_win and 'build_exe' in sys.argv:
     try:
-        # cx_Freeze extends setuptools and should be imported after it
+        # cxfreeze extends setuptools and should be imported after it
         from cx_Freeze import setup, Executable
         use_cx_freeze = True
     except ImportError:
-        # use setuptools if cx_Freeze doesn't exist
+        # use setuptools if cxfreeze doesn't exist
         from setuptools import setup
 else:
     from setuptools import setup
 
-# shared arguments
+# shared args
 setup_kwargs = {
-    'name': 'butterflow',
-    'packages': find_packages(exclude=['tests']),
-    'ext_modules': [avinfo_ext, ocl_ext, motion_ext],
-    'version': version,
-    'author': 'Duong Pham',
+    'name':         'butterflow',
+    'packages':     find_packages(exclude=['tests']),
+    'ext_modules':  [avinfo_ext, ocl_ext, motion_ext],
+    'version':      version,
+    'author':       'Duong Pham',
     'author_email': 'dthpham@gmail.com',
-    'url': 'https://github.com/dthpham/butterflow',
+    'url':          'https://github.com/dthpham/butterflow',
     'download_url': 'http://srv.dthpham.me/butterflow/butterflow-{}.tar.gz'.
                     format(version),
-    'description': 'Makes fluid slow motion and motion interpolated videos',
-    'keywords': ['motion interpolation', 'slow motion', 'slowmo',
-                 'smooth motion'],
+    'description':  'Makes fluid slow motion and motion interpolated videos',
+    'keywords':     ['motion interpolation', 'slow motion', 'slowmo',
+                     'smooth motion'],
     'entry_points': {'console_scripts': ['butterflow = butterflow.cli:main']},
-    'test_suite': 'tests'
+    'test_suite':   'tests'
 }
 
-# make a partial setup function
 import functools
 setup = functools.partial(setup, **setup_kwargs)
 
 if use_cx_freeze:
-    # use cx_Freeze setup
+    # get files not picked up by cxfreeze
     import fnmatch
     include_files = []
-    with open('win10_include_files', 'r') as f:
+    with open('win10-cxfreeze_include_files', 'r') as f:
         for line in f:
             line = line.rstrip()
             if line.startswith('PREFIX'):
@@ -269,5 +229,4 @@ if use_cx_freeze:
     ]
     setup(options={'build_exe': build_exe_options}, executables=executables)
 else:
-    # use setuptools setup
     setup()
