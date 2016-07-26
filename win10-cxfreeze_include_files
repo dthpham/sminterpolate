@@ -1,0 +1,16 @@
+PREFIX=C:\msys64\mingw64\bin
+avdevice-*.dll
+avfilter-*.dll
+avresample-*.dll
+ffmpeg.exe
+libass-*.dll
+libcaca-*.dll
+libenca-*.dll
+libfontconfig-*.dll
+libfribidi-*.dll
+libopenal-*.dll
+postproc-*.dll
+SDL.dll
+swscale-*.dll
+PREFIX=C:\msys64\mingw64\local\bin
+opencv_ffmpeg*_64.dll

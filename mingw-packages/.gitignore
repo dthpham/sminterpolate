@@ -1,0 +1,11 @@
+# build
+pkg
+src
+
+# src+pkg
+*.tar.gz
+*.pkg.tar.xz
+ocl-icd
+
+# docs
+README.md

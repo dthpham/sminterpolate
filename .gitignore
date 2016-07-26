@@ -45,6 +45,6 @@ dev_settings.py
 out.mp4
 
 # win10
-win10-*
+win10-package.sh
 butterflow.lnk
 init.bat
