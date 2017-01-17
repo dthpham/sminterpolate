@@ -188,63 +188,68 @@ class Renderer(object):
             if final_run:
                 frs_to_write.append((fr_1, 'SOURCE', 1))
             else:
-                fr_2 = self.fr_source.read()
+                try:
+                    fr_2 = self.fr_source.read()
+                except RuntimeError:
+                    fr_2 = None
                 if fr_2 is None:
-                    raise RuntimeError
-                src_seen += 1
+                    frs_to_write.append((fr_1, 'SOURCE', 1))
+                    final_run = True
+                if not final_run:
+                    src_seen += 1
 
-                if self.scaling_method == settings['scaler_dn']:
-                    fr_2 = self.scale_fr(fr_2)
+                    if self.scaling_method == settings['scaler_dn']:
+                        fr_2 = self.scale_fr(fr_2)
 
-                fr_1_gr = cv2.cvtColor(fr_1, cv2.COLOR_BGR2GRAY)
-                fr_2_gr = cv2.cvtColor(fr_2, cv2.COLOR_BGR2GRAY)
+                    fr_1_gr = cv2.cvtColor(fr_1, cv2.COLOR_BGR2GRAY)
+                    fr_2_gr = cv2.cvtColor(fr_2, cv2.COLOR_BGR2GRAY)
 
-                f_uv = self.optflow_fn(fr_1_gr, fr_2_gr)
-                b_uv = self.optflow_fn(fr_2_gr, fr_1_gr)
+                    f_uv = self.optflow_fn(fr_1_gr, fr_2_gr)
+                    b_uv = self.optflow_fn(fr_2_gr, fr_1_gr)
 
-                if isinstance(f_uv, np.ndarray):
-                    fu = f_uv[:,:,0]
-                    fv = f_uv[:,:,1]
-                    bu = b_uv[:,:,0]
-                    bv = b_uv[:,:,1]
-                else:
-                    fu, fv = f_uv
-                    bu, bv = b_uv
-
-                fr_1_32 = np.float32(fr_1) * 1/255.0
-                fr_2_32 = np.float32(fr_2) * 1/255.0
-
-                will_write = True
-
-                would_drp = []
-                cmp_interpolate_each_go = interpolate_each_go
-                cmp_work_idx = work_idx - 1
-
-                for x in range(1 + interpolate_each_go):
-                    cmp_work_idx += 1
-                    if drp_every > 0 and \
-                            math.fmod(cmp_work_idx, drp_every) < 1.0:
-                        would_drp.append(x + 1)
-
-                if len(would_drp) > 0:
-                    if len(would_drp) <= interpolate_each_go:
-                        cmp_interpolate_each_go -= len(would_drp)
+                    if isinstance(f_uv, np.ndarray):
+                        fu = f_uv[:,:,0]
+                        fv = f_uv[:,:,1]
+                        bu = b_uv[:,:,0]
+                        bv = b_uv[:,:,1]
                     else:
-                        will_write = False
-                    if not will_write:
-                        work_idx += 1
-                        self.frs_dropped += 1
+                        fu, fv = f_uv
+                        bu, bv = b_uv
 
-                if will_write:
-                    interpolated_frs = self.interpolate_fn(
-                        fr_1_32, fr_2_32, fu, fv, bu, bv,
-                        cmp_interpolate_each_go)
+                    fr_1_32 = np.float32(fr_1) * 1/255.0
+                    fr_2_32 = np.float32(fr_2) * 1/255.0
 
-                    frs_interpolated += len(interpolated_frs)
+                    will_write = True
 
-                    frs_to_write.append((fr_1, 'SOURCE', 0))
-                    for i, fr in enumerate(interpolated_frs):
-                        frs_to_write.append((fr, 'INTERPOLATED', i+1))
+                    would_drp = []
+                    cmp_interpolate_each_go = interpolate_each_go
+                    cmp_work_idx = work_idx - 1
+
+                    for x in range(1 + interpolate_each_go):
+                        cmp_work_idx += 1
+                        if drp_every > 0 and \
+                                math.fmod(cmp_work_idx, drp_every) < 1.0:
+                            would_drp.append(x + 1)
+
+                    if len(would_drp) > 0:
+                        if len(would_drp) <= interpolate_each_go:
+                            cmp_interpolate_each_go -= len(would_drp)
+                        else:
+                            will_write = False
+                        if not will_write:
+                            work_idx += 1
+                            self.frs_dropped += 1
+
+                    if will_write:
+                        interpolated_frs = self.interpolate_fn(
+                            fr_1_32, fr_2_32, fu, fv, bu, bv,
+                            cmp_interpolate_each_go)
+
+                        frs_interpolated += len(interpolated_frs)
+
+                        frs_to_write.append((fr_1, 'SOURCE', 0))
+                        for i, fr in enumerate(interpolated_frs):
+                            frs_to_write.append((fr, 'INTERPOLATED', i+1))
 
             for (fr, fr_type, idx_between_pair) in frs_to_write:
                 work_idx += 1
