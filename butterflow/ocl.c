@@ -10,7 +10,15 @@
     PyErr_SetString(PyExc_RuntimeError, "opencl call failed"); \
     return (PyObject*)NULL; }
 #define MIN_CL_VER 1.2
+#define MIN_WORK_GROUP_SIZE 256
+#define MIN_FB_UPDATEMATRICES_WORK_ITEM_SIZE        {32,  8, 1}
+#define MIN_FB_BOXFILTER5_WORK_ITEM_SIZE            {256, 1, 1}
+#define MIN_FB_UPDATEFLOW_WORK_ITEM_SIZE            {32,  8, 1}
+#define MIN_FB_GAUSSIANBLUR_WORK_ITEM_SIZE          {256, 1, 1}
+#define MIN_FB_POLYNOMIALEXPANSION_WORK_ITEM_SIZE   {256, 1, 1}
+#define MIN_FB_GAUSSIANBLUR5_WORK_ITEM_SIZE         {256, 1, 1}
 
+static const int MIN_FB_WORK_ITEM_SIZES[3] = {256, 8, 1};
 
 static PyObject*
 print_ocl_devices(PyObject *self, PyObject *noargs) {
@@ -75,6 +83,8 @@ compat_ocl_device_available(PyObject *self, PyObject *noargs) {
     char p_prof[1024];
     char d_vers[1024];
     char d_prof[1024];
+    size_t d_max_work_group_size;
+    size_t d_max_work_item_sizes[3];
 
     cl_safe(clGetPlatformIDs(32, platforms, &n_platforms));
 
@@ -102,6 +112,18 @@ compat_ocl_device_available(PyObject *self, PyObject *noargs) {
             compatible &= cl_version >= MIN_CL_VER;
             compatible &= strcmp(d_prof, "FULL_PROFILE") == 0;
             compatible &= strcmp(p_prof, "FULL_PROFILE") == 0;
+
+            cl_safe(clGetDeviceInfo(d, CL_DEVICE_MAX_WORK_GROUP_SIZE,
+                                    sizeof(d_max_work_group_size),
+                                    &d_max_work_group_size, NULL));
+            cl_safe(clGetDeviceInfo(d, CL_DEVICE_MAX_WORK_ITEM_SIZES,
+                                    sizeof(d_max_work_item_sizes),
+                                    &d_max_work_item_sizes, NULL));
+
+            compatible &= d_max_work_group_size >= MIN_WORK_GROUP_SIZE;
+            compatible &= d_max_work_item_sizes[0] >= MIN_FB_WORK_ITEM_SIZES[0];
+            compatible &= d_max_work_item_sizes[1] >= MIN_FB_WORK_ITEM_SIZES[1];
+            compatible &= d_max_work_item_sizes[2] >= MIN_FB_WORK_ITEM_SIZES[2];
 
             if (compatible) {
                 free(devices);
