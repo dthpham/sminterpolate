@@ -311,7 +311,7 @@ class Renderer(object):
         filename = os.path.splitext(os.path.basename(self.src))[0]
         tempfile1 = os.path.join(
             settings['tempdir'],
-            '{}.{}'.format(filename, settings['v_container']).lower())
+            '{}.{}.{}'.format(filename, os.getpid(), settings['v_container']).lower())
         self.fr_source = OpenCvFrameSource(self.src)
         self.fr_source.open()
         self.mk_render_pipe(tempfile1)
@@ -377,8 +377,9 @@ class Renderer(object):
                 continue
             tempfile1 = os.path.join(
                 settings['tempdir'],
-                '{}.{}.{}'.format(filename,
+                '{}.{}.{}.{}'.format(filename,
                                   i,
+                                  os.getpid(),
                                   settings['a_container']).lower())
             mux.extract_audio(self.src,
                               tempfile1,
@@ -390,7 +391,8 @@ class Renderer(object):
             update_progress()
         tempfile2 = os.path.join(
             settings['tempdir'],
-            '{}.merged.{}'.format(filename,
+            '{}.merged.{}.{}'.format(filename,
+                                  os.getpid(),
                                   settings['a_container']).lower())
         mux.concat_av_files(tempfile2, audio_files)
         progress += 1.0/3

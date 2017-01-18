@@ -10,8 +10,9 @@ log = logging.getLogger('butterflow')
 
 
 def mux_av(vid, audio, dest):
-    tempfile = '{}+{}.{}'.format(os.path.splitext(os.path.basename(vid))[0],
+    tempfile = '{}+{}.{}.{}'.format(os.path.splitext(os.path.basename(vid))[0],
                                  os.path.splitext(os.path.basename(audio))[0],
+                                 os.getpid(),
                                  settings['v_container'])
     tempfile = os.path.join(settings['tempdir'], tempfile)
     call = [
@@ -29,7 +30,7 @@ def mux_av(vid, audio, dest):
 
 
 def concat_av_files(dest, files):
-    tempfile = os.path.join(settings['tempdir'], 'list.txt')
+    tempfile = os.path.join(settings['tempdir'], 'list.{}.txt'.format(os.getpid()))
     with open(tempfile, 'w') as f:
         for file in files:
             f.write('file \'{}\'\n'.format(file))
@@ -51,7 +52,7 @@ def concat_av_files(dest, files):
 def extract_audio(vid, dest, ss, to, speed=1.0):
     filename = os.path.splitext(os.path.basename(dest))[0]
     tempfile1 = os.path.join(settings['tempdir'],
-                             '{}.{}'.format(filename, settings['v_container']).
+                             '{}.{}.{}'.format(filename, os.getpid(), settings['v_container']).
                              lower())
     call = [
         settings['avutil'],
@@ -74,7 +75,7 @@ def extract_audio(vid, dest, ss, to, speed=1.0):
     if subprocess.call(call) == 1:
         raise RuntimeError
     tempfile2 = os.path.join(settings['tempdir'],
-                             '{}.{}x.{}'.format(filename, speed,
+                             '{}.{}x.{}.{}'.format(filename, speed, os.getpid(),
                                                 settings['a_container']))
     def mk_atempo_chain(speed):
         if speed >= 0.5 and speed <= 2.0:
