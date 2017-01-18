@@ -3,7 +3,7 @@
 _realname=ocl-icd
 pkgbase=mingw-w64-${_realname}-git
 pkgname="${MINGW_PACKAGE_PREFIX}-${_realname}-git"
-pkgver=r4.4defeae
+pkgver=r5.cb4acb9
 pkgrel=1
 pkgdesc="OpenCL Installable Client Driver (ICD) Loader (mingw-w64)"
 arch=('any')

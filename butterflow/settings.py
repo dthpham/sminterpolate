@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import os
 import logging
 import tempfile
@@ -8,6 +10,9 @@ from butterflow.__init__ import __version__
 
 default = {
     'debug_opts':     False,
+    # show first and last n runs, -1 to show all
+    'debug_show_n_runs':            15,
+    'debug_show_progress_period':   0.1,  # show progress every % if snipped
     # default logging level
     # levels in order of urgency: critical, error, warning, info, debug
     'loglevel_0':     logging.WARNING,
@@ -42,7 +47,7 @@ default = {
     # presets: ultrafast, superfast, veryfast, faster, fast, medium, slow,
     # slower, veryslow
     'preset':         'veryslow',
-    'crf':            18,  # visually lossless
+    'crf':            18,       # visually lossless
     # scaling opts
     'video_scale':    1.0,
     'scaler_up':      cv2.cv.CV_INTER_AREA,
@@ -52,7 +57,7 @@ default = {
     # muxing opts
     'v_container':    'mp4',
     # See: https://trac.ffmpeg.org/wiki/Encode/HighQualityAudio
-    'a_container':    'm4a',  # will keep some useful metadata
+    'a_container':    'm4a',   # will keep some useful metadata
     # audio codec and quality
     # See: https://trac.ffmpeg.org/wiki/Encode/AAC
     'ca':             'aac',   # built in encoder, doesnt require an ext lib
@@ -81,11 +86,11 @@ default = {
     'fast_pyr':       False,
     'flow_filter':    'box',
     # -1 is max threads and it's the opencv default
-    'ocv_threads':    -1,  # 0 will disable threading optimizations
+    'ocv_threads':    -1,    # 0 will disable threading optimizations
     # milliseconds to display image in preview window
     'imshow_ms':      1,
     # debug text settings
-    'text_type':      'light',  # other options: `dark`, `stroke`
+    'text_type':      'light',      # other options: `dark`, `stroke`
     'light_color':    cv2.cv.RGB(255, 255, 255),
     'dark_color':     cv2.cv.RGB(0, 0, 0),
     # h_fits and v_fits is the minimium size in which the unscaled
@@ -102,15 +107,15 @@ default = {
     'txt_l_pad':      20,
     'txt_r_pad':      20,
     'txt_ln_b_pad':   10,    # spacing between lines
-    'txt_min_scale':  0.6,   # don't draw if the font is scaled below this
+    'txt_min_scale':  0.55,  # don't draw if the font is scaled below this
     'txt_placeh':     '?',   # placeholder if value in fmt text is None
     # progress bar settings
-    'bar_w_fits':     572,
+    'bar_w_fits':     420,
     'bar_h_fits':     142,
     'bar_t_pad':      0.7,   # relative padding from the top
     'bar_s_pad':      0.12,  # relative padding on each side
     'bar_ln_thick':   3,     # pixels of lines that make outer rectangle
-    'bar_stroke_thick':  1,     # size of the stroke in pixels
+    'bar_stroke_thick':  1,  # size of the stroke in pixels
     'bar_ln_type':    cv2.cv.CV_FILLED,  # -1, a filled line
     'bar_in_pad':     3,     # padding from the inner bar
     'bar_thick':      15,    # thickness of the inner bar
@@ -122,12 +127,12 @@ default = {
     'mrk_d_pad':      20,
     'mrk_r_pad':      20,
     'mrk_out_thick':  -1,    # -1, a filled circle
-    'mrk_out_radius': 7,
+    'mrk_out_radius': 6,
     'mrk_in_thick':   -1,
     'mrk_in_radius':  4,
     'mrk_ln_type':    cv2.cv.CV_AA,
     'mrk_out_color':  cv2.cv.RGB(255, 255, 255),
-    'mrk_color':      cv2.cv.RGB(128, 128, 128),
+    'mrk_color':      cv2.cv.RGB(255, 255, 255),
     'mrk_fill_color': cv2.cv.RGB(255, 0, 0)
 }
 

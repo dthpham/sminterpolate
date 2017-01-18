@@ -1,11 +1,14 @@
 # Setting Up OpenCL
 **Tip:** Most of this guide is adapted from other sources and should not be considered definitive or up to date. For additional information on how to satisfy the OpenCL requirement, please read [How to set up OpenCL in Linux](http://wiki.tiker.net/OpenCLHowTo).
 
-## Instructions
+## Setup instructions:
 ### OS X (Mavericks and newer):
 Apple provides support for OpenCL by default on all Macs so you will be able to take advantage of hardware acceleration without having to set anything up.
 
 If you encounter an error that you suspect is related to OpenCL, it may be because you don't have a compatible graphics device. Double check to see if your Mac is listed on Apple's [Mac computers that use OpenCL and OpenGL graphics](https://support.apple.com/en-us/HT202823) support page and verify that it meets the minimum requirements outlined in the [Device compatibility](#device-compatibility) section.
+
+### Windows 10:
+OpenCL should be provided by default as long as you have the latest version of your graphics driver installed.
 
 ### Ubuntu (Vivid Vervet):
 #### Nvidia:
@@ -15,7 +18,7 @@ If you encounter an error that you suspect is related to OpenCL, it may be becau
 
 #### Intel or AMD:
 1. Download the driver/library package from the [AMD website](http://support.amd.com/en-us/download/desktop?os=Linux+x86).
- * The archive file will be named `amd-catalyst-<VERSION>-linux-installer-<BUILD_VERSION>-x86.x86_64.zip`.
+ * The archive file will be named amd-catalyst-<VERSION>-linux-installer-<BUILD_VERSION>-x86.x86_64.zip.
 2. Extract the package to a folder.
 3. Launch a terminal and change into the directory.
 4. Extract the driver files with `bash AMD-Catalyst-<VERSION>-Linux-installer-*.run --extract .`.
@@ -34,15 +37,15 @@ If you encounter an error that you suspect is related to OpenCL, it may be becau
 1. Add `deb <repos> jessie main non-free` and `deb-src <repos> jessie main non-free` components to `/etc/apt/sources.list`.
 2. Refresh your package list with `sudo apt-get update`.
 3. Install a client driver for your hardware device:
- * If NVIDIA: `nvidia-opencl-icd`.
- * Intel or AMD: `amd-opencl-icd` (supports both).
+ * If using NVIDIA: nvidia-opencl-icd.
+ * If using Intel or AMD: amd-opencl-icd (it supports both).
 
 ### Arch Linux:
-**Recommended:** Refer to the Arch [GPGPU wiki page](https://wiki.archlinux.org/index.php/GPGPU).
+Typically, you just need to install at least one vendor-specific OpenCL implementation that supports your hardware. For NVIDIA install [opencl-nvidia](https://www.archlinux.org/packages/extra/x86_64/opencl-nvidia/) or [intel-opencl-runtime](https://aur.archlinux.org/packages/intel-opencl-runtime/) if you're using an Intel device.
 
-Typically, you just need to install at least one vendor-specific OpenCL implementation that supports your hardware under Arch. For NVIDIA install [opencl-nvidia](https://www.archlinux.org/packages/extra/x86_64/opencl-nvidia/) or [intel-opencl-runtime](https://aur.archlinux.org/packages/intel-opencl-runtime/) if you're using an Intel device.
+**Recommended:** Refer to the Arch [GPGPU wiki page](https://wiki.archlinux.org/index.php/GPGPU) for more information.
 
-## Device compatibility
-**Important:** You need to have a `FULL_PROFILE` device that supports OpenCL 1.2 or higher to do hardware accelerated rendering with Butterflow. You can print your device info with `butterflow -d` or by using a more comprehensive tool like [clinfo](https://github.com/Oblomov/clinfo).
+## Device compatibility with BF:
+**Important:** You need to have a FULL_PROFILE device that supports OpenCL >=1.2, with a max work group size >=256, and max work item size >=256x8x1, to do hardware accelerated rendering with BF. You can print your device info with `butterflow -d` or by using a more comprehensive tool like [clinfo](https://github.com/Oblomov/clinfo).
 
-BF will automatically software-rendering if there are no compatible devices available (it will be extremely slow). To force this, use the `-sw` flag.
+BF will automatically revert to software-rendering if there are no compatible devices available. It will be extremely slow so only use it if you're dealing with short segments of small resolution videos.

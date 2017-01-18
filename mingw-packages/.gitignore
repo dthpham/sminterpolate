@@ -1,6 +1,7 @@
 # build
 pkg
 src
+mingw-w64-*.log*
 
 # src+pkg
 *.tar.gz

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # a parallel, naive implementation of software frame interpolation using
 # provided optical flows (displacement fields)
 

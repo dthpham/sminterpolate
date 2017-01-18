@@ -42,10 +42,11 @@ env
 tags
 *.pth
 dev_settings.py
-out.mp4
+*.mp4
+*.gif
+test_videos
 
 # win10
-win10-package.sh
 butterflow.lnk
 init.bat
 snippets

@@ -188,7 +188,7 @@ setup_kwargs = {
     'url':          'https://github.com/dthpham/butterflow',
     'download_url': 'http://srv.dthpham.me/butterflow/butterflow-{}.tar.gz'.
                     format(version),
-    'description':  'Makes fluid slow motion and motion interpolated videos',
+    'description':  'Makes motion interpolated and fluid slow motion videos',
     'keywords':     ['motion interpolation', 'slow motion', 'slowmo',
                      'smooth motion'],
     'entry_points': {'console_scripts': ['butterflow = butterflow.cli:main']},

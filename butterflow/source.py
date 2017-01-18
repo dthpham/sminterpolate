@@ -1,3 +1,8 @@
+# -*- coding: utf-8 -*-
+# uses the opencv api as the default frame source. must ensure that the ffmpeg
+# compiled that it is linked against is the same as the ffmpeg being used to
+# render video files
+
 import cv2
 
 
@@ -22,10 +27,9 @@ class OpenCvFrameSource(object):
             self.capture.release()
         self.capture = None
 
-    def seek_to_fr(self, idx):
+    def seek_to_fr(self, idx):  # idx will +1 automatically after a seek
         if idx < 0 or idx > self.frames-1:
             raise IndexError
-        # do seek, idx will +1 automatically
         if self.capture.set(cv2.cv.CV_CAP_PROP_POS_FRAMES, idx) is not True:
             raise RuntimeError
 

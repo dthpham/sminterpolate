@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import cv2
 import sys
 import collections
@@ -26,7 +28,6 @@ def draw_marker(fr, fill=True):
     h = fr.shape[0]
     x = int(w - (settings['mrk_r_pad'] + settings['mrk_out_radius']))
     y = int(h - settings['mrk_d_pad'] - settings['mrk_out_radius'])
-
     cv2.circle(fr,
                (x, y),
                settings['mrk_out_radius'],
@@ -101,9 +102,7 @@ def draw_progress_bar(fr, progress=0.0):
         draw_rectangle(bar_v1, bar_v2)
 
 
-@draw_if_fr_fits(settings['txt_w_fits'],
-                 settings['txt_h_fits'],
-                 settings['txt_min_scale'])
+@draw_if_fr_fits(settings['txt_w_fits'], settings['txt_h_fits'], settings['txt_min_scale'])
 def draw_debug_text(fr, text_type, rate, optflow_fn, tot_frs_written, pair_a,
                     pair_b, idx_between_pair, fr_type, is_dupe, frs_to_render,
                     frs_written, sub, sub_idx, subs_to_render, drp_every,

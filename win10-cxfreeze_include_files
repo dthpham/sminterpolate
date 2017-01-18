@@ -10,7 +10,6 @@ libfontconfig-*.dll
 libfribidi-*.dll
 libopenal-*.dll
 postproc-*.dll
-SDL.dll
+SDL2.dll
 swscale-*.dll
-PREFIX=C:\msys64\mingw64\local\bin
 opencv_ffmpeg*_64.dll

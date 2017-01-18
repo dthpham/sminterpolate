@@ -1,5 +1,5 @@
-# Maintainer: Alexey Pavlov <alexpux@gmail.com>
-# Contributor: Duong Pham <dthpham@gmail.com>
+# Maintainer: Duong Pham <dthpham@gmail.com>
+# Contributor: Alexey Pavlov <alexpux@gmail.com>
 
 _realname=opencv
 pkgbase=mingw-w64-${_realname}2
