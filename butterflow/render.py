@@ -332,7 +332,6 @@ class Renderer(object):
                 continue
             else:
                 self.curr_sub_idx += 1
-                log.info('sub {0:02d}:'.format(i))
                 self.render_subregion(sub)
         if not settings['quiet']:
             sys.stdout.write('\n')
@@ -381,11 +380,16 @@ class Renderer(object):
                                   i,
                                   os.getpid(),
                                   settings['a_container']).lower())
+            speed = sub.target_spd
+            if speed is None:
+                reg_duration = (sub.tb - sub.ta) / 1000.0
+                frs = self.calc_frs_to_render(sub)
+                speed = (self.rate * reg_duration) / frs
             mux.extract_audio(self.src,
                               tempfile1,
                               sub.ta,
                               sub.tb,
-                              speed=sub.target_spd)
+                              speed)
             audio_files.append(tempfile1)
             progress += progress_chunk
             update_progress()
