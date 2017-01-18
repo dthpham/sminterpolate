@@ -240,6 +240,11 @@ def main():
     w1, h1 = av_info['w'], av_info['h']
     w2, h2 = nearest_even_int(w), nearest_even_int(h)
 
+    if w2 > 256:
+        if w2 % 4 > 0:
+            w2 -= 2
+            w2 = max(w2, 0)
+
     if w1*h1 > w2*h2:
         scaling_method = settings['scaler_dn']
     elif w1*h1 < w2*h2:
