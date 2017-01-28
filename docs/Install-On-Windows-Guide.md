@@ -2,8 +2,8 @@
 **Important:** BF only works on 64-bit systems.
 
 ## The prebuilt version
-* Download link: [butterflow-0.2.2.dev0-alpha.1.7z](http://srv.dthpham.me/butterflow/releases/win/butterflow-0.2.2.dev0-alpha.1.7z).
-  * Sha256: 12174d3c1d6cfba5a2a21866f2fe312a0d9e12f53955dff872f48dd6682dd1a9
+* Download link: [butterflow-0.2.2.7z](http://srv.dthpham.me/butterflow/releases/win/butterflow-0.2.2.7z).
+  * Sha256: cb228ea8674f6ff29573c4f0b00a0ff513420021b51648ed6aad3099505f0ba5
 
 ## Instructions:
 **Important:** This guide is meant for Windows 10 users.

@@ -25,8 +25,8 @@ Here's another example of the same concept. Frame-stepping through the BF'd file
 **Important:** BF only works on 64-bit systems.
 
 * **Mac OS X:** With [Homebrew](http://brew.sh/), `brew install homebrew/science/butterflow`.
-* **Windows (Portable)**: Download [butterflow-0.2.2.dev0-alpha.1.7z](http://srv.dthpham.me/butterflow/releases/win/butterflow-0.2.2.dev0-alpha.1.7z).
-  * Sha256: 12174d3c1d6cfba5a2a21866f2fe312a0d9e12f53955dff872f48dd6682dd1a9
+* **Windows (Portable)**: Download [butterflow-0.2.2.7z](http://srv.dthpham.me/butterflow/releases/win/butterflow-0.2.2.7z).
+  * Sha256: cb228ea8674f6ff29573c4f0b00a0ff513420021b51648ed6aad3099505f0ba5
 * **Arch Linux:** A package is available in the AUR under [`butterflow`](https://aur.archlinux.org/packages/butterflow/).
 * **From Source (Ubuntu, Debian):** Refer to the [Install From Source Guide](https://github.com/dthpham/butterflow/blob/master/docs/Install-From-Source-Guide.md) for instructions.
 
