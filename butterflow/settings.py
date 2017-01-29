@@ -4,7 +4,7 @@ import os
 import logging
 import tempfile
 import cv2
-import motion
+import ocl
 from butterflow.__init__ import __version__
 
 
@@ -156,4 +156,4 @@ for x in [default['clbdir'], default['tempdir']]:
         os.makedirs(x)
 
 # set the location of the clb cache
-motion.set_cache_path(default['clbdir'] + os.sep)
+ocl.set_cache_path(default['clbdir'] + os.sep)

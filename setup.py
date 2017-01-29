@@ -129,9 +129,9 @@ if is_osx:
 else:
     cl_lib = ['OpenCL']
 
-ocl_ext = Extension('butterflow.ocl', extra_compile_args=cflags,
+ocl_ext = Extension('butterflow.ocl', extra_compile_args=cxxflags,
                     extra_link_args=cl_linkflags, libraries=cl_lib,
-                    sources=[os.path.join(pkgdir, 'ocl.c')], language='c')
+                    sources=[os.path.join(pkgdir, 'ocl.cpp')], language='c')
 
 # numpy args
 np_includes = None

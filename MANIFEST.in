@@ -4,5 +4,5 @@ recursive-exclude tests *.pyc
 recursive-exclude vendor *
 recursive-include vendor/opencv-ndarray-conversion *
 include butterflow/avinfo.c
-include butterflow/ocl.c
+include butterflow/ocl.cpp
 include butterflow/motion.cpp

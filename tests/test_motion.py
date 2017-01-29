@@ -7,7 +7,8 @@ import cv2
 from cv2 import calcOpticalFlowFarneback as sw_farneback_optical_flow
 import numpy as np
 from butterflow.motion import ocl_farneback_optical_flow, \
-    ocl_interpolate_flow, set_cache_path, time_steps_for_nfrs
+    ocl_interpolate_flow, time_steps_for_nfrs
+from butterflow.ocl import set_cache_path
 
 from butterflow.settings import default as settings  # will mk temp dirs
 
