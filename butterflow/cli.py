@@ -188,10 +188,12 @@ def main():
 
     logging.basicConfig(level=settings['loglevel_0'], format=format)
     log = logging.getLogger('butterflow')
+
     if args.verbosity == 1:
         log.setLevel(settings['loglevel_1'])
     if args.verbosity >= 2:
         log.setLevel(settings['loglevel_2'])
+
     if args.quiet:
         log.setLevel(settings['loglevel_quiet'])
         settings['quiet'] = True
@@ -201,6 +203,16 @@ def main():
         return 0
 
     cachedir = settings['tempdir']
+
+    cachedirs = []
+    tempfolder = os.path.dirname(cachedir)
+    for dirpath, dirnames, filenames in os.walk(tempfolder):
+        for d in dirnames:
+            if 'butterflow' in d:
+                if 'butterflow-'+__version__ not in d:
+                    cachedirs.append(os.path.join(dirpath, d))
+        break
+
     if args.cache:
         nfiles = 0
         sz = 0
@@ -213,12 +225,20 @@ def main():
                 sz += os.path.getsize(fp)
         sz = sz / 1024.0**2
         print('{} files, {:.2f} MB'.format(nfiles, sz))
-        print('Cache @ '+cachedir)
+        print('Cache: '+cachedir)
         return 0
     if args.rm_cache:
-        if os.path.exists(cachedir):
-            import shutil
-            shutil.rmtree(cachedir)
+        cachedirs.append(cachedir)
+        for i, x in enumerate(cachedirs):
+            print('[{}] {}'.format(i, x))
+        choice = raw_input('Remove these directories? [y/N] ')
+        if choice != 'y':
+            print('Leaving the cache alone, done.')
+            return 0
+        for x in cachedirs:
+            if os.path.exists(x):
+                import shutil
+                shutil.rmtree(x)
         print('Cache deleted, done.')
         return 0
 
@@ -254,6 +274,9 @@ def main():
         return 1
 
     log.info('Version '+__version__)
+
+    for x in cachedirs:
+        log.warn('Stale cache directory (delete with `--rm-cache`): %s' % x)
 
     if ocl.compat_ocl_device_available():
         log.info('At least one compatible OpenCL device was detected')
