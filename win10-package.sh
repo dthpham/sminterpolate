@@ -4,8 +4,7 @@ version=$(cut -d \' -f2 butterflow/__init__.py)
 pkg=butterflow-$version
 
 # pacman -S base-devel msys2-devel mingw-w64-x86_64-toolchain  # build dependencies
-# pacman -S mingw-w64-x86_64-python2 mingw-w64-x86_64-python2-pip mingw-w64-x86_64-python2-numpy mingw-w64-x86_64-ffmpeg mingw-w64-x86_64-python2-cx_Freeze  mingw-w64-x86_64-SDL2  # pkg dependencies
-# pacman -S p7zip
+# pacman -S mingw-w64-x86_64-python2 mingw-w64-x86_64-python2-pip mingw-w64-x86_64-python2-numpy mingw-w64-x86_64-ffmpeg mingw-w64-x86_64-python2-cx_Freeze mingw-w64-x86_64-SDL2  # pkg dependencies
 
 # build_package() {
 #   cd mingw-packages/mingw-w64-$1
@@ -23,5 +22,6 @@ python2 setup.py build_exe
 if [ ! -f $pkg ]; then rm -rf $pkg; fi
 cp -R build/exe.mingw-2.7/ $pkg
 
+# pacman -S p7zip
 # p7zip a $pkg $pkg.7z
 # shasum -a256 $pkg.7z

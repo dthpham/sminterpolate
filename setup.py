@@ -129,9 +129,16 @@ if is_osx:
 else:
     cl_lib = ['OpenCL']
 
+old_linkflags = linkflags
+if cl_linkflags:
+    linkflags.extend(cl_linkflags)
+
 ocl_ext = Extension('butterflow.ocl', extra_compile_args=cxxflags,
-                    extra_link_args=cl_linkflags, libraries=cl_lib,
-                    sources=[os.path.join(pkgdir, 'ocl.cpp')], language='c')
+                    extra_link_args=linkflags,
+                    libraries=mklist(cl_lib, 'opencv_core', 'opencv_ocl'),
+                    sources=[os.path.join(pkgdir, 'ocl.cpp')], language='c++')
+
+linkflags = old_linkflags
 
 # numpy args
 np_includes = None
@@ -205,7 +212,7 @@ if use_cx_freeze:
     with open('win10-cxfreeze_include_files', 'r') as f:
         for line in f:
             line = line.rstrip()
-            if line.startswith('PREFIX'):
+            if line.startswith('prefix'):
                 prefix = line.split('=')[1]
                 continue
             else:

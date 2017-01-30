@@ -1,0 +1,27 @@
+# Maintainer: Duong Pham <dthpham@gmail.com>
+
+_realname=butterflow
+pkgbase=mingw-w64-${_realname}
+pkgname="${MINGW_PACKAGE_PREFIX}-${_realname}"
+pkgver=0.2.2
+pkgrel=1
+pkgdesc="Make slow motion and motion interpolated videos from the command line (mingw-w64)"
+arch=('x86_64')
+url="https://github.com/dthpham/butterflow"
+license=("custom")
+makedepends=("${MINGW_PACKAGE_PREFIX}-python2-setuptools"
+             "${MINGW_PACKAGE_PREFIX}-opencl-headers")
+depends=("${MINGW_PACKAGE_PREFIX}-python2-numpy"
+         "${MINGW_PACKAGE_PREFIX}-ffmpeg"
+         "${MINGW_PACKAGE_PREFIX}-opencv2"
+         "${MINGW_PACKAGE_PREFIX}-ocl-icd-git")
+source=("http://srv.dthpham.me/butterflow/${_realname}-${pkgver}.tar.gz")
+sha256sums=('8facea495812fdc7da77c207a4adda95dabab6de36e8461e645b5aa8ea4e44ed')
+
+package() {
+  cd "${srcdir}/${_realname}-${pkgver}"
+  MSYS2_ARG_CONV_EXCL="--prefix=;--install-scripts=;--install-platlib=;--install-purelib=;--install-data=" \
+    ${MINGW_PREFIX}/bin/python2 setup.py install --prefix=${MINGW_PREFIX} --root="${pkgdir}" --optimize=1
+
+  install -D -m644 LICENSE "${pkgdir}${MINGW_PREFIX}"/share/licenses/${_realname}/LICENSE
+}
