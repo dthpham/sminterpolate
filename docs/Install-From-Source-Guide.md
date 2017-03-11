@@ -61,6 +61,19 @@ Or if you're using the package without making changes:
  2. Install with `python setup.py install`.
       * **Tip:** Uninstall with `pip2 uninstall butterflow`.
 
+## Tricks
+### Is FFmpeg missing flags?
+To check if your version of FFmpeg was configured with all required flags you can run this snippet:
+1 means not available, 0 available
+```bash
+#!/bin/bash
+flags_available="$(ffmpeg 2>&1)";
+flags_required="--enable-gpl --enable-postproc --enable-swscale --enable-avfilter --enable-libmp3lame --enable-libvorbis --enable-libtheora --enable-libx264 --enable-libspeex --enable-shared --enable-pthreads --enable-libopenjpeg --enable-libfaac --enable-nonfree";
+for flag in ${flags_required}; do
+     echo "${flags_available}" | grep -sq -- "${flag}"; printf -- "$?\t${flag}\n";
+  done
+```
+
 ## What to do when you're done:
 * **Recommended:** Check if your OpenCL device is detected with `buutterflow -d`.
  * If it isn't, refer to [Setting up OpenCL](Setting-Up-OpenCL.md) for instructions on how to get it working. This step isn't required but when working on large segments of a video or with high resolution frames, rendering will be extremely slow without it.
