@@ -12,7 +12,7 @@ Butterflow has been successfully built and tested on OS X 10.12 (macOS Sierra), 
 ##### OS X:
  1. Install with [Homebrew](http://brew.sh/), `brew install ffmpeg` and `brew install homebrew/science/opencv --with-ffmpeg`.
  2. Install packages that will be used to set up a virtual environment with `sudo easy_install pip`, then `pip install virtualenv`.
- 
+
 ##### Arch Linux:
  1. Install with `sudo pacman -S git python2-setuptools python2-virtualenv python2-numpy ocl-icd opencl-headers ffmpeg`.
  2. Install the [opencv2](https://aur.archlinux.org/packages/opencv2/) package from the AUR.
