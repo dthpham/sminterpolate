@@ -240,14 +240,14 @@ def main():
               settings['v_container'].upper()))
         return 0
 
-    if not ocl.compat_ocl_device_available() and not args.sw:
+    if not args.sw and not ocl.compat_ocl_device_available():
         print('No compatible OpenCL devices were detected. Must force software '
               'rendering with the `-sw` flag to continue.')
         return 1
 
     log.info('Version '+__version__)
 
-    if ocl.compat_ocl_device_available():
+    if not args.sw and ocl.compat_ocl_device_available():
         log.info('At least one compatible OpenCL device was detected')
     else:
         log.warning('No compatible OpenCL devices were detected.')
