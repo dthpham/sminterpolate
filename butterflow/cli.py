@@ -74,6 +74,8 @@ def main():
                      help='Show this help message and exit')
     gen.add_argument('--version', action='store_true',
                      help='Show program\'s version number and exit')
+    gen.add_argument('--cache-dir', type=str,
+                     help='Specify path to the cache directory')
     gen.add_argument('-c', '--cache', action='store_true',
                      help='Show cache information and exit')
     gen.add_argument('--rm-cache', action='store_true',
@@ -202,6 +204,20 @@ def main():
         print(__version__)
         return 0
 
+    if args.cache_dir is not None:
+        cachedir = os.path.normpath(args.cache_dir)
+        if os.path.exists(cachedir):
+            if not os.path.isdir(cachedir):
+                print('Cache path is not a directory')
+                return 1
+        else:
+            os.makedirs(cachedir)
+        settings['tempdir'] = cachedir
+        settings['clbdir'] = os.path.join(cachedir, 'clb')
+        if not os.path.exists(settings['clbdir']):
+            os.makedirs(settings['clbdir'])
+        ocl.set_cache_path(settings['clbdir'] + os.sep)
+
     cachedir = settings['tempdir']
 
     cachedirs = []
@@ -274,6 +290,7 @@ def main():
         return 1
 
     log.info('Version '+__version__)
+    log.info('Cache directory:\t%s' % cachedir)
 
     for x in cachedirs:
         log.warn('Stale cache directory (delete with `--rm-cache`): %s' % x)
