@@ -324,7 +324,7 @@ def main():
     else:
         args.flow_filter = 0
     if args.smooth_motion:
-        args.polys = 0.01
+        args.poly_s = 0.01
 
     def optflow_fn(x, y,
                    pyr=args.pyr_scale, levels=args.levels,
