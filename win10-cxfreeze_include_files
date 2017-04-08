@@ -1,4 +1,4 @@
-PREFIX=C:\msys64\mingw64\bin
+prefix=C:\msys64\mingw64\bin
 avdevice-*.dll
 avfilter-*.dll
 avresample-*.dll

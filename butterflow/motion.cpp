@@ -1,4 +1,5 @@
 #include <Python.h>
+#include <iostream>
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/ocl/ocl.hpp>
@@ -200,22 +201,6 @@ ocl_interpolate_flow(PyObject *self, PyObject *args) {
     return py_frames;
 }
 
-static PyObject*
-set_cache_path(PyObject *self, PyObject *arg) {
-    char *cache_path = PyString_AsString(arg);
-    setBinaryPath(cache_path);
-
-    Py_RETURN_NONE;
-}
-
-static PyObject*
-set_num_threads(PyObject *self, PyObject *arg) {
-    int n_threads = PyInt_AsLong(arg);
-    setNumThreads(n_threads);
-
-    Py_RETURN_NONE;
-}
-
 static PyMethodDef module_methods[] = {
     {"ocl_interpolate_flow", ocl_interpolate_flow, METH_VARARGS,
         "Interpolate flow from frames"},
@@ -223,10 +208,6 @@ static PyMethodDef module_methods[] = {
         "Calc farneback optical flow"},
     {"time_steps_for_nfrs", time_steps_for_nfrs, METH_O,
         "Get time steps for interpolated frames"},
-    {"set_cache_path", set_cache_path, METH_O,
-        "Sets the path of OpenCL kernel binaries"},
-    {"set_num_threads", set_num_threads, METH_O,
-        "Set the number of threads for the next parallel region"},
     {NULL, NULL, 0, NULL}
 };
 

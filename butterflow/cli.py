@@ -8,7 +8,7 @@ import datetime
 import logging
 import cv2
 from butterflow.settings import default as settings
-from butterflow import ocl, avinfo, motion
+from butterflow import ocl, avinfo, motion, ocl
 from butterflow.render import Renderer
 from butterflow.sequence import VideoSequence, Subregion
 from butterflow.__init__ import __version__
@@ -61,6 +61,7 @@ def main():
                                   add_help=False)
     req = par.add_argument_group('Required arguments')
     gen = par.add_argument_group('General options')
+    dev = par.add_argument_group('Device options')
     dsp = par.add_argument_group('Display options')
     vid = par.add_argument_group('Video options')
     mux = par.add_argument_group('Muxing options')
@@ -73,10 +74,8 @@ def main():
                      help='Show this help message and exit')
     gen.add_argument('--version', action='store_true',
                      help='Show program\'s version number and exit')
-    gen.add_argument('-d', '--devices', action='store_true',
-                     help='Show detected OpenCL devices and exit')
-    gen.add_argument('-sw', action='store_true',
-                     help='Set to force software rendering')
+    gen.add_argument('--cache-dir', type=str,
+                     help='Specify path to the cache directory')
     gen.add_argument('-c', '--cache', action='store_true',
                      help='Show cache information and exit')
     gen.add_argument('--rm-cache', action='store_true',
@@ -87,6 +86,17 @@ def main():
                      help='Set to increase output verbosity')
     gen.add_argument('-q', '--quiet', action='store_true',
                      help='Set to suppress console output')
+
+    dev.add_argument('-d', '--show-devices', action='store_true',
+                     help='Show detected OpenCL devices and exit')
+    dev.add_argument('-device', type=int,
+                     default=-1,
+                     help='Specify the preferred OpenCL device to use as an '
+                     'integer. Device numbers can be listed with the `-d` '
+                     'option. The device will be chosen automatically if '
+                     'nothing is specified.')
+    dev.add_argument('-sw', action='store_true',
+                     help='Set to force software rendering')
 
     dsp.add_argument('-p', '--show-preview', action='store_true',
                      help='Set to show video preview')
@@ -180,10 +190,12 @@ def main():
 
     logging.basicConfig(level=settings['loglevel_0'], format=format)
     log = logging.getLogger('butterflow')
+
     if args.verbosity == 1:
         log.setLevel(settings['loglevel_1'])
     if args.verbosity >= 2:
         log.setLevel(settings['loglevel_2'])
+
     if args.quiet:
         log.setLevel(settings['loglevel_quiet'])
         settings['quiet'] = True
@@ -192,7 +204,31 @@ def main():
         print(__version__)
         return 0
 
+    if args.cache_dir is not None:
+        cachedir = os.path.normpath(args.cache_dir)
+        if os.path.exists(cachedir):
+            if not os.path.isdir(cachedir):
+                print('Cache path is not a directory')
+                return 1
+        else:
+            os.makedirs(cachedir)
+        settings['tempdir'] = cachedir
+        settings['clbdir'] = os.path.join(cachedir, 'clb')
+        if not os.path.exists(settings['clbdir']):
+            os.makedirs(settings['clbdir'])
+        ocl.set_cache_path(settings['clbdir'] + os.sep)
+
     cachedir = settings['tempdir']
+
+    cachedirs = []
+    tempfolder = os.path.dirname(cachedir)
+    for dirpath, dirnames, filenames in os.walk(tempfolder):
+        for d in dirnames:
+            if 'butterflow' in d:
+                if 'butterflow-'+__version__ not in d:
+                    cachedirs.append(os.path.join(dirpath, d))
+        break
+
     if args.cache:
         nfiles = 0
         sz = 0
@@ -205,16 +241,24 @@ def main():
                 sz += os.path.getsize(fp)
         sz = sz / 1024.0**2
         print('{} files, {:.2f} MB'.format(nfiles, sz))
-        print('Cache @ '+cachedir)
+        print('Cache: '+cachedir)
         return 0
     if args.rm_cache:
-        if os.path.exists(cachedir):
-            import shutil
-            shutil.rmtree(cachedir)
+        cachedirs.append(cachedir)
+        for i, x in enumerate(cachedirs):
+            print('[{}] {}'.format(i, x))
+        choice = raw_input('Remove these directories? [y/N] ')
+        if choice != 'y':
+            print('Leaving the cache alone, done.')
+            return 0
+        for x in cachedirs:
+            if os.path.exists(x):
+                import shutil
+                shutil.rmtree(x)
         print('Cache deleted, done.')
         return 0
 
-    if args.devices:
+    if args.show_devices:
         ocl.print_ocl_devices()
         return 0
 
@@ -246,11 +290,32 @@ def main():
         return 1
 
     log.info('Version '+__version__)
+    log.info('Cache directory:\t%s' % cachedir)
+
+    for x in cachedirs:
+        log.warn('Stale cache directory (delete with `--rm-cache`): %s' % x)
 
     if not args.sw and ocl.compat_ocl_device_available():
         log.info('At least one compatible OpenCL device was detected')
     else:
         log.warning('No compatible OpenCL devices were detected.')
+
+    if args.device != -1:
+        try:
+            ocl.select_ocl_device(args.device)
+        except IndexError as error:
+            print('Error: '+str(error))
+            return 1
+        except ValueError:
+            if not args.sw:
+                print('An incompatible device was selected.\n'
+                      'Must force software rendering with the `-sw` flag to continue.')
+                return 1
+
+    s = "Using device: %s"
+    if args.device == -1:
+        s += " (autoselected)"
+    log.info(s % ocl.get_current_ocl_device_name())
 
     use_sw_interpolate = args.sw
 
@@ -259,7 +324,7 @@ def main():
     else:
         args.flow_filter = 0
     if args.smooth_motion:
-        args.polys = 0.01
+        args.poly_s = 0.01
 
     def optflow_fn(x, y,
                    pyr=args.pyr_scale, levels=args.levels,
@@ -337,7 +402,7 @@ def main():
                    args.mark_frames,
                    args.audio)
 
-    motion.set_num_threads(settings['ocv_threads'])
+    ocl.set_num_threads(settings['ocv_threads'])
 
     log.info('Rendering:')
     added_rate = False
