@@ -209,7 +209,7 @@ if use_cx_freeze:
     # get files not picked up by cxfreeze
     import fnmatch
     include_files = []
-    with open('win10-cxfreeze_include_files', 'r') as f:
+    with open('packaging/windows/cxfreeze_include_files', 'r') as f:
         for line in f:
             line = line.rstrip()
             if line.startswith('prefix'):
