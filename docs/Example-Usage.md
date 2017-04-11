@@ -57,7 +57,7 @@ BF uses the Farneback algorithm to compute dense optical flows for frame interpo
 ### Tips and strategies
 
 #### Optimal input videos:
-BF works best on input videos with an inherent "fluidity" to them, videos where moving elements in a scene have a steady and traceable trail of motion. See the [glob and explosion demo](#motion-interpolation-vs-scaling-timestamps-glob-and-explosion) for a good example of these types of videos.
+BF works best on input videos with an inherent "fluidity" to them, videos where moving elements in a scene have a steady and traceable trail of motion. See the [glob and explosion demo](https://github.com/dthpham/butterflow/blob/master/docs/Demonstrations.md#motion-interpolated-slowmo-vs-scaling-timestamps-270-frames) for a good example of these types of videos.
 
 #### Artifact-less frames are a priority:
 Use the `-sm` flag if having artifact-less frames is a priority. This will tune settings to emphasize blending frames over the default behavior of warping pixels.
@@ -91,4 +91,4 @@ ffmpeg -i <input video> -vf mpdecimate -loglevel debug -f null -
 ffmpeg -i <input video> -vf mpdecimate,setpts=N/FRAME_RATE/TB <output video>
 ```
 
-Not using slowmo? There may be stuttering in the input video itself.
+Not using slowmo? Check if there is stuttering in the input video itself.

@@ -10,7 +10,8 @@
 #!/bin/bash
 # Using a GeForce GTX 760
 # Video: 4.05sec 23.976fps 96frames to -> 40.4sec ~48fps 1937frames
-# Rendering took 4.86 mins.
+# Rendering took 4.86 mins on Windows, 3.15 mins on Arch Linux
+# Rendering took 3.15 mins on Arch Linux
 
 A=her_day_1.0x_23.98fps.mp4
 if [ ! -f $A ]; then wget http://srv.dthpham.me/butterflow/demos/${A}; fi

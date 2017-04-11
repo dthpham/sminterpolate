@@ -1,17 +1,17 @@
 # Butterflow
 ## Features
-1. Makes **motion interpolated videos** (*increase a video's frame rate by rendering intermediate frames based on motion, using a combination of pixel-warping and blending*).
-2. Makes **smooth motion videos** (*simple blending between frames*).
-3. Leverages interpolated frames to make **fluid slow motion videos**.
+* Makes **motion interpolated videos** (increase a video's frame rate by rendering intermediate frames based on motion, uses a combination of pixel-warping and blending).
+* Makes **smooth motion videos** (simple blending between frames).
+* Leverages interpolated frames to make **fluid slow motion videos**.
 
 ## Demonstration
 BF works by rendering intermediate frames between existing frames using a process called [motion interpolation](http://en.wikipedia.org/wiki/Motion_interpolation). Given two existing frames, `A` and `B`, this program can generate frames `C.1`, `C.2`...`C.n` positioned between the two. In contrast to other tools that can only *blend or dupe* frames, this program *warps pixels based on motion* to generate new ones.
 
-The addition of interpolated frames increases a video's frame rate and can give the perception of more fluid animation, an effect most people know as the "soap opera effect". Besides creating motion interpolated videos, BF can leverage additional frames to make fluid slow motion videos:
+The addition of interpolated frames can give the perception of more fluid animation commonly found in high frame rate videos, an effect most people know as the "soap opera effect". Besides creating motion interpolated videos, BF can leverage interpolated frames to make fluid slow motion videos:
 
 ![](http://srv.dthpham.me/butterflow/demos/1.gif)
 
-In these examples, BF slowed a `1s` video down by `10x`. An additional `270` frames were interpolated from `30` original source frames giving the video a smooth feel during playback. The same video was slowed down with FFmpeg alone, but because it dupes frames and can't interpolate new ones the video has a noticeable stutter (shown on the right-hand side).
+In these examples, BF slowed a `1sec` video down by `10x`. An additional `270` frames were interpolated from `30` original source frames giving the video a smooth feel during playback. The same video was slowed down with FFmpeg alone, but because it dupes frames and can't interpolate new ones, the video has a noticeable stutter (shown on the right-hand side).
 
 ![](http://srv.dthpham.me/butterflow/demos/2.gif)
 
@@ -27,7 +27,7 @@ In these examples, BF slowed a `1s` video down by `10x`. An additional `270` fra
 * **From Source (Ubuntu, Debian):** Refer to the [Install From Source Guide](https://github.com/dthpham/butterflow/blob/master/docs/Install-From-Source-Guide.md) for instructions.
 
 ## Setup (for Windows and Linux users)
-**Note:** No setup is necessary on macOS. Read [this](https://github.com/dthpham/butterflow/blob/master/docs/Setting-Up-OpenCL.md#os-x-mavericks-and-newer) if you run into a problem with OpenCL on macOS.
+**Note:** No setup is necessary on macOS. Read [this](https://github.com/dthpham/butterflow/blob/master/docs/Setting-Up-OpenCL.md#macos-mavericks-and-newer) if you run into a problem with OpenCL.
 
 BF requires no setup to use, but it's too slow out of the box to do any serious work. To take advantage of hardware accelerated methods that will make rendering significantly faster, you must set up a functional OpenCL environment on your machine.
 

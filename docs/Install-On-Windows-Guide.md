@@ -7,9 +7,9 @@
 2. Clone the BF repo with `git clone https://github.com/dthpham/butterflow.git`.
 3. Launch a MSYS2 shell.
 4. Change into the project's `packaging\windows` directory.
-5. `chmod u+x build_depends.sh` then run the script.
+5. `chmod u+x build_depends.sh` and then run the script with `./build_depends.sh`.
 6. Close the MSYS2 shell and launch a MINGW64 shell.
-6. Switch back into the top-level project folder.
+6. Switch back into the top-level of the project folder.
 7. Install BF with `python2 setup.py develop`. At this point, you can use BF system-wide while in a MINGW64 shell.
     * **Tip:** To uninstall: `pip2 uninstall butterflow`.
 8. See: [When finished](Install-From-Source-Guide.md#when-finished).
