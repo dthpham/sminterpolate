@@ -20,7 +20,7 @@ In these examples, BF slowed a `1sec` video down by `10x`. An additional `270` f
 ## How to install
 **Important:** BF only works on 64-bit systems.
 
-* **macOS:** With [Homebrew](http://brew.sh/), `brew install homebrew/science/butterflow`.
+* **macOS:** With [Homebrew](http://brew.sh/), `brew install brewsci/science/butterflow`.
 * **Windows 10 (Portable)**: Download [butterflow-0.2.3.7z](http://srv.dthpham.me/butterflow/releases/win/butterflow-0.2.3.7z).
   * Sha256: 1e138b7d88154bed7150a0a155843832cba8d38be07b80bedee9f625c5fa0cc0
 * **Arch Linux:** A package is available in the AUR under [`butterflow`](https://aur.archlinux.org/packages/butterflow/).
