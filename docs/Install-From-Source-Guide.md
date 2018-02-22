@@ -82,7 +82,7 @@ for flag in ${flags_required}; do
 
 ## When finished
 * Check if your OpenCL device is detected with `butterflow -d`.
-   * If it isn't, refer to [Setting up OpenCL](Setting-Up-OpenCL.md) for instructions on how to get it working. This step isn't required, but rendering will be extremely slow without it.
-* **Optional:** While in the project directory, you can run a suite of tests against butterflow with `python setup.py test`.
+   * If it isn't, refer to [Setting up OpenCL](Setting-Up-OpenCL.md) for instructions on how to get it working. This isn't required but rendering will be extremely slow without it.
+* **Optional:** You can run a suite of tests against butterflow with `python setup.py test` while in the project directory.
    * Tests will fail if OpenCL isn't set up.
 * See: [Example Usage](https://github.com/dthpham/butterflow/blob/master/docs/Example-Usage.md).

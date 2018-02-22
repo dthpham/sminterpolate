@@ -45,6 +45,16 @@ dev_settings.py
 *.mp4
 *.gif
 test_videos
+notes.txt
+*.jpg
+*.png
+butterflow-*.sha256sum
+butterflow-*.7z
+butterflow-*
+a.sh
+# check_dupes_small_hash.py
+# package.sh
+# cxfreeze-include-files.txt
 
 # win10
 butterflow.lnk

@@ -42,13 +42,16 @@ ffprobe -i $B
 
 generate() {
   if [ ! -f $1 ]; then wget http://srv.dthpham.me/butterflow/demos/${1}; fi
+
   butterflow -e -l -v -s a=0,b=end,spd=0.1 $1 -o a.mp4
   ffmpeg -y -ss 0 -t 1 -i $1 -filter:v "setpts=10*PTS" -c:v libx264 -qp 0 b.mp4
+
   ffmpeg -y -i a.mp4 -i b.mp4 -filter_complex \
   "[0:v]setpts=PTS-STARTPTS, \
   pad=iw*2:ih[left]; [1:v]setpts=PTS-STARTPTS[right]; \
   [left][right]overlay=overlay_w" \
   -an -sn -c:v libx264 -preset veryslow -crf 18 side.mp4
+
   ffmpeg -y -i side.mp4 -vf scale=-2:200 $2
 }
 

@@ -1,7 +1,7 @@
 # Setting Up OpenCL
 **Note:** This guide is adapted from other sources and is not definitive or up to date.
 
-**Tip for Linux users:** For extra information on how to satisfy the OpenCL requirement, please read [How to set up OpenCL in Linux](http://wiki.tiker.net/OpenCLHowTo).
+**Tip for Linux users:** Read [How to set up OpenCL in Linux](http://wiki.tiker.net/OpenCLHowTo) for extra information on how to satisfy the OpenCL requirement
 
 ## Setup instructions
 ### macOS (Mavericks and newer):
@@ -43,12 +43,12 @@ OpenCL should be provided by default as long as you have the latest version of y
    * If you're using Intel or AMD: amd-opencl-icd (it supports both).
 
 ### Arch Linux:
-Typically, you just need to install at least one vendor-specific OpenCL implementation that supports your hardware. For NVIDIA, install [opencl-nvidia](https://www.archlinux.org/packages/extra/x86_64/opencl-nvidia/), or [intel-opencl-runtime](https://aur.archlinux.org/packages/intel-opencl-runtime/) if you're using an Intel device.
+Typically, you just need to install at least one vendor-specific OpenCL implementation that supports your hardware. For NVIDIA install [opencl-nvidia](https://www.archlinux.org/packages/extra/x86_64/opencl-nvidia/), or [intel-opencl-runtime](https://aur.archlinux.org/packages/intel-opencl-runtime/) if you're using an Intel device.
 
 **Tip:** Refer to the Arch [GPGPU wiki page](https://wiki.archlinux.org/index.php/GPGPU) for more information.
 
 ## Device compatibility
-For hardware accelerated rendering with BF, you will need to have:
+For hardware accelerated rendering with BF you will need:
 
 1. A `FULL_PROFILE` hardware device that supports OpenCL 1.2 or above
 2. Max Work Group Size greater than 256
@@ -56,6 +56,4 @@ For hardware accelerated rendering with BF, you will need to have:
 
 You can print your device info with `butterflow -d` or by using a more comprehensive tool like [clinfo](https://github.com/Oblomov/clinfo).
 
-BF will force you to use CPU rendering with the `-sw` option if there are no compatible devices available.
-
-**Important:** `-sw` is deprecated and will be removed in a future version.
+BF will force you to use CPU rendering with the `-sw` option if there are no compatible devices available (**Important:** `-sw` is deprecated and will be removed in a future version).
