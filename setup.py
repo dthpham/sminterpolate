@@ -6,7 +6,9 @@ import sys
 import ast
 import re
 import subprocess
-from setuptools import find_packages, Extension
+from setuptools import find_packages
+import functools
+import fnmatch
 
 
 # get version number
@@ -75,6 +77,19 @@ cxxflags     = []
 is_win = sys.platform.startswith('win')
 is_osx = sys.platform.startswith('darwin')
 is_nix = sys.platform.startswith('linux')
+
+# should we use cxfreeze?
+use_cx_freeze = False
+if is_win and 'build_exe' in sys.argv:
+    try:
+        # cxfreeze extends setuptools and should be imported after it
+        from cx_Freeze import setup, Executable
+        from distutils.core import Extension    # cxfreeze builds upon distutils
+        use_cx_freeze = True
+    except ImportError as exc:
+        sys.exit(exc)
+else:
+    from setuptools import setup, Extension, find_packages
 
 # global cflags
 if is_devbuild:
@@ -171,19 +186,6 @@ motion_ext = Extension('butterflow.motion',
                                 os.path.join(nddir, 'src', 'conversion.cpp')],
                        language='c++')
 
-# should we use cxfreeze?
-use_cx_freeze = False
-if is_win and 'build_exe' in sys.argv:
-    try:
-        # cxfreeze extends setuptools and should be imported after it
-        from cx_Freeze import setup, Executable
-        use_cx_freeze = True
-    except ImportError:
-        # use setuptools if cxfreeze doesn't exist
-        from setuptools import setup
-else:
-    from setuptools import setup
-
 # shared args
 setup_kwargs = {
     'name':         'butterflow',
@@ -202,17 +204,16 @@ setup_kwargs = {
     'test_suite':   'tests'
 }
 
-import functools
 setup = functools.partial(setup, **setup_kwargs)
 
 if use_cx_freeze:
-    # get files not picked up by cxfreeze
-    import fnmatch
-    include_files = []
-    with open('packaging/windows/cxfreeze_include_files', 'r') as f:
+    additional_files = []
+    with open('cxfreeze-include-files.txt', 'r') as f:
         for line in f:
             line = line.rstrip()
-            if line.startswith('prefix'):
+            if line.startswith('#'):
+                continue
+            elif line.startswith('Prefix'):
                 prefix = line.split('=')[1]
                 continue
             else:
@@ -221,18 +222,23 @@ if use_cx_freeze:
                     if fnmatch.fnmatch(file, pattern):
                         filename = file
                 relpath = os.path.relpath(os.path.join(prefix, filename))
-                include_files.append((relpath, filename))
+                additional_files.append((relpath, filename))
     build_exe_options = {
         'packages': ['butterflow'],
+        'includes': ['numpy.core._methods', 'numpy.lib.format'],  # Bug: https://stackoverflow.com/q/41735413
         'include_msvcr': True,
-        'excludes': ['Tkinter'],
-        'include_files': include_files
+        'excludes': ['copyreg', 'distutils', 'email', 'future', 'pydoc_data',
+                     'setuptools', 'test', 'tests', 'test', 'Tkinter'],
+        'include_files': additional_files,
+        # 'replace_paths': [("*", "")],
     }
     executables = [
         Executable(script='butterflow/__main__.py',
+                   # initScript=os.path.abspath('butterflow/console.py'),
+                   base=None,
                    targetName='butterflow.exe',
                    icon='butterflow.ico',
-                   base=None)
+                   copyright='Copyright (c) 2017 Duong Pham')
     ]
     setup(options={'build_exe': build_exe_options}, executables=executables)
 else:

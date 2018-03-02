@@ -6,9 +6,10 @@ import re
 import argparse
 import datetime
 import logging
+import numpy.core.multiarray  # Bug: https://github.com/opencv/opencv/issues/8139
 import cv2
 from butterflow.settings import default as settings
-from butterflow import ocl, avinfo, motion, ocl
+from butterflow import ocl, avinfo, motion
 from butterflow.render import Renderer
 from butterflow.sequence import VideoSequence, Subregion
 from butterflow.__init__ import __version__
