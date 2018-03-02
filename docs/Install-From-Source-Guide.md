@@ -8,7 +8,7 @@
 * Ubuntu 15.04 (Vivid Vervet)
 * Debian 8.2 (Jessie)
 
-**Note:** Getting BF to work on other Linux distributions may be possible, but expect any support to be limited.
+**Note:** Getting BF to work on other Linux distributions may be possible, but expect support to be limited.
 
 ## Instructions
 **Windows users:** Refer to the [Install on Windows Guide](Install-On-Windows-Guide.md#install-from-source).
@@ -22,7 +22,7 @@
 ##### Arch Linux:
  1. Install with `sudo pacman -S git python2-setuptools python2-virtualenv python2-numpy ocl-icd opencl-headers ffmpeg`.
  2. Install the [opencv2](https://aur.archlinux.org/packages/opencv2/) package from the AUR.
-      * **Tip:** Remove all packages that depend on opencv, like opencv-samples, before installing opencv2. This will save you the trouble of re-compiling the package, which takes a long time, if the install fails.
+      * **Tip:** Remove all packages that depend on opencv, like opencv-samples, before installing opencv2. This will save you the trouble of re-compiling the package, which takes a long time if the install fails.
 
 ##### Ubuntu:
 Install with `sudo apt-get install git virtualenv python-dev ocl-icd-opencl-dev libopencv-dev python-opencv ffmpeg`.
@@ -69,8 +69,7 @@ Or if you're using the package without making changes:
 
 ## Tricks
 ### Is FFmpeg missing flags?
-To check if your version of FFmpeg was configured with all required flags you can run this snippet:
-1 means not available, 0 available
+To check if your version of FFmpeg was configured with all the required flags, you can run this snippet (1 means not available, 0 means available).
 ```bash
 #!/bin/bash
 flags_available="$(ffmpeg 2>&1)";
@@ -82,7 +81,7 @@ for flag in ${flags_required}; do
 
 ## When finished
 * Check if your OpenCL device is detected with `butterflow -d`.
-   * If it isn't, refer to [Setting up OpenCL](Setting-Up-OpenCL.md) for instructions on how to get it working. This step isn't required, but rendering will be extremely slow without it.
-* **Optional:** While in the project directory, you can run a suite of tests against butterflow with `python setup.py test`.
+   * If it isn't, refer to [Setting up OpenCL](Setting-Up-OpenCL.md) for instructions on how to get it working. This isn't required, but rendering will be extremely slow without it.
+* **Optional:** You can run a suite of tests against butterflow with `python setup.py test` while in the project directory.
    * Tests will fail if OpenCL isn't set up.
 * See: [Example Usage](https://github.com/dthpham/butterflow/blob/master/docs/Example-Usage.md).
