@@ -20,7 +20,7 @@ with open('butterflow/__init__.py', 'rb') as f:
 rootdir = os.path.abspath(os.sep)
 topdir = os.path.join(os.path.dirname(os.path.realpath(__file__)))
 pkgdir = os.path.join(topdir, 'butterflow')
-vendordir = os.path.join(topdir, 'vendor')
+dependsdir = os.path.join(topdir, 'depends')
 
 # are we building a development version?
 building = True
@@ -158,7 +158,7 @@ if is_osx:
                       '{}/Extras/lib/python/numpy/core/include'.format(py_ver)
 
 # opencv-ndarray-conversion args
-nddir = os.path.join(vendordir, 'opencv-ndarray-conversion')
+nddir = os.path.join(dependsdir, 'opencv-ndarray-conversion')
 nd_includes = os.path.join(nddir, 'include')
 
 motion_ext = Extension('butterflow.motion',
