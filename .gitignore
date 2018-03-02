@@ -43,10 +43,28 @@ tags
 *.pth
 dev_settings.py
 *.mp4
+*.mov
 *.gif
 test_videos
+notes.txt
+*.jpg
+*.png
+a.sh
+
+# packaging
+build_depends.sh
+cxfreeze-*.txt
+check_dupes_small_hash.py
+dupes_remover.py
+package.sh
+butterflow-*.sha256sum
+butterflow-*.7z
+butterflow-*
 
 # win10
 butterflow.lnk
 init.bat
 snippets
+
+#rope
+.ropeproject
