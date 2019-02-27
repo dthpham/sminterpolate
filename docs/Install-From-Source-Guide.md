@@ -1,14 +1,5 @@
 # Install From Source Guide
-**Requirements:** A 64-bit system.
-
-## Known working platforms
-* macOS 10.12 (Mavericks and newer)
-* Windows 10
-* Arch Linux
-* Ubuntu 15.04 (Vivid Vervet)
-* Debian 8.2 (Jessie)
-
-**Note:** Getting BF to work on other Linux distributions may be possible, but expect support to be limited.
+**Requirements:** A 64-bit system with a compatible graphics device.
 
 ## Instructions
 **Windows users:** Refer to the [Install on Windows Guide](Install-On-Windows-Guide.md#install-from-source).

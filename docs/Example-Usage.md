@@ -10,9 +10,9 @@
 3. Set a fractional frame rate: `butterflow -r 23.976 <video>`.
     * This command is the same as `butterflow -r 24/1.001 <video>`.
 
-**Note:** In general, frames will be interpolated if the frame rate is increased, otherwise they'll be dropped. The video's original rate will be used if `-r` is not set (an X fps input video will yield an X fps output video).
+**Note:** In general frames will be interpolated if the frame rate is increased, otherwise they'll be dropped. The video's original rate will be used if `-r` is not set (an X fps input video will yield an X fps output video).
 
-**Note:** BF isn't optimized for tasks that only involve dropping frames, so use another tool like FFMPEG if that's the only thing you're doing.
+**Note:** BF isn't optimized for tasks that only involve dropping frames so use another tool like FFmpeg if that's the only thing you're doing.
 
 ### Altering speed, duration, and region fps:
 #### Examples:
@@ -26,7 +26,7 @@
     * **Important:** `fps` is different from `-r`,  which sets the global playback rate.
     * Think of `fps` as "create `fps`=X frames for every 1 second in this region".
 
-**Note:** In most cases, slowing a video down or extending its duration will cause frames to be interpolated, otherwise they'll be dropped.
+**Note:** In most cases slowing a video down or extending its duration will cause frames to be interpolated, otherwise they'll be dropped.
 
 ### Working on one region:
 #### Examples:
@@ -54,7 +54,7 @@ BF uses the Farneback algorithm to compute dense optical flows for frame interpo
 ### Tips and strategies
 
 #### Optimal input videos:
-BF works best on input videos with an inherent "fluidity" to them, videos where moving elements in a scene have a steady and traceable trail of motion. See this [demo](https://github.com/dthpham/butterflow/blob/master/docs/Demonstrations.md#motion-interpolated-slowmo-vs-scaling-timestamps-270-frames) for a good example of these types of videos.
+BF works best on input videos with an inherent "fluidity" to them, videos where moving elements in a scene have a steady and traceable trail of motion.
 
 #### Artifact-less frames are a priority:
 Use the `-sm` flag if having artifact-less frames is a priority. This will tune settings to emphasize blending frames over the default behavior of warping pixels.
@@ -67,25 +67,16 @@ Tune the `--poly-s` setting. `--poly-s=<lower>` will blend more, `--poly-s=<high
 #### Few source frames to work with/time-lapse videos:
 These types of videos aren't optimal for usage with BF because the motion between frames tends to be too extreme. If pure blending with the `-sm` isn't providing the effect you're looking for (you need motion interpolation), then you can counteract the lack of frames by rendering tons of interpolated frames at first (typically with `-r <higher>`, `spd=<very low>` or `fps=<higher>`, or a combination thereof), and then speeding up the playback to a desired speed.
 
-For example:
-```bash
-butterflow -v -r24 -s a=0,b=3.9,spd=.1 --poly-s=0.8 <input video> -o <temp video>
-butterflow -v -s full,spd=1.5 <temp video> -o <output video>
-```
+For example `butterflow -v -r24 -s a=0,b=3.9,spd=.1 --poly-s=0.8 <input video> -o <temp video>`, followed by `butterflow -v -s full,spd=1.5 <temp video> -o <output video>`.
 
 #### Artifacts and obfuscating them:
-The presence of pixel artifacts/undesirable warping effects depends on many factors: the frame rate of the source video, its dimensions, original image quality, and the type of motion present. Artifacts will be more prevalent when the motion between source frames is atypical or falls on extremes (e.g., during scene changes, camera shot changes, when people or objects pop in and out between frames or cover large distances in a short period of time).
+The presence of pixel artifacts/undesirable warping effects depends on many factors: the frame rate of the source video, its dimensions, the original image quality, and the type of motion present. Artifacts will be more prevalent when the motion between source frames is atypical or falls on extremes (e.g., during scene changes, camera shot changes, when people or objects pop in and out between frames or cover large distances in a short period of time).
 
 Lower resolution videos are good at obfuscating artifacts and they tend to be less prone to producing them. If the output image is artifact heavy, try scaling the video down with `-vs <lower>`.
 
 You can skip over scene/camera shot changes with the `-s` option.
 
 #### Output video is stuttering?
-Duplicate frames will cause the output video to stutter when doing slowmo. Try using FFMPEG's decimate filter to generate a readout of what frames the filter thinks are duplicates and then remove them before passing the video to BF:
+Duplicate frames will cause the output video to stutter when doing slowmo. Try using FFmpeg's decimate filter to generate a readout of what frames the filter thinks are duplicates and then remove them before passing the video to BF.
 
-```bash
-ffmpeg -i <input video> -vf mpdecimate -loglevel debug -f null -
-ffmpeg -i <input video> -vf mpdecimate,setpts=N/FRAME_RATE/TB <output video>
-```
-
-Not using slowmo? Check if there is stuttering in the input video itself.
+If you're not using slow motion check if there is stuttering in the input video itself.
