@@ -5,8 +5,6 @@ mingw-w64-*.log*
 
 # src+pkg
 *.tar.gz
+*.tar.xz
 *.pkg.tar.xz
 ocl-icd
-
-# docs
-README.md

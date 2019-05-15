@@ -5,7 +5,7 @@ _realname=opencv
 pkgbase=mingw-w64-${_realname}2
 pkgname="${MINGW_PACKAGE_PREFIX}-${_realname}2"
 pkgver=2.4.13
-pkgrel=1
+pkgrel=2
 pkgdesc="Open Source Computer Vision Library (mingw-w64)"
 arch=('any')
 url="http://opencv.org/"
@@ -24,12 +24,12 @@ depends=(#"${MINGW_PACKAGE_PREFIX}-gst-plugins-base0.10"
 makedepends=("${MINGW_PACKAGE_PREFIX}-cmake"
             #"${MINGW_PACKAGE_PREFIX}-qt5"
             "${MINGW_PACKAGE_PREFIX}-eigen3"
-            "${MINGW_PACKAGE_PREFIX}-ffmpeg"
+            "${MINGW_PACKAGE_PREFIX}-ffmpeg3"
             "${MINGW_PACKAGE_PREFIX}-python2-numpy"
-            # "${MINGW_PACKAGE_PREFIX}-vtk"
+            #"${MINGW_PACKAGE_PREFIX}-vtk"
             )
 optdepends=("${MINGW_PACKAGE_PREFIX}-eigen3"
-            "${MINGW_PACKAGE_PREFIX}-ffmpeg: support to read and write video files"
+            "${MINGW_PACKAGE_PREFIX}-ffmpeg3: support to read and write video files"
             "${MINGW_PACKAGE_PREFIX}-python2-numpy: Python 2.x interface"
             "${MINGW_PACKAGE_PREFIX}-vtk: opencv_viz module")
 provides=('opencv')

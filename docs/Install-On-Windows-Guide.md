@@ -5,11 +5,11 @@
 ### Using custom package scripts (recommended method):
 1. Install the 64-bit version of [MSYS2](https://msys2.github.io/) and set it up using their guide.
 2. Launch a MSYS2 shell.
-3. Install dependencies with `pacman -S base-devel msys2-devel mingw-w64-x86_64-toolchain mingw-w64-x86_64-python2 mingw-w64-x86_64-python2-pip mingw-w64-x86_64-python2-numpy mingw-w64-x86_64-ffmpeg mingw-w64-x86_64-SDL2 git`.
+3. Install dependencies with `pacman -S base-devel msys2-devel mingw-w64-x86_64-toolchain mingw-w64-x86_64-python2 mingw-w64-x86_64-python2-pip mingw-w64-x86_64-python2-numpy mingw-w64-x86_64-SDL2 git`.
     * Select to download all items in the toolchain when prompted.
 4. Clone the BF repo with `git clone https://github.com/dthpham/butterflow.git`.
 5. Change into the project's `packaging\windows` directory.
-6. Install the mingw-w64-ocl-icd-git and mingw-w64-opencv2 packages by:
+6. Install the mingw-w64-ocl-icd-git, mingw-w64-ffmpeg3, and mingw-w64-opencv2 packages by:
     1. Changing into each package directory.
     2. Building with `MINGW_INSTALLS=mingw64 makepkg-mingw -sLf`.
         * **Note:** Select defaults when prompted.
@@ -20,7 +20,7 @@
     * **Tip:** To uninstall: `pip2 uninstall butterflow`.
 10. See: [When finished](Install-From-Source-Guide.md#when-finished).
 
-### Manually:
+### Manually (outdated):
 #### Set up a build environment with MSYS2:
 1. Install the 64-bit version of [MSYS2](https://msys2.github.io/) and set it up using their guide.
 2. Open the "Edit the system environment variables" dialog from the Control Panel and add these to the front of PATH: `PATH=C:\msys64\mingw64\local\bin;C:\msys64\mingw64\bin;C:\msys64\usr\bin`.
