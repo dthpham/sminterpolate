@@ -1,7 +1,7 @@
 # Example Usage
-**Tip:** Run `butterflow -h` for a full list of options and their default values.
 
 ### Altering the frame rate (the global playback rate):
+
 #### Examples:
 1. Double a video's frame rate with `butterflow -r 2x <video>`.
     * `-r`, or `--playback-rate`, sets the global playback rate.
@@ -15,6 +15,7 @@
 **Note:** BF isn't optimized for tasks that only involve dropping frames so use another tool like FFmpeg if that's the only thing you're doing.
 
 ### Altering speed, duration, and region fps:
+
 #### Examples:
 1. Set a video to 0.25x speed with `butterflow -s a=0,b=end,spd=0.25 <video>`.
     * `-s`, or `--subregions`, specifies a subregion to work on. Here the entire video is worked on.
@@ -29,6 +30,7 @@
 **Note:** In most cases slowing a video down or extending its duration will cause frames to be interpolated, otherwise they'll be dropped.
 
 ### Working on one region:
+
 #### Examples:
 1. Double the frame rate on a 1s region with `butterflow -r 2x -s a=1:30:24,b=1:30:25,spd=1 <video>`.
     * Setting `spd=1` has a nulling effect on the `-s` option. It means "work on this region but don't alter its speed, duration, or fps". It ensures that (1) only the `-r` option applies to the region and (2) only the `-r` argument will determine if frames will be dropped or rendered.
