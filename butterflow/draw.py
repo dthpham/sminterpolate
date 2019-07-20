@@ -5,7 +5,7 @@ import sys
 import collections
 import inspect
 from butterflow.settings import default as settings
-from butterflow.__init__ import __version__
+from butterflow.version import __version__
 
 
 def draw_if_fr_fits(w_fits, h_fits, min_scale):

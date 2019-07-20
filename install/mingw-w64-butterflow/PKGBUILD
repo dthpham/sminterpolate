@@ -3,7 +3,7 @@
 _realname=butterflow
 pkgbase=mingw-w64-${_realname}
 pkgname="${MINGW_PACKAGE_PREFIX}-${_realname}"
-pkgver=0.2.3
+pkgver=0.2.4
 pkgrel=1
 pkgdesc="Make slow motion and motion interpolated videos from the command line (mingw-w64)"
 arch=('x86_64')
@@ -15,8 +15,8 @@ depends=("${MINGW_PACKAGE_PREFIX}-python2-numpy"
          "${MINGW_PACKAGE_PREFIX}-ffmpeg3"
          "${MINGW_PACKAGE_PREFIX}-opencv2"
          "${MINGW_PACKAGE_PREFIX}-ocl-icd-git")
-source=("${_realname}-${pkgver}.tar.gz"::https://github.com/dthpham/butterflow/archive/v${pkgver}.tar.gz)
-sha256sums=('f7b79afc5604684c53e5773bf4374b4d1afc042edcdb11f6bb4073513674cf8a')
+source=("${_realname}-${pkgver}.tar.gz"::https://github.com/dthpham/butterflow/archive/${pkgver}.tar.gz)
+sha256sums=('SKIP')
 
 package() {
   cd "${srcdir}/${_realname}-${pkgver}"

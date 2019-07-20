@@ -5,7 +5,7 @@ pkgbase=mingw-w64-${_realname}-git
 pkgname="${MINGW_PACKAGE_PREFIX}-${_realname}-git"
 _commit=cb4acb99df3441e147bd859c20d9c3533ec95ce8
 pkgver=r5.cb4acb9
-pkgrel=1
+pkgrel=2
 pkgdesc="OpenCL Installable Client Driver (ICD) Loader (mingw-w64)"
 arch=('any')
 url="http://www.khronos.org/registry/cl/"
@@ -14,12 +14,20 @@ makedepends=("${MINGW_PACKAGE_PREFIX}-cmake"
              "${MINGW_PACKAGE_PREFIX}-opencl-headers"
              "git")
 options=('strip')
-source=("${_realname}"::"git+https://github.com/KhronosGroup/OpenCL-ICD-Loader.git#commit=""${_commit}")
-sha256sums=('SKIP')
+source=("${_realname}"::"git+https://github.com/KhronosGroup/OpenCL-ICD-Loader.git#commit=""${_commit}"
+        0001-use-hkey-current-user-hive.patch)
+sha256sums=('SKIP'
+            '37dd6193b9dca2c4a7c68ce8d9d2f6206d3c2c94f64d374fa16ddaa676b65dbc')
 
 pkgver() {
   cd "${srcdir}/${_realname}"
   printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
+}
+
+prepare() {
+  cd ${_realname}
+  patch -Np1 -i ${srcdir}/0001-use-hkey-current-user-hive.patch
+  cd ..
 }
 
 build() {

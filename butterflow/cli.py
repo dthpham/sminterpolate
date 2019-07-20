@@ -12,7 +12,7 @@ from butterflow.settings import default as settings
 from butterflow import ocl, avinfo, motion
 from butterflow.render import Renderer
 from butterflow.sequence import VideoSequence, Subregion
-from butterflow.__init__ import __version__
+from butterflow.version import __version__
 
 
 flt_pattern = r"(?P<flt>\d*\.\d+|\d+)"
@@ -65,7 +65,7 @@ def main():
     dev = par.add_argument_group('Device options')
     dsp = par.add_argument_group('Display options')
     vid = par.add_argument_group('Video options')
-    mux = par.add_argument_group('Muxing options')
+    aud = par.add_argument_group('Audio options')
     fgr = par.add_argument_group('Advanced options')
 
     req.add_argument('video', type=str, nargs='?', default=None,
@@ -147,7 +147,7 @@ def main():
                      'artifact-less frames by emphasizing blended frames over '
                      'warping pixels.')
 
-    mux.add_argument('-audio', action='store_true',
+    aud.add_argument('-audio', action='store_true',
                      help='Set to add the source audio to the output video')
 
     fgr.add_argument('--fast-pyr', action='store_true',

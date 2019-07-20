@@ -46,21 +46,17 @@ tags
 *.gif
 *.jpg
 *.png
-gifs
-motionblur
 releases
-test_videos
 save.py
 
 # packaging
-build_deps.sh
-check_dupes.py
-*_files.txt
-dupes.txt
+build_dependencies.sh
+check_dupes_small_hash.py
+include_files.txt
+delete_files.txt
 package.sh
 remove_dupes.py
-uninstall_deps.sh
-upload_package.sh
+uninstall_dependencies.sh
 
 # releases
 butterflow-*
@@ -70,4 +66,3 @@ butterflow-*.sha256sum
 # windows
 butterflow.lnk
 init.bat
-snippets

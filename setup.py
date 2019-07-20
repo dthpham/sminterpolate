@@ -14,7 +14,7 @@ import fnmatch
 # get version number
 # avoid importing from package
 version_re = re.compile(r'__version__\s+=\s+(.*)')
-with open('butterflow/__init__.py', 'rb') as f:
+with open('butterflow/version.py', 'rb') as f:
     version = str(ast.literal_eval(version_re.search(
         f.read().decode('utf-8')).group(1)))
 
@@ -208,12 +208,12 @@ setup = functools.partial(setup, **setup_kwargs)
 
 if use_cx_freeze:
     additional_files = []
-    with open('cxfreeze-include-files.txt', 'r') as f:
+    with open('include_files.txt', 'r') as f:
         for line in f:
             line = line.rstrip()
             if line.startswith('#'):
                 continue
-            elif line.startswith('Prefix'):
+            elif line.startswith('prefix'):
                 prefix = line.split('=')[1]
                 continue
             else:

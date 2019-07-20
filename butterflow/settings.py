@@ -5,7 +5,7 @@ import logging
 import tempfile
 import cv2
 import ocl
-from butterflow.__init__ import __version__
+from butterflow.version import __version__
 
 
 default = {
