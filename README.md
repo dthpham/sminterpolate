@@ -22,7 +22,7 @@ In these examples BF slowed a `1sec` video down by `10x`. An additional `270` fr
 **Requirements:** A 64-bit system with a compatible graphics device.
 
 * **Windows 10 (Portable):** Download the [latest releases](https://github.com/dthpham/butterflow/releases/latest).
-  * **Latest:** butterflow-0.2.4.alpha2-win64.zip
+  * **Stable:** butterflow-0.2.3.7z
 * **macOS and Linux:** See the [Install From Source Guide](docs/Install-From-Source-Guide.md) for instructions.
 
 ## Setup
