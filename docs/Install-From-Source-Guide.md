@@ -1,6 +1,7 @@
 # Install From Source Guide
 
 ## Windows
+
 1. Install the 64-bit version of [MSYS2](https://msys2.github.io/).
 2. Launch a MSYS2 shell.
 3. Install dependencies with `pacman -S base-devel msys2-devel mingw-w64-x86_64-toolchain mingw-w64-x86_64-python2 mingw-w64-x86_64-python2-pip mingw-w64-x86_64-python2-numpy mingw-w64-x86_64-SDL2 git`.
@@ -16,11 +17,11 @@ get() {
 }
 build() {
     arch=$(get arch)
-    MINGW_INSTALLS=mingw64 makepkg-mingw -sLf
+    MINGW_INSTALLS=mingw64 makepkg-mingw -Lsf
     pacman -U mingw-w64-x86_64-${1}-$(get pkgver)-$(get pkgrel)-${arch:2:-2}.pkg.tar.xz
 }
 cd install
-packages="ocl-icd-git ffmpeg3 opencv2 butterflow"
+packages="ocl-icd-git x264-git ffmpeg3 opencv2 butterflow"
 for package in ${packages}; do
     cd mingw-w64-$package
     build $package

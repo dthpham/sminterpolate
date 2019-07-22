@@ -8,3 +8,4 @@ mingw-w64-*.log*
 *.tar.xz
 *.pkg.tar.xz
 ocl-icd
+x264

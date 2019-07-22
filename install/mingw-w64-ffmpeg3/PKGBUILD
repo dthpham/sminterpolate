@@ -43,8 +43,8 @@ makedepends=("${MINGW_PACKAGE_PREFIX}-gcc"
              "${MINGW_PACKAGE_PREFIX}-pkg-config"
              "${MINGW_PACKAGE_PREFIX}-nasm"
              )
-provides=('ffmpeg')
-conflicts=('ffmpeg')
+provides=("${MINGW_PACKAGE_PREFIX}-${_realname}")
+conflicts=("${MINGW_PACKAGE_PREFIX}-${_realname}")
 source=("https://ffmpeg.org/releases/${_realname}-${pkgver}.tar.xz")
 sha256sums=('3572279cb139d9e39dcfbc23edf438ff5311ec3fc5d0dcb3558e49591e5cb83e')
 

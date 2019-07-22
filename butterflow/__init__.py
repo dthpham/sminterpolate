@@ -3,10 +3,11 @@
 
 import os
 import sys
-import multiprocessing
 import _winreg as winreg
 import itertools
 
+
+ADDED_KEYS=False
 
 class RegistryKey(object):
     def __init__(self, name, data_type, value):
@@ -29,26 +30,6 @@ KHRONOS_REG_PATH=r"Software\Khronos\OpenCL\Vendors"
 KEYS_NEEDED=[RegistryKey("amdocl64.dll", winreg.REG_DWORD, 0),
     RegistryKey("nvopencl64.dll", winreg.REG_DWORD, 0),
     RegistryKey("IntelOpenCL64.dll", winreg.REG_DWORD, 0)]
-
-ADD_PATHS_TO_EXE=['lib', 'lib\\library.zip', 'lib\\butterflow', 'lib\\numpy\\core', 'lib\\ffmpeg', 'lib\\misc']
-ADDED_PATHS=False
-
-
-def add_paths_to_exe():
-    global ADDED_PATHS
-    if ADDED_PATHS:
-        return
-
-    if hasattr(sys, "frozen"):
-        # print("Settting PATHs for executable:")
-        
-        executable_dir = os.path.dirname(sys.executable).replace('/', os.sep)
-        os.environ['PATH'] = executable_dir
-        for path in ADD_PATHS_TO_EXE:
-            os.environ['PATH'] += os.pathsep+os.path.join(executable_dir, path)
-
-        # print(os.environ['PATH'])
-        ADDED_PATHS=True
 
 def get_local_machine_registry_subkeys(name):
     # print("Keys at %s:" % name)
@@ -90,7 +71,9 @@ def add_registry_keys():
 
 
 if sys.platform.startswith("win"):
-    add_paths_to_exe()
-    add_registry_keys()    
-    multiprocessing.freeze_support()
+    global ADDED_KEYS
+
+    if not ADDED_KEYS:
+        add_registry_keys()
+        ADDED_KEYS=True
 

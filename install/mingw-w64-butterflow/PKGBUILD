@@ -3,7 +3,7 @@
 _realname=butterflow
 pkgbase=mingw-w64-${_realname}
 pkgname="${MINGW_PACKAGE_PREFIX}-${_realname}"
-pkgver=0.2.4
+pkgver=0.2.3
 pkgrel=1
 pkgdesc="Make slow motion and motion interpolated videos from the command line (mingw-w64)"
 arch=('x86_64')
