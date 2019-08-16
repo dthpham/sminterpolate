@@ -27,10 +27,9 @@ dependsdir = os.path.join(topdir, 'depends')
 # are we building a development version?
 building = True
 for x in sys.argv:
-    if x.startswith('build'):
+    if x.startswith('build') or x.startswith('develop'):
         building = False
-is_devbuild = 'dev' in version and not building
-
+is_devbuild = ('dev' in version or 'a' in version) and not building
 
 # make a list with no duplicates
 # does not maintain ordering

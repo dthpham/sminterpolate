@@ -1,38 +1,5 @@
 # Install From Source Guide
 
-## Windows
-
-1. Install the 64-bit version of [MSYS2](https://msys2.github.io/).
-2. Launch a MSYS2 shell.
-3. Install dependencies with `pacman -S base-devel msys2-devel mingw-w64-x86_64-toolchain mingw-w64-x86_64-python2 mingw-w64-x86_64-python2-pip mingw-w64-x86_64-python2-numpy mingw-w64-x86_64-SDL2 git`.
-4. Do `git clone https://github.com/dthpham/butterflow.git`.
-5. Change into the project directory then run this install script.
-```bash
-#!/bin/bash
-if [[ $MSYSTEM != "MSYS" ]]; then
-    exit "You must run this in a MSYS2 shell"
-fi
-get() {
-    grep ^${1}= PKGBUILD | cut -d'=' -f 2
-}
-build() {
-    arch=$(get arch)
-    MINGW_INSTALLS=mingw64 makepkg-mingw -Lsf
-    pacman -U mingw-w64-x86_64-${1}-$(get pkgver)-$(get pkgrel)-${arch:2:-2}.pkg.tar.xz
-}
-cd install
-packages="ocl-icd-git x264-git ffmpeg3 opencv2 butterflow"
-for package in ${packages}; do
-    cd mingw-w64-$package
-    build $package
-    cd ..
-done
-```
-
-6. You may now use BF system-wide while in a MINGW64 shell.
-    * **Important:** There's a distinction between MSYS2 and MINGW64 shells.
-    * **Tip:** To uninstall: `pacman -R mingw-w64-x86_64-butterflow`.
-
 ## macOS and Linux
 
 ### Install dependencies:

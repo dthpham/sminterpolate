@@ -28,6 +28,7 @@ REG_HIVE=winreg.HKEY_CURRENT_USER
 KHRONOS_REG_PATH=r"Software\Khronos\OpenCL\Vendors"
 
 KEYS_NEEDED=[RegistryKey("amdocl64.dll", winreg.REG_DWORD, 0),
+    RegistryKey("AMD_OpenCL64.dll", winreg.REG_DWORD, 0),
     RegistryKey("nvopencl64.dll", winreg.REG_DWORD, 0),
     RegistryKey("IntelOpenCL64.dll", winreg.REG_DWORD, 0)]
 
@@ -69,6 +70,8 @@ def add_registry_keys():
             print("Couldn't create (%s)\tReason: %s" % (key_needed, error))
             exit(1)
 
+# TODO: How to Enumerate Vendor ICDs on Windows: https://github.com/KhronosGroup/OpenCL-Docs/blob/master/ext/cl_khr_icd.txt#L68
+# SEARCH_HIVE=winreg.HKEY_LOCAL_MACHINE
 
 if sys.platform.startswith("win"):
     global ADDED_KEYS

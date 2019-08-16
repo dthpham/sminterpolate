@@ -107,17 +107,19 @@ print_ocl_devices(PyObject *self, PyObject *noargs) {
             if (!compatible) {
                 compatible_string = "No";
             }
-            bool isCurrentDevice = (currentVendorId == d_vendor_id);
+            bool isCurrentDevice = ( (currentVendorId == d_vendor_id) &&
+                                    !(strcmp(currentDevice.deviceName.c_str(), d_name)) );
             char const *selected_string = " ";
             if (isCurrentDevice) {
                 selected_string = "*";
             }
             printf("\n%s  Device %d    \t\t: %s"
+                   "\n      Vendor Id\t\t: 0x%lx"
                    "\n      Version  \t\t: %s"
                    "\n      Version  \t\t: %s"
                    "\n      Work Sizes\t: %lu, %lux%lux%lu"
                    "\n      Compatible\t: %s",
-                   selected_string, d_num, d_name, d_vers, d_dver,
+                   selected_string, d_num, d_name, d_vendor_id, d_vers, d_dver,
                    d_max_work_group_size,
                    d_max_work_item_sizes[0],
                    d_max_work_item_sizes[1],
@@ -201,18 +203,18 @@ compat_ocl_device_available(PyObject *self, PyObject *noargs) {
 static PyObject*
 select_ocl_device(PyObject *self, PyObject *arg) {
     int preferred_device_num = PyInt_AsLong(arg);
+    int current_device_num = 0;
 
     cl_platform_id platforms[32];
     cl_uint n_platforms;
     cl_device_id *devices;
     cl_uint n_devices;
     char p_prof[1024];
-    cl_uint d_vendor_id;
+    char d_name[1024];
     char d_vers[1024];
     char d_prof[1024];
     size_t d_max_work_group_size;
     size_t d_max_work_item_sizes[3];
-    int d_num = 0;
 
     cl_safe(clGetPlatformIDs(32, platforms, &n_platforms));
 
@@ -229,7 +231,8 @@ select_ocl_device(PyObject *self, PyObject *arg) {
 
         for (int j = 0; j < n_devices; j++) {
             cl_device_id d = devices[j];
-            cl_safe(clGetDeviceInfo(d, CL_DEVICE_VENDOR_ID, sizeof(d_vendor_id), &d_vendor_id, NULL));
+
+            cl_safe(clGetDeviceInfo(d, CL_DEVICE_NAME, 1024, d_name, NULL));
             cl_safe(clGetDeviceInfo(d, CL_DEVICE_VERSION, 1024, d_vers, NULL));
             cl_safe(clGetDeviceInfo(d, CL_DEVICE_PROFILE, 1024, d_prof, NULL));
             cl_safe(clGetDeviceInfo(d, CL_DEVICE_MAX_WORK_GROUP_SIZE,
@@ -239,13 +242,14 @@ select_ocl_device(PyObject *self, PyObject *arg) {
                                     sizeof(d_max_work_item_sizes),
                                     &d_max_work_item_sizes, NULL));
 
-            if (d_num == preferred_device_num) {
+            if (current_device_num == preferred_device_num) {
                 bool found_device = false;
                 DevicesInfo devicesInfo;
                 getOpenCLDevices(devicesInfo, CVCL_DEVICE_TYPE_ALL, NULL);
                 for(vector<const DeviceInfo*>::iterator it = devicesInfo.begin(); it != devicesInfo.end(); ++it) {
                     const DeviceInfo *deviceInfo = *it;
-                    if (deviceInfo->deviceVendorId == d_vendor_id) {
+
+                    if ( !(strcmp(deviceInfo->deviceName.c_str(), d_name)) ) {
                         setDevice(deviceInfo);
                         found_device = true;
                         break;
@@ -265,7 +269,7 @@ select_ocl_device(PyObject *self, PyObject *arg) {
                     return (PyObject*)NULL;
                 }
             }
-            d_num++;
+            current_device_num++;
         }
         free(devices);
     }

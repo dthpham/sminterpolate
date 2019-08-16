@@ -22,8 +22,8 @@ In these examples BF slowed a `1sec` video down by `10x`. An additional `270` fr
 **Requirements:** A 64-bit system with a compatible graphics device.
 
 * **Windows 10 (Portable):** Download the [latest releases](https://github.com/dthpham/butterflow/releases/latest).
-  * **Preview:** butterflow-0.2.4a3-win64.zip
-    * Sha256: 282ef1a2eeac9e60d0422b14f20a946dca88ce727fe1096dc0d4879d1368278d
+  * **Preview:** butterflow-0.2.4a4-win64.zip
+    * Sha256: 856ad05bafaeb9d084d6b1cbf0bdec17defeef438e610f6a3a772087acea301b
   * **Stable:** butterflow-0.2.3-win64.zip
     * Sha256: a77fbbdbdd0d85bb31feac30e53378a36ff4fb2a8a98ba15a6fa06def4b36ad1
 * **macOS and Linux:** See the [Install From Source Guide](docs/Install-From-Source-Guide.md) for instructions.
@@ -31,7 +31,7 @@ In these examples BF slowed a `1sec` video down by `10x`. An additional `270` fr
 ## Setup
 BF requires no setup to use but it's too slow out of the box to do any serious work. To take advantage of hardware accelerated methods that will make rendering significantly faster you must set up a functional OpenCL environment on your machine.
 
-To do this on Windows you will only need to have the latest version of your graphics driver installed. If BF fails to detect your device you can try specifying the location of your hardware's OpenCL client driver in the registry at `HKEY_CURRENT_USER\SOFTWARE\Khronos\OpenCL\Vendors` by adding a key with the full path to the DLL as a `REG_DWORD` type with a data value of 0. NVIDIA users should look for `nvopencl64.dll`, AMD: `amdocl64.dll`, and Intel: `IntelOpenCL64.dll` on your computer and add the keys to your registry.
+To do this on Windows you will only need to have the latest version of your graphics driver installed. If BF fails to detect your device you can try specifying the location of your hardware's OpenCL client driver in the registry at `HKEY_LOCAL_MACHINE\SOFTWARE\Khronos\OpenCL\Vendors` by adding a key with the full path to the DLL as a `REG_DWORD` type with a data value of 0. NVIDIA users should look for `nvopencl64.dll`, AMD: `amdocl64.dll`, and Intel: `IntelOpenCL64.dll` on your computer and add the keys to your registry.
 
 No setup on macOS is necessary because Apple provides OpenCL support by default on all newer Macs. If you're on Linux, please seek other sources on how to satisfy the OpenCL requirement.
 
