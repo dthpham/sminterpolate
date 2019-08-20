@@ -29,13 +29,28 @@ In these examples BF slowed a `1sec` video down by `10x`. An additional `270` fr
 * **macOS and Linux:** See the [Install From Source Guide](docs/Install-From-Source-Guide.md) for instructions.
 
 ## Setup
-BF requires no setup to use but it's too slow out of the box to do any serious work. To take advantage of hardware accelerated methods that will make rendering significantly faster you must set up a functional OpenCL environment on your machine.
+BF requires no setup to use but it's too slow out of the box to do any serious work. To take advantage of hardware accelerated methods that will make rendering significantly faster you must set up a functional OpenCL environment on your machine
 
-To do this on Windows you will only need to have the latest version of your graphics driver installed. If BF fails to detect your device you can try specifying the location of your hardware's OpenCL client driver in the registry at `HKEY_LOCAL_MACHINE\SOFTWARE\Khronos\OpenCL\Vendors` by adding a key with the full path to the DLL as a `REG_DWORD` type with a data value of 0. NVIDIA users should look for `nvopencl64.dll`, AMD: `amdocl64.dll`, and Intel: `IntelOpenCL64.dll` on your computer and add the keys to your registry.
+You can check if your device is detected with `butterflow -d`. BF will force you to use CPU rendering if there are no compatible devices available.
+
+### Windows
+
+To do this on Windows you will only need to have the latest version of your graphics driver installed. If BF fails to detect your device for fails to execute, you can try specifying the location of your hardware's OpenCL client driver. Find your drivers by doing a search in your windows folder for nvopencl64.dll and nvopencl32.dll if you have NVIDA, Intel: IntelOpenCL64.dll and IntelOpenCL32.dll; AMD amdocl64.dll and amdocl32.dll. You may need to reference to the 32-bit key, even if you're on a 64-bit system.  In regedit, add the 64 bit driver in the registry at `HKEY_LOCAL_MACHINE\SOFTWARE\Khronos\OpenCL\Vendors` by adding a key with the full path to the DLL as a `REG_DWORD` type with a data value of 0. Do the same for the 32-bit driver at HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\Khronos\OpenCL\Vendors
+
+Example for NVIDIA (Use the full path to your driver you found after a search).
+```
+[HKEY_LOCAL_MACHINE\SOFTWARE\Khronos\OpenCL\Vendors]
+"C:\Windows\System32\nvopencl64.dll"=dword:00000000  
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\Khronos\OpenCL\Vendors]
+"C:\Windows\System32\nvopencl32.dll"=dword:00000000
+```
+
+### Mac 
 
 No setup on macOS is necessary because Apple provides OpenCL support by default on all newer Macs. If you're on Linux, please seek other sources on how to satisfy the OpenCL requirement.
 
-You can check if your device is detected with `butterflow -d`. BF will force you to use CPU rendering if there are no compatible devices available.
+
 
 ## Usage
 Run `butterflow -h` for a full list of options. See: [Example Usage](docs/Example-Usage.md) for typical commands.
